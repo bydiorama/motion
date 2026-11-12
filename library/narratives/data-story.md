@@ -17,29 +17,35 @@ beats:
   share: 15
   content: The claim, before the evidence
   primitives:
+  - type/mask-reveal
   - type/word-build
 - name: number
   share: 25
   content: The headline number rolls in
   primitives:
+  - fx/odometer
   - fx/counter-roll
   - type/accent-number
 - name: context
   share: 20
   content: What surrounds the number
   primitives:
+  - scene/line-chart
+  - scene/bar-chart
   - scene/stat-with-evidence
   - fx/depth-drift
 - name: compare
   share: 25
   content: Before and after, or this against that
   primitives:
+  - scene/bar-chart
   - rig/flip-ticker
   - fx/stagger-fill
 - name: end
   share: 15
   content: Source and sign-off
   primitives:
+  - scene/logo-reveal
   - scene/end-card
 since: 0.5.0
 ---
@@ -47,5 +53,7 @@ since: 0.5.0
 ## Notes
 
 Never more than one number moving at a time. The source of every figure goes on screen, small, in the end card.
+
+Charts build in stages: axis, then data, then labels, then the one annotation that carries the point, each 0.6–1.0 s. A counter beside a chart uses the same curve as its bars, so they land together. Highlight one bar or one point, never two.
 
 Shares are percentages of total duration and must add up to 100.

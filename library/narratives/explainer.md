@@ -17,18 +17,21 @@ beats:
   share: 10
   content: The question the video answers
   primitives:
+  - type/mask-reveal
   - scene/kinetic-headline
   - type/focus-blur
 - name: setup
   share: 16
   content: What is there before anything happens
   primitives:
+  - fx/grid-ripple
   - fx/stagger-fill
   - scene/grid-wall
 - name: mechanism
   share: 30
   content: How it works, one step per beat
   primitives:
+  - transition/push
   - transition/step-wipe
   - fx/card-arrangements
   - type/inline-chips
@@ -36,12 +39,15 @@ beats:
   share: 18
   content: The number that shows it works
   primitives:
+  - scene/bar-chart
+  - fx/odometer
   - scene/stat-with-evidence
   - fx/counter-roll
 - name: takeaway
   share: 14
   content: The answer, in one line
   primitives:
+  - type/scribble-highlight
   - type/word-build
 - name: end
   share: 12

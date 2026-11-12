@@ -30,6 +30,18 @@ const STYLE_KEYS = ['size', 'color', 'font', 'weight', 'align', 'width', 'css'];
 
 const MOVE_AMOUNT: Record<MoveName, number> = {
   fade: 0, rise: 40, drop: 40, scale: 0.08, blur: 16, 'slide-left': 120, 'slide-right': 120,
+  zoom: 0.12, pop: 0.5, focus: 24, 'mask-up': 0, 'mask-down': 0, 'wipe-up': 0, 'wipe-down': 0, 'wipe-left': 0, 'wipe-right': 0, swing: 70,
+};
+/** Moves that read best with their own curve when the film does not give one. */
+const MOVE_EASE: Partial<Record<MoveName, { enter: EaseSpec; exit: EaseSpec }>> = {
+  pop: { enter: { spring: { duration: 0.5, bounce: 0.35 } }, exit: 'back.in' },
+  'mask-up': { enter: 'expressive.out', exit: 'expressive.in' },
+  'mask-down': { enter: 'expressive.out', exit: 'expressive.in' },
+  'wipe-up': { enter: 'quart.inOut', exit: 'quart.inOut' },
+  'wipe-down': { enter: 'quart.inOut', exit: 'quart.inOut' },
+  'wipe-left': { enter: 'quart.inOut', exit: 'quart.inOut' },
+  'wipe-right': { enter: 'quart.inOut', exit: 'quart.inOut' },
+  swing: { enter: { spring: { duration: 0.6, bounce: 0.2 } }, exit: 'cubic.in' },
 };
 
 function distance(a: string, b: string): number {
@@ -259,9 +271,10 @@ export function resolveFilm(input: unknown): Resolution {
           }
           const okType = spec.type === 'number' ? isNum(v)
             : spec.type === 'string[]' ? Array.isArray(v) && v.every((x) => typeof x === 'string')
-              : typeof v === 'string';
-          if (!okType) { err(`${lp}.props.${name}`, 'bad-prop', `"${name}" is ${spec.type === 'string[]' ? 'a list of strings' : `a ${spec.type === 'html' ? 'string' : spec.type}`}.`); continue; }
-          if (spec.type === 'string[]' && spec.required && (v as unknown[]).length === 0) warn(`${lp}.props.${name}`, 'empty', `"${name}" is empty, so nothing is drawn.`);
+              : spec.type === 'number[]' ? Array.isArray(v) && v.every(isNum)
+                : typeof v === 'string';
+          if (!okType) { err(`${lp}.props.${name}`, 'bad-prop', `"${name}" is ${spec.type === 'string[]' ? 'a list of strings' : spec.type === 'number[]' ? 'a list of numbers' : `a ${spec.type === 'html' ? 'string' : spec.type}`}.`); continue; }
+          if ((spec.type === 'string[]' || spec.type === 'number[]') && spec.required && (v as unknown[]).length === 0) warn(`${lp}.props.${name}`, 'empty', `"${name}" is empty, so nothing is drawn.`);
           props[name] = v;
         }
       }
@@ -298,7 +311,8 @@ export function resolveFilm(input: unknown): Resolution {
       }
       unknownKeys(m as unknown as Record<string, unknown>, exit ? ['move', 'duration', 'ease', 'amount', 'at'] : ['move', 'duration', 'ease', 'amount'], path);
       const duration = m.duration === undefined ? (exit ? tokens.duration.fast : tokens.duration.base) : seconds(m.duration, `${path}.duration`, 'duration');
-      const ease = m.ease === undefined ? (exit ? tokens.ease_exit : tokens.ease_enter) : checkEase(m.ease, `${path}.ease`);
+      const own = MOVE_EASE[m.move];
+      const ease = m.ease === undefined ? (own ? own[exit ? 'exit' : 'enter'] : exit ? tokens.ease_exit : tokens.ease_enter) : checkEase(m.ease, `${path}.ease`);
       if (m.amount !== undefined && !isNum(m.amount)) err(`${path}.amount`, 'bad-value', 'amount is a number.');
       if (duration === undefined || ease === undefined) return undefined;
       return { move: m.move, duration, ease, amount: isNum(m.amount) ? m.amount : MOVE_AMOUNT[m.move] };

@@ -17,18 +17,23 @@ beats:
   share: 30
   content: One word or number that stops the scroll
   primitives:
+  - type/block-reveal
+  - type/char-cascade
   - type/scramble
   - type/split-flap
 - name: payoff
   share: 45
   content: What it means, cut on the beat
   primitives:
+  - type/word-roller
+  - transition/slant-wipe
   - type/word-build
   - transition/beat-cut
 - name: end
   share: 25
   content: Name and call to action
   primitives:
+  - scene/logo-reveal
   - scene/end-card
 since: 0.5.0
 ---

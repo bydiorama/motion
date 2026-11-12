@@ -9,19 +9,33 @@ import type { TokenOverrides } from '../tokens.ts';
 /** Seconds from the scene start, or `"<layer id>.start|end"` / `"scene.end"`, optionally `± seconds`. */
 export type TimeRef = number | string;
 
-export type TrackProp = 'x' | 'y' | 'scale' | 'rotate' | 'opacity' | 'blur';
-export const TRACK_PROPS: readonly TrackProp[] = ['x', 'y', 'scale', 'rotate', 'opacity', 'blur'];
+export type TrackProp = 'x' | 'y' | 'scale' | 'rotate' | 'opacity' | 'blur' | 'rotateX' | 'rotateY' | 'skew';
+export const TRACK_PROPS: readonly TrackProp[] = ['x', 'y', 'scale', 'rotate', 'opacity', 'blur', 'rotateX', 'rotateY', 'skew'];
 export type Tracks = Partial<Record<TrackProp, Key[]>>;
 
-export type MoveName = 'fade' | 'rise' | 'drop' | 'scale' | 'blur' | 'slide-left' | 'slide-right';
-export const MOVE_NAMES: readonly MoveName[] = ['fade', 'rise', 'drop', 'scale', 'blur', 'slide-left', 'slide-right'];
+/**
+ * Enter and exit moves for any layer.
+ *  fade, rise, drop, slide-*: opacity with a travel in px.
+ *  scale: grows from slightly small. zoom: settles from slightly large. pop: grows with an overshoot.
+ *  blur: comes into focus. focus: comes into focus while rising (a soft arrival).
+ *  mask-up, mask-down: slides out from under its own edge, without fading (a line reveal).
+ *  wipe-*: an edge travels across the layer and uncovers it, without moving it.
+ *  swing: turns in on a horizontal hinge, in perspective.
+ */
+export type MoveName =
+  | 'fade' | 'rise' | 'drop' | 'scale' | 'blur' | 'slide-left' | 'slide-right'
+  | 'zoom' | 'pop' | 'focus' | 'mask-up' | 'mask-down' | 'wipe-up' | 'wipe-down' | 'wipe-left' | 'wipe-right' | 'swing';
+export const MOVE_NAMES: readonly MoveName[] = [
+  'fade', 'rise', 'drop', 'scale', 'blur', 'slide-left', 'slide-right',
+  'zoom', 'pop', 'focus', 'mask-up', 'mask-down', 'wipe-up', 'wipe-down', 'wipe-left', 'wipe-right', 'swing',
+];
 
 export interface Move {
   move: MoveName;
   /** Seconds, or a token such as `"$duration.base"`. */
   duration?: number | string;
   ease?: EaseSpec;
-  /** Travel in px for rise, drop and slide; start scale offset for scale; px for blur. */
+  /** Travel in px for rise, drop, slide and focus; scale offset for scale, zoom and pop; px for blur; degrees for swing. Masks and wipes ignore it. */
   amount?: number;
 }
 export interface ExitMove extends Move {

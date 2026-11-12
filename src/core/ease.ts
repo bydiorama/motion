@@ -71,13 +71,34 @@ export const UI_EASE: Record<string, Bezier> = {
   'ui.spring': [0.22, 1, 0.36, 1],
 };
 
+/**
+ * Asymmetric curves for film: arrivals that spend most of their time settling,
+ * exits that leave fast and late. Shared with the craft guide (docs/CRAFT.md).
+ */
+export const EXPRESSIVE: Record<string, Bezier> = {
+  'expressive.out': [0.05, 0.7, 0.1, 1],
+  'expressive.in': [0.3, 0, 0.8, 0.15],
+  'expressive.inOut': [0.7, 0, 0.1, 1],
+  // A hard ease-out with a finite start: things are placed, not floated in.
+  'snap.out': [0.3, 0.9, 0.1, 1],
+  // Pulls back a little, then whips away: exits with weight.
+  'anticipate.in': [0.45, -0.48, 1, -0.82],
+};
+
 /** The nearest cubic-bezier to each named curve: what a curve editor shows for it. */
 export const EASE_BEZIER: Record<string, Bezier> = {
   linear: [0, 0, 1, 1], smooth: [0.45, 0, 0.55, 1],
   'sine.in': [0.12, 0, 0.39, 0], 'sine.out': [0.61, 1, 0.88, 1], 'sine.inOut': [0.37, 0, 0.63, 1],
   'cubic.in': [0.32, 0, 0.67, 0], 'cubic.out': [0.33, 1, 0.68, 1], 'cubic.inOut': [0.65, 0, 0.35, 1],
   'expo.in': [0.7, 0, 0.84, 0], 'expo.out': [0.16, 1, 0.3, 1], 'expo.inOut': [0.87, 0, 0.13, 1],
-  'back.out': [0.34, 1.56, 0.64, 1],
+  'quad.in': [0.11, 0, 0.5, 0], 'quad.out': [0.5, 1, 0.89, 1], 'quad.inOut': [0.45, 0, 0.55, 1],
+  'quart.in': [0.5, 0, 0.75, 0], 'quart.out': [0.25, 1, 0.5, 1], 'quart.inOut': [0.76, 0, 0.24, 1],
+  'quint.in': [0.64, 0, 0.78, 0], 'quint.out': [0.22, 1, 0.36, 1], 'quint.inOut': [0.83, 0, 0.17, 1],
+  'circ.in': [0.55, 0, 1, 0.45], 'circ.out': [0, 0.55, 0.45, 1], 'circ.inOut': [0.85, 0, 0.15, 1],
+  'back.in': [0.36, 0, 0.66, -0.56], 'back.out': [0.34, 1.56, 0.64, 1], 'back.inOut': [0.68, -0.6, 0.32, 1.6],
+  // No cubic matches an elastic; the curve editor shows the nearest overshoot.
+  'elastic.out': [0.34, 1.56, 0.64, 1],
+  ...EXPRESSIVE,
   ...UI_EASE,
 };
 
@@ -95,9 +116,27 @@ const NAMED: Record<string, (x: number) => number> = {
     x <= 0 ? 0 : x >= 1 ? 1 : x < 0.5 ? Math.pow(2, 20 * x - 10) / 2 : (2 - Math.pow(2, -20 * x + 10)) / 2,
   'back.out': (x) => 1 + 2.70158 * Math.pow(x - 1, 3) + 1.70158 * Math.pow(x - 1, 2),
   smooth: (x) => x * x * x * (x * (x * 6 - 15) + 10),
+  'quad.in': (x) => x * x,
+  'quad.out': (x) => 1 - (1 - x) * (1 - x),
+  'quad.inOut': (x) => (x < 0.5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2),
+  'quart.in': (x) => x * x * x * x,
+  'quart.out': (x) => 1 - Math.pow(1 - x, 4),
+  'quart.inOut': (x) => (x < 0.5 ? 8 * x * x * x * x : 1 - Math.pow(-2 * x + 2, 4) / 2),
+  'quint.in': (x) => x * x * x * x * x,
+  'quint.out': (x) => 1 - Math.pow(1 - x, 5),
+  'quint.inOut': (x) => (x < 0.5 ? 16 * Math.pow(x, 5) : 1 - Math.pow(-2 * x + 2, 5) / 2),
+  'circ.in': (x) => 1 - Math.sqrt(1 - x * x),
+  'circ.out': (x) => Math.sqrt(1 - Math.pow(x - 1, 2)),
+  'circ.inOut': (x) => (x < 0.5 ? (1 - Math.sqrt(1 - Math.pow(2 * x, 2))) / 2 : (Math.sqrt(1 - Math.pow(-2 * x + 2, 2)) + 1) / 2),
+  'back.in': (x) => 2.70158 * x * x * x - 1.70158 * x * x,
+  'back.inOut': (x) => {
+    const c = 1.70158 * 1.525;
+    return x < 0.5 ? (Math.pow(2 * x, 2) * ((c + 1) * 2 * x - c)) / 2 : (Math.pow(2 * x - 2, 2) * ((c + 1) * (x * 2 - 2) + c) + 2) / 2;
+  },
+  'elastic.out': (x) => (x <= 0 ? 0 : x >= 1 ? 1 : Math.pow(2, -10 * x) * Math.sin((x * 10 - 0.75) * ((2 * Math.PI) / 3)) + 1),
 };
 
-export const EASE_NAMES: readonly string[] = [...Object.keys(NAMED), ...Object.keys(UI_EASE)];
+export const EASE_NAMES: readonly string[] = [...Object.keys(NAMED), ...Object.keys(EXPRESSIVE), ...Object.keys(UI_EASE)];
 
 export const isEaseSpec = (v: unknown): v is EaseSpec => {
   if (typeof v === 'string') return true;
@@ -113,7 +152,7 @@ export const isEaseSpec = (v: unknown): v is EaseSpec => {
 export function resolveEase(spec: EaseSpec | undefined, overrides: Record<string, Bezier> = {}): (x: number) => number {
   if (spec === undefined) return NAMED['expo.out']!;
   if (typeof spec === 'string') {
-    const themed = overrides[spec] ?? UI_EASE[spec];
+    const themed = overrides[spec] ?? UI_EASE[spec] ?? EXPRESSIVE[spec];
     if (themed) return bezier(...themed);
     const named = NAMED[spec];
     if (!named) throw new Error(`Unknown ease "${spec}". Known: ${EASE_NAMES.join(', ')}`);

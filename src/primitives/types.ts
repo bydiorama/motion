@@ -6,6 +6,11 @@
 //                                 seek(t) draws the exact state t seconds after
 //                                 the layer starts. No clock, no CSS transitions,
 //                                 no unseeded randomness.
+//
+// The engine owns the transform, opacity, filter and clip-path of `el` (and a
+// transition owns them on the scene), so draw those on children. A child that is
+// hidden and shown again uses visibility 'inherit', never 'visible', or it shows
+// through a hidden scene.
 import type { Bezier, EaseSpec } from '../core/ease.ts';
 import type { Tokens } from '../tokens.ts';
 
@@ -25,7 +30,7 @@ export interface ParamSpec {
 }
 
 export interface PropSpec {
-  type: 'string' | 'number' | 'string[]' | 'html';
+  type: 'string' | 'number' | 'string[]' | 'number[]' | 'html';
   required?: boolean;
   default?: unknown;
   label: string;
@@ -73,3 +78,4 @@ export interface TransitionPrimitive {
 export const num = (v: unknown, fallback = 0): number => (typeof v === 'number' && Number.isFinite(v) ? v : fallback);
 export const str = (v: unknown, fallback = ''): string => (typeof v === 'string' ? v : v == null ? fallback : String(v));
 export const list = (v: unknown): string[] => (Array.isArray(v) ? v.map((x) => String(x)) : []);
+export const nums = (v: unknown): number[] => (Array.isArray(v) ? v.map((x) => num(x)) : []);

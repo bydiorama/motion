@@ -17,12 +17,14 @@ beats:
   share: 10
   content: The problem in one line
   primitives:
+  - type/mask-reveal
   - scene/kinetic-headline
   - type/word-build
 - name: open
   share: 12
   content: The app arrives, enlarged where it matters
   primitives:
+  - transition/iris
   - scene/zoomed-ui
   - transition/dive-in
 - name: flow
@@ -36,18 +38,21 @@ beats:
   share: 18
   content: The outcome appears, with the number that proves it
   primitives:
+  - type/shimmer
   - ui/streamed-result
   - fx/counter-roll
 - name: recap
   share: 18
   content: Three features, named
   primitives:
+  - transition/stack-over
   - type/inline-chips
   - fx/stagger-fill
 - name: end
   share: 12
   content: Name and where to get it
   primitives:
+  - scene/logo-reveal
   - scene/end-card
 since: 0.5.0
 ---

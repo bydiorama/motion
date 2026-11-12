@@ -16,6 +16,31 @@ import { stepWipe } from './transition/step-wipe.ts';
 import { scramble } from './type/scramble.ts';
 import { typedTitle } from './type/typed-title.ts';
 import { wordBuild } from './type/word-build.ts';
+import { gridRipple } from './fx/grid-ripple.ts';
+import { odometer } from './fx/odometer.ts';
+import { pathDraw } from './fx/path-draw.ts';
+import { shapeMorph } from './fx/shape-morph.ts';
+import { barChart } from './scene/bar-chart.ts';
+import { lineChart } from './scene/line-chart.ts';
+import { logoReveal } from './scene/logo-reveal.ts';
+import { gradientDrift } from './texture/gradient-drift.ts';
+import { grain } from './texture/grain.ts';
+import { coverReveal } from './transition/cover-reveal.ts';
+import { curtain } from './transition/curtain.ts';
+import { diveIn } from './transition/dive-in.ts';
+import { iris } from './transition/iris.ts';
+import { push } from './transition/push.ts';
+import { slantWipe } from './transition/slant-wipe.ts';
+import { stackOver } from './transition/stack-over.ts';
+import { blockReveal } from './type/block-reveal.ts';
+import { charCascade } from './type/char-cascade.ts';
+import { echo } from './type/echo.ts';
+import { maskReveal } from './type/mask-reveal.ts';
+import { scribbleHighlight } from './type/scribble-highlight.ts';
+import { shimmer } from './type/shimmer.ts';
+import { trackingIn } from './type/tracking-in.ts';
+import { wordRoller } from './type/word-roller.ts';
+import { cursorClick } from './ui/cursor-click.ts';
 import type { Primitive, TransitionPrimitive } from './types.ts';
 
 const byslug = <T extends { slug: string }>(items: T[]): Record<string, T> =>
@@ -23,8 +48,12 @@ const byslug = <T extends { slug: string }>(items: T[]): Record<string, T> =>
 
 export const PRIMITIVES: Record<string, Primitive> = byslug([
   text, box, image, html, slot, wordBuild, typedTitle, scramble, counterRoll, staggerFill, depthDrift, marqueeWall, orbitRing, halftoneField,
+  maskReveal, charCascade, blockReveal, wordRoller, trackingIn, shimmer, echo, scribbleHighlight,
+  odometer, pathDraw, shapeMorph, gridRipple, logoReveal, barChart, lineChart, gradientDrift, grain, cursorClick,
 ]);
 
-export const TRANSITIONS: Record<string, TransitionPrimitive> = byslug([beatCut, blurDissolve, stepWipe]);
+export const TRANSITIONS: Record<string, TransitionPrimitive> = byslug([
+  beatCut, blurDissolve, stepWipe, push, iris, coverReveal, diveIn, curtain, stackOver, slantWipe,
+]);
 
 export type { Ctx, ParamSpec, Primitive, PropSpec, TransitionPrimitive } from './types.ts';

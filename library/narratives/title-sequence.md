@@ -17,12 +17,15 @@ beats:
   share: 15
   content: Texture and a first mark of light
   primitives:
+  - texture/gradient-drift
+  - texture/grain
   - texture/halftone-field
   - transition/curtain
 - name: names
   share: 40
   content: Names and roles, one at a time
   primitives:
+  - type/mask-reveal
   - type/typed-title
   - type/word-roller
   - type/writing-ticker
@@ -30,12 +33,16 @@ beats:
   share: 30
   content: The title, set large
   primitives:
+  - type/char-cascade
+  - type/tracking-in
+  - transition/zoom-through-letter
   - scene/kinetic-headline
   - type/echo
 - name: date
   share: 15
   content: Date and place
   primitives:
+  - type/block-reveal
   - type/split-flap
   - scene/end-card
 since: 0.5.0

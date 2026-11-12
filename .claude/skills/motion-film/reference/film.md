@@ -43,7 +43,7 @@
 | `props` | Content. Required props are marked in the catalog. |
 | `params` | Motion values, each inside its catalog range. |
 | `at` | Start, in seconds from the scene start, or relative: `"other.start"`, `"other.end - 0.1"`, `"scene.end - 1"`. |
-| `enter` | `"rise"`, or `{ "move": "rise", "duration": "$duration.base", "ease": "expo.out", "amount": 24 }`. Moves: `fade`, `rise`, `drop`, `scale`, `blur`, `slide-left`, `slide-right`. |
+| `enter` | `"rise"`, or `{ "move": "rise", "duration": "$duration.base", "ease": "expo.out", "amount": 24 }`. Moves: `fade`, `rise`, `drop`, `scale`, `blur`, `slide-left`, `slide-right`, `zoom` (scales down from slightly large), `pop` (spring from small), `focus` (sharpens from a blur), `mask-up`/`mask-down` (rises through its own edge, no fade), `wipe-up`/`wipe-down`/`wipe-left`/`wipe-right` (uncovered by a clip, no fade), `swing` (hinges in on X). Masks, wipes and `pop` bring their own eases when you give none. |
 | `exit` | Same, plus `at` for when it starts. Default: it ends with the scene. |
 | `style` | `size` (`hero`, `headline`, `title`, `body`, `caption`), `color` (see `colors` in the catalog), `font` (`display`, `body`, `mono`), `weight`, `align`, `width` (% of stage width), `css` (last resort). |
 | `place` | `{ "x": 50, "y": 80, "anchor": "bottom" }` in % of the stage. Takes the layer out of the stack. |
@@ -51,7 +51,7 @@
 
 ## Tracks
 
-`x`, `y` (px), `scale`, `rotate` (deg), `opacity`, `blur` (px). Each is a list of `[seconds, value]` or `[seconds, value, ease]`; the ease shapes the move arriving at that key.
+`x`, `y` (px), `scale`, `rotate`, `rotateX`, `rotateY`, `skew` (deg), `opacity`, `blur` (px). Each is a list of `[seconds, value]` or `[seconds, value, ease]`; the ease shapes the move arriving at that key.
 
 ```json
 "tracks": { "scale": [[0, 1], [4, 1.06, "sine.inOut"]] }
