@@ -93,6 +93,37 @@ def main():
             for r in sc.get("uses", []):
                 if not resolves(r): errors.append(f"{p.name}: scene {sc.get('id')}: '{r}' does not resolve")
 
+    # runtime: catalog.json is what the motion runtime can draw (`pnpm catalog`).
+    # Every primitive it ships must have a library entry, and the params an entry
+    # documents must be the ones the runtime takes, with the same defaults and range.
+    catalog_path = ROOT / "catalog.json"
+    if catalog_path.exists():
+        import json
+        catalog = json.loads(catalog_path.read_text())
+        shipped = catalog.get("primitives", []) + catalog.get("transitions", [])
+        for p in shipped:
+            slug = p["slug"]
+            if slug.startswith("el/"): continue  # plain elements, not patterns
+            m = entries.get(slug) or entries.get(aliases.get(slug, ""))
+            if not m:
+                errors.append(f"catalog.json: runtime primitive {slug} has no library entry")
+                continue
+            if m.get("status") == "deprecated":
+                errors.append(f"catalog.json: runtime ships {slug}, which the library deprecates")
+            runtime = p.get("params") or {}
+            for name, doc in (m.get("params") or {}).items():
+                r = runtime.get(name)
+                if r is None:
+                    err(m, f"param {name}: documented but the runtime has no such param")
+                    continue
+                for key in ("default", "min", "max"):
+                    if key in doc and doc[key] != r.get(key):
+                        err(m, f"param {name}: {key} is {doc[key]} here, {r.get(key)} in the runtime")
+            for name in runtime:
+                if name not in (m.get("params") or {}):
+                    warn(m, f"runtime param {name} is not documented in the entry")
+        print(f"runtime: {sum(1 for p in shipped if not p['slug'].startswith('el/'))} catalog primitives checked against the library")
+
     for w in warnings: print("warn ", w)
     for e in errors: print("ERROR", e)
     print(f"{len(entries)} entries, {len(errors)} errors, {len(warnings)} warnings")

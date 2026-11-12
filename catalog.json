@@ -1,0 +1,681 @@
+{
+  "motion": "0.4.0",
+  "tokens": {
+    "fps": 30,
+    "beat": 2.5,
+    "hold": 0.6,
+    "hold_end": 1.5,
+    "duration": {
+      "instant": 0,
+      "fast": 0.3,
+      "base": 0.5,
+      "slow": 0.8
+    },
+    "stagger": {
+      "tight": 0.03,
+      "base": 0.08,
+      "loose": 0.12
+    },
+    "ease_enter": "expo.out",
+    "ease_exit": "cubic.in",
+    "ease_move": "cubic.inOut",
+    "ease_loop": "linear",
+    "ui": {
+      "duration": {
+        "fast": 0.12,
+        "base": 0.2,
+        "slow": 0.32,
+        "enter": 0.4
+      },
+      "stagger": 0.1
+    }
+  },
+  "eases": [
+    "linear",
+    "sine.in",
+    "sine.out",
+    "sine.inOut",
+    "cubic.in",
+    "cubic.out",
+    "cubic.inOut",
+    "expo.in",
+    "expo.out",
+    "expo.inOut",
+    "back.out",
+    "smooth",
+    "ui.default",
+    "ui.in",
+    "ui.out",
+    "ui.spring"
+  ],
+  "moves": [
+    "fade",
+    "rise",
+    "drop",
+    "scale",
+    "blur",
+    "slide-left",
+    "slide-right"
+  ],
+  "tracks": [
+    "x",
+    "y",
+    "scale",
+    "rotate",
+    "opacity",
+    "blur"
+  ],
+  "sizes": [
+    "hero",
+    "headline",
+    "title",
+    "body",
+    "caption"
+  ],
+  "colors": [
+    "primary",
+    "secondary",
+    "muted",
+    "accent",
+    "inverse",
+    "on-accent"
+  ],
+  "surfaces": [
+    "base",
+    "surface",
+    "sunken",
+    "accent",
+    "inverse"
+  ],
+  "anchors": [
+    "center",
+    "top-left",
+    "top",
+    "top-right",
+    "left",
+    "right",
+    "bottom-left",
+    "bottom",
+    "bottom-right"
+  ],
+  "primitives": [
+    {
+      "slug": "el/text",
+      "summary": "A block of text. Animate it with enter, exit and tracks.",
+      "props": {
+        "text": {
+          "type": "string",
+          "required": true,
+          "label": "Text. Use \\n for a line break."
+        }
+      },
+      "params": {}
+    },
+    {
+      "slug": "el/box",
+      "summary": "A plain rectangle: a card, a rule, a colour field.",
+      "props": {
+        "fill": {
+          "type": "string",
+          "default": "surface",
+          "label": "Surface name (base, surface, sunken, accent, inverse) or a CSS colour"
+        }
+      },
+      "params": {
+        "width": {
+          "type": "number",
+          "default": 480,
+          "min": 1,
+          "max": 4000,
+          "step": 1,
+          "unit": "px",
+          "label": "Width"
+        },
+        "height": {
+          "type": "number",
+          "default": 270,
+          "min": 1,
+          "max": 4000,
+          "step": 1,
+          "unit": "px",
+          "label": "Height"
+        },
+        "radius": {
+          "type": "number",
+          "default": 16,
+          "min": 0,
+          "max": 400,
+          "step": 1,
+          "unit": "px",
+          "label": "Corner radius"
+        }
+      }
+    },
+    {
+      "slug": "el/image",
+      "summary": "A picture. The path is relative to the film file.",
+      "props": {
+        "src": {
+          "type": "string",
+          "required": true,
+          "label": "Image path or URL"
+        },
+        "alt": {
+          "type": "string",
+          "default": "",
+          "label": "Description of the picture"
+        }
+      },
+      "params": {
+        "width": {
+          "type": "number",
+          "default": 640,
+          "min": 1,
+          "max": 4000,
+          "step": 1,
+          "unit": "px",
+          "label": "Width"
+        },
+        "radius": {
+          "type": "number",
+          "default": 16,
+          "min": 0,
+          "max": 400,
+          "step": 1,
+          "unit": "px",
+          "label": "Corner radius"
+        }
+      }
+    },
+    {
+      "slug": "el/html",
+      "summary": "Static markup, for content no primitive covers. Style it with --ui-* tokens.",
+      "props": {
+        "html": {
+          "type": "html",
+          "required": true,
+          "label": "Markup"
+        }
+      },
+      "params": {}
+    },
+    {
+      "slug": "el/slot",
+      "summary": "An empty frame the host page fills, e.g. with a rendered bydiorama/ui component.",
+      "props": {
+        "name": {
+          "type": "string",
+          "required": true,
+          "label": "Slot name the host fills"
+        }
+      },
+      "params": {
+        "width": {
+          "type": "number",
+          "default": 640,
+          "min": 1,
+          "max": 4000,
+          "step": 1,
+          "unit": "px",
+          "label": "Width"
+        },
+        "height": {
+          "type": "number",
+          "default": 360,
+          "min": 1,
+          "max": 4000,
+          "step": 1,
+          "unit": "px",
+          "label": "Height"
+        }
+      }
+    },
+    {
+      "slug": "type/word-build",
+      "summary": "Words rise and fade in one by one.",
+      "props": {
+        "text": {
+          "type": "string",
+          "required": true,
+          "label": "The line to build"
+        },
+        "accent": {
+          "type": "string[]",
+          "default": [],
+          "label": "Words set in the accent colour"
+        }
+      },
+      "params": {
+        "rise": {
+          "type": "number",
+          "default": 16,
+          "min": 12,
+          "max": 20,
+          "step": 1,
+          "unit": "px",
+          "label": "Rise"
+        },
+        "stagger": {
+          "type": "number",
+          "default": 0.1,
+          "min": 0.08,
+          "max": 0.12,
+          "step": 0.005,
+          "unit": "s",
+          "label": "Delay between words"
+        },
+        "word_duration": {
+          "type": "number",
+          "default": 0.5,
+          "min": 0.3,
+          "max": 0.6,
+          "step": 0.01,
+          "unit": "s",
+          "label": "Time per word"
+        }
+      }
+    },
+    {
+      "slug": "type/typed-title",
+      "summary": "Characters appear one by one with a caret.",
+      "props": {
+        "text": {
+          "type": "string",
+          "required": true,
+          "label": "The text to type"
+        }
+      },
+      "params": {
+        "chars_per_s": {
+          "type": "number",
+          "default": 20,
+          "min": 12,
+          "max": 30,
+          "step": 1,
+          "unit": "chars/s",
+          "label": "Typing speed"
+        }
+      }
+    },
+    {
+      "slug": "type/scramble",
+      "summary": "Characters cycle randomly before settling.",
+      "props": {
+        "text": {
+          "type": "string",
+          "required": true,
+          "label": "The text to settle on"
+        }
+      },
+      "params": {
+        "duration": {
+          "type": "number",
+          "default": 0.8,
+          "min": 0.6,
+          "max": 1,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time to settle"
+        }
+      }
+    },
+    {
+      "slug": "fx/counter-roll",
+      "summary": "A number rolls up to its value.",
+      "props": {
+        "value": {
+          "type": "number",
+          "required": true,
+          "label": "The number to land on"
+        },
+        "from": {
+          "type": "number",
+          "default": 0,
+          "label": "The number to start from"
+        },
+        "decimals": {
+          "type": "number",
+          "default": 0,
+          "label": "Decimal places"
+        },
+        "prefix": {
+          "type": "string",
+          "default": "",
+          "label": "Text before the number"
+        },
+        "suffix": {
+          "type": "string",
+          "default": "",
+          "label": "Text after the number"
+        }
+      },
+      "params": {
+        "duration": {
+          "type": "number",
+          "default": 1,
+          "min": 0.6,
+          "max": 1.5,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time to roll"
+        }
+      }
+    },
+    {
+      "slug": "fx/stagger-fill",
+      "summary": "Items appear one after another.",
+      "props": {
+        "items": {
+          "type": "string[]",
+          "required": true,
+          "label": "The items, in reading order"
+        }
+      },
+      "params": {
+        "stagger": {
+          "type": "number",
+          "default": 0.04,
+          "min": 0.02,
+          "max": 0.06,
+          "step": 0.005,
+          "unit": "s",
+          "label": "Delay between items"
+        }
+      }
+    },
+    {
+      "slug": "fx/depth-drift",
+      "summary": "A floating collage on several depth planes.",
+      "props": {
+        "items": {
+          "type": "string[]",
+          "required": true,
+          "label": "Labels of the floating pieces"
+        }
+      },
+      "params": {
+        "planes": {
+          "type": "number",
+          "default": 3,
+          "min": 2,
+          "max": 3,
+          "step": 1,
+          "unit": "planes",
+          "label": "Depth planes"
+        },
+        "speed": {
+          "type": "number",
+          "default": 20,
+          "min": 10,
+          "max": 30,
+          "step": 1,
+          "unit": "px/s",
+          "label": "Drift speed of the nearest plane"
+        }
+      }
+    },
+    {
+      "slug": "scene/marquee-wall",
+      "summary": "Rows of chips or logos scrolling sideways.",
+      "props": {
+        "items": {
+          "type": "string[]",
+          "required": true,
+          "label": "Chip labels"
+        },
+        "highlight": {
+          "type": "string",
+          "default": "",
+          "label": "One label to emphasise while the others dim"
+        }
+      },
+      "params": {
+        "rows": {
+          "type": "number",
+          "default": 5,
+          "min": 4,
+          "max": 6,
+          "step": 1,
+          "unit": "rows",
+          "label": "Rows"
+        },
+        "speed": {
+          "type": "number",
+          "default": 60,
+          "min": 30,
+          "max": 120,
+          "step": 5,
+          "unit": "px/s",
+          "label": "Scroll speed"
+        },
+        "dim_opacity": {
+          "type": "number",
+          "default": 0.5,
+          "min": 0.4,
+          "max": 0.6,
+          "step": 0.01,
+          "unit": "ratio",
+          "label": "Opacity of the other items once one is emphasised",
+          "from": "fx/marquee-highlight"
+        },
+        "highlight_at": {
+          "type": "number",
+          "default": 1.5,
+          "min": 0,
+          "max": 10,
+          "step": 0.1,
+          "unit": "s",
+          "label": "When the emphasis starts"
+        }
+      }
+    },
+    {
+      "slug": "rig/orbit-ring",
+      "summary": "Tiles on a tilted ring that rotates forever.",
+      "props": {
+        "items": {
+          "type": "string[]",
+          "default": [],
+          "label": "Tile labels. Repeated to fill the ring; empty tiles when left out."
+        }
+      },
+      "params": {
+        "tiles": {
+          "type": "number",
+          "default": 12,
+          "min": 8,
+          "max": 16,
+          "step": 1,
+          "unit": "tiles",
+          "label": "Tiles"
+        },
+        "tilt_x": {
+          "type": "number",
+          "default": 25,
+          "min": 15,
+          "max": 35,
+          "step": 1,
+          "unit": "deg",
+          "label": "Pitch",
+          "pad": {
+            "name": "tilt",
+            "axis": "y"
+          }
+        },
+        "tilt_z": {
+          "type": "number",
+          "default": -20,
+          "min": -30,
+          "max": -10,
+          "step": 1,
+          "unit": "deg",
+          "label": "Roll",
+          "pad": {
+            "name": "tilt",
+            "axis": "x"
+          }
+        },
+        "period": {
+          "type": "number",
+          "default": 15,
+          "min": 12,
+          "max": 18,
+          "step": 0.5,
+          "unit": "s",
+          "label": "Time for one turn"
+        },
+        "min_opacity": {
+          "type": "number",
+          "default": 0.4,
+          "min": 0.3,
+          "max": 0.6,
+          "step": 0.01,
+          "unit": "ratio",
+          "label": "Opacity of tiles facing away",
+          "from": "texture/depth-fade"
+        },
+        "radius": {
+          "type": "number",
+          "default": 24,
+          "min": 14,
+          "max": 34,
+          "step": 0.5,
+          "unit": "% of stage width",
+          "label": "Ring radius"
+        },
+        "tile": {
+          "type": "number",
+          "default": 11,
+          "min": 6,
+          "max": 16,
+          "step": 0.5,
+          "unit": "% of stage width",
+          "label": "Tile size"
+        }
+      }
+    },
+    {
+      "slug": "texture/halftone-field",
+      "summary": "Squares or dots sized by a gradient.",
+      "props": {
+        "edge": {
+          "type": "string",
+          "default": "top",
+          "label": "Edge the field grows from: top or bottom"
+        }
+      },
+      "params": {
+        "cell": {
+          "type": "number",
+          "default": 12,
+          "min": 8,
+          "max": 20,
+          "step": 1,
+          "unit": "px",
+          "label": "Cell size"
+        },
+        "grow": {
+          "type": "number",
+          "default": 1.6,
+          "min": 0,
+          "max": 4,
+          "step": 0.1,
+          "unit": "s",
+          "label": "Time to grow in"
+        },
+        "reach": {
+          "type": "number",
+          "default": 0.6,
+          "min": 0.2,
+          "max": 1,
+          "step": 0.02,
+          "unit": "ratio",
+          "label": "How far into the frame it reaches"
+        },
+        "strength": {
+          "type": "number",
+          "default": 1,
+          "min": 0,
+          "max": 1,
+          "step": 0.05,
+          "unit": "ratio",
+          "label": "Opacity"
+        }
+      }
+    }
+  ],
+  "transitions": [
+    {
+      "slug": "transition/beat-cut",
+      "summary": "A plain cut placed on a music beat.",
+      "params": {
+        "duration": {
+          "type": "number",
+          "default": 0,
+          "min": 0,
+          "max": 0,
+          "step": 0,
+          "unit": "s",
+          "label": "Always zero: a cut"
+        }
+      }
+    },
+    {
+      "slug": "transition/blur-dissolve",
+      "summary": "One scene blurs out while the next blurs in.",
+      "params": {
+        "duration": {
+          "type": "number",
+          "default": 0.4,
+          "min": 0.3,
+          "max": 0.6,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Length of the hand-over"
+        },
+        "blur": {
+          "type": "number",
+          "default": 20,
+          "min": 12,
+          "max": 30,
+          "step": 1,
+          "unit": "px",
+          "label": "Blur at the midpoint"
+        },
+        "overlap": {
+          "type": "number",
+          "default": 0.5,
+          "min": 0.3,
+          "max": 0.7,
+          "step": 0.05,
+          "unit": "ratio",
+          "label": "Share of the time both scenes are visible"
+        }
+      }
+    },
+    {
+      "slug": "transition/step-wipe",
+      "summary": "Stepped bars sweep across the frame.",
+      "params": {
+        "duration": {
+          "type": "number",
+          "default": 0.5,
+          "min": 0.4,
+          "max": 0.7,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Length of the hand-over"
+        },
+        "steps": {
+          "type": "number",
+          "default": 6,
+          "min": 4,
+          "max": 10,
+          "step": 1,
+          "unit": "bars",
+          "label": "Number of bars"
+        }
+      }
+    }
+  ]
+}

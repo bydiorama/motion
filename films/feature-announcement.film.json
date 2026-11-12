@@ -1,0 +1,70 @@
+{
+  "$schema": "../schema/film.schema.json",
+  "motion": "0.4",
+  "title": "Feature announcement: a shared calendar",
+  "size": [1920, 1080],
+  "fps": 60,
+  "narrative": "narrative/feature-announcement",
+  "style": "style/clean-explainer",
+  "poster": 2.2,
+  "scenes": [
+    {
+      "id": "headline",
+      "intent": "Say the news in one line.",
+      "uses": ["scene/kinetic-headline", "type/word-build"],
+      "layers": [
+        { "id": "eyebrow", "use": "el/text", "props": { "text": "New this week" }, "style": { "size": "caption", "color": "muted", "font": "mono" }, "enter": "fade" },
+        { "id": "title", "use": "type/word-build", "at": 0.3, "props": { "text": "Meet the new shared calendar", "accent": ["calendar"] }, "style": { "size": "headline", "width": 70 } },
+        { "id": "sub", "use": "el/text", "at": "title.end + 0.1", "props": { "text": "One schedule for every team." }, "style": { "size": "title", "color": "muted" }, "enter": { "move": "rise", "amount": 24 } }
+      ],
+      "hold": 0.9,
+      "out": { "use": "transition/blur-dissolve" }
+    },
+    {
+      "id": "stat",
+      "intent": "One number that proves it.",
+      "uses": ["scene/stat-with-evidence", "fx/counter-roll", "type/accent-number"],
+      "background": "sunken",
+      "layers": [
+        { "id": "number", "use": "fx/counter-roll", "at": 0.3, "props": { "value": 12 }, "style": { "size": "hero", "color": "accent" } },
+        { "id": "label", "use": "el/text", "at": "number.start + 0.25", "props": { "text": "teams, one schedule" }, "style": { "size": "title" }, "enter": { "move": "rise", "amount": 24 } }
+      ],
+      "hold": 1.0,
+      "out": { "use": "transition/step-wipe" }
+    },
+    {
+      "id": "prompt",
+      "intent": "Show the request being typed.",
+      "uses": ["scene/zoomed-ui", "ui/prompt-typing"],
+      "layers": [
+        { "id": "field", "use": "el/box", "props": { "fill": "surface" }, "params": { "width": 1280, "height": 150, "radius": 75 }, "place": { "x": 50, "y": 50 }, "enter": { "move": "scale", "amount": 0.06 } },
+        { "id": "query", "use": "type/typed-title", "at": "field.end", "props": { "text": "Find a free hour next week" }, "place": { "x": 20, "y": 50, "anchor": "left" }, "style": { "size": "title", "align": "left" } }
+      ],
+      "hold": 1.0,
+      "tracks": { "scale": [[0, 1], [3, 1.05, "sine.inOut"]] },
+      "out": { "use": "transition/blur-dissolve" }
+    },
+    {
+      "id": "breadth",
+      "intent": "It works with what people already use.",
+      "uses": ["scene/marquee-wall", "fx/marquee-highlight"],
+      "length": 4,
+      "layout": { "padding": 0, "gap": 60 },
+      "layers": [
+        { "id": "claim", "use": "el/text", "props": { "text": "Works with the tools you already use" }, "style": { "size": "title" }, "enter": "rise" },
+        { "id": "wall", "use": "scene/marquee-wall", "at": 0.2, "props": { "items": ["Mail", "Chat", "Docs", "Tasks", "Video calls", "Notes", "Time off", "Rooms", "Shifts", "Travel", "Deadlines", "Reviews", "Stand-ups", "Launches", "Holidays", "On-call", "Workshops", "Interviews", "Releases", "Planning"], "highlight": "Rooms" }, "style": { "size": "title" }, "enter": { "move": "fade", "duration": "$duration.slow" } }
+      ],
+      "out": { "use": "transition/blur-dissolve", "params": { "blur": 24 } }
+    },
+    {
+      "id": "end",
+      "intent": "The name, alone, and hold.",
+      "uses": ["scene/end-card"],
+      "background": "inverse",
+      "layers": [
+        { "id": "name", "use": "type/scramble", "at": 0.3, "props": { "text": "CALENDAR" }, "style": { "size": "headline", "font": "mono" } }
+      ],
+      "hold": "$hold_end"
+    }
+  ]
+}

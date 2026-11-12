@@ -1,6 +1,7 @@
 ---
 slug: narrative/capability-through-type
 kind: narrative
+family: graphics
 summary: For features that can be shown through text itself.
 status: draft
 origin: observed

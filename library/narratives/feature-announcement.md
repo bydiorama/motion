@@ -1,6 +1,7 @@
 ---
 slug: narrative/feature-announcement
 kind: narrative
+family: product
 summary: For one new capability.
 status: draft
 origin: observed

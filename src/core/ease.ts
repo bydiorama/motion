@@ -1,0 +1,141 @@
+// Easing. Every curve is a pure function of progress or of elapsed seconds, so a
+// film can be drawn at any time, in any order.
+
+export const clamp = (x: number, lo = 0, hi = 1): number => Math.min(hi, Math.max(lo, x));
+export const lerp = (a: number, b: number, k: number): number => a + (b - a) * k;
+
+export type Bezier = readonly [number, number, number, number];
+export interface SpringSpec {
+  /** Seconds until the move first looks finished. */
+  duration: number;
+  /** 0 = no overshoot, 0.5 = lively. */
+  bounce?: number;
+}
+/** How long a move eased by a spring should last, so the overshoot has time to settle. */
+export const springSpan = (s: SpringSpec): number => s.duration * (1 + 2 * (s.bounce ?? 0));
+/** A named curve, a cubic-bezier, or a spring. */
+export type EaseSpec = string | Bezier | { spring: SpringSpec };
+
+/** Solves a CSS cubic-bezier for x, the same curve the browser would draw. */
+export function bezier(x1: number, y1: number, x2: number, y2: number): (x: number) => number {
+  const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+  const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+  const fx = (u: number) => ((ax * u + bx) * u + cx) * u;
+  const fy = (u: number) => ((ay * u + by) * u + cy) * u;
+  return (x) => {
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
+    let u = x;
+    for (let i = 0; i < 8; i++) {
+      const d = (3 * ax * u + 2 * bx) * u + cx;
+      if (Math.abs(d) < 1e-6) break;
+      u -= (fx(u) - x) / d;
+    }
+    // Newton can leave the unit interval on steep curves; bisect to be safe.
+    if (u < 0 || u > 1 || Math.abs(fx(u) - x) > 1e-4) {
+      let lo = 0, hi = 1;
+      for (let i = 0; i < 24; i++) {
+        u = (lo + hi) / 2;
+        if (fx(u) < x) lo = u; else hi = u;
+      }
+    }
+    return fy(u);
+  };
+}
+
+/** Progress of a spring that looks settled after `duration` seconds. May overshoot 1. */
+export function spring({ duration, bounce = 0 }: SpringSpec): (x: number) => number {
+  const w0 = (2 * Math.PI) / (Math.max(0.05, duration) * 1.2);
+  const z = clamp(1 - bounce, 0.05, 1);
+  return (x) => {
+    if (x <= 0) return 0;
+    if (x >= 1) return 1;
+    // Progress 0..1 covers the whole settling time, not just the first arrival.
+    const dt = x * duration * (1 + 2 * bounce);
+    if (z < 1) {
+      const wd = w0 * Math.sqrt(1 - z * z);
+      return 1 - Math.exp(-z * w0 * dt) * (Math.cos(wd * dt) + ((z * w0) / wd) * Math.sin(wd * dt));
+    }
+    return 1 - Math.exp(-w0 * dt) * (1 + w0 * dt);
+  };
+}
+
+/**
+ * The `ui.*` curves are the bydiorama/ui easing tokens (`--ui-ease-*`). A page that
+ * loads a ui theme replaces them with the theme's own values (see dom/tokens.ts).
+ */
+export const UI_EASE: Record<string, Bezier> = {
+  'ui.default': [0.2, 0, 0, 1],
+  'ui.in': [0.4, 0, 1, 1],
+  'ui.out': [0, 0, 0.2, 1],
+  'ui.spring': [0.22, 1, 0.36, 1],
+};
+
+/** The nearest cubic-bezier to each named curve: what a curve editor shows for it. */
+export const EASE_BEZIER: Record<string, Bezier> = {
+  linear: [0, 0, 1, 1], smooth: [0.45, 0, 0.55, 1],
+  'sine.in': [0.12, 0, 0.39, 0], 'sine.out': [0.61, 1, 0.88, 1], 'sine.inOut': [0.37, 0, 0.63, 1],
+  'cubic.in': [0.32, 0, 0.67, 0], 'cubic.out': [0.33, 1, 0.68, 1], 'cubic.inOut': [0.65, 0, 0.35, 1],
+  'expo.in': [0.7, 0, 0.84, 0], 'expo.out': [0.16, 1, 0.3, 1], 'expo.inOut': [0.87, 0, 0.13, 1],
+  'back.out': [0.34, 1.56, 0.64, 1],
+  ...UI_EASE,
+};
+
+const NAMED: Record<string, (x: number) => number> = {
+  linear: (x) => x,
+  'sine.in': (x) => 1 - Math.cos((x * Math.PI) / 2),
+  'sine.out': (x) => Math.sin((x * Math.PI) / 2),
+  'sine.inOut': (x) => -(Math.cos(Math.PI * x) - 1) / 2,
+  'cubic.in': (x) => x * x * x,
+  'cubic.out': (x) => 1 - Math.pow(1 - x, 3),
+  'cubic.inOut': (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2),
+  'expo.in': (x) => (x <= 0 ? 0 : Math.pow(2, 10 * x - 10)),
+  'expo.out': (x) => (x >= 1 ? 1 : 1 - Math.pow(2, -10 * x)),
+  'expo.inOut': (x) =>
+    x <= 0 ? 0 : x >= 1 ? 1 : x < 0.5 ? Math.pow(2, 20 * x - 10) / 2 : (2 - Math.pow(2, -20 * x + 10)) / 2,
+  'back.out': (x) => 1 + 2.70158 * Math.pow(x - 1, 3) + 1.70158 * Math.pow(x - 1, 2),
+  smooth: (x) => x * x * x * (x * (x * 6 - 15) + 10),
+};
+
+export const EASE_NAMES: readonly string[] = [...Object.keys(NAMED), ...Object.keys(UI_EASE)];
+
+export const isEaseSpec = (v: unknown): v is EaseSpec => {
+  if (typeof v === 'string') return true;
+  if (Array.isArray(v)) return v.length === 4 && v.every((n) => typeof n === 'number');
+  if (v && typeof v === 'object' && 'spring' in v) {
+    const s = (v as { spring: unknown }).spring;
+    return !!s && typeof s === 'object' && typeof (s as SpringSpec).duration === 'number';
+  }
+  return false;
+};
+
+/** Turns a spec into a function of progress 0..1. `overrides` carries theme curves. */
+export function resolveEase(spec: EaseSpec | undefined, overrides: Record<string, Bezier> = {}): (x: number) => number {
+  if (spec === undefined) return NAMED['expo.out']!;
+  if (typeof spec === 'string') {
+    const themed = overrides[spec] ?? UI_EASE[spec];
+    if (themed) return bezier(...themed);
+    const named = NAMED[spec];
+    if (!named) throw new Error(`Unknown ease "${spec}". Known: ${EASE_NAMES.join(', ')}`);
+    return (x) => named(clamp(x));
+  }
+  if (Array.isArray(spec)) return bezier(...(spec as Bezier));
+  return spring((spec as { spring: SpringSpec }).spring);
+}
+
+/** Eased progress 0..1 of a move that starts at `start` and lasts `duration` seconds. */
+export function progress(t: number, start: number, duration: number, ease: (x: number) => number): number {
+  if (duration <= 0) return t >= start ? 1 : 0;
+  return ease(clamp((t - start) / duration));
+}
+
+/** Seeded random, so renders repeat exactly. */
+export function rng(seed = 1): () => number {
+  let s = seed >>> 0 || 1;
+  return () => {
+    s = (s + 0x6d2b79f5) >>> 0;
+    let r = Math.imul(s ^ (s >>> 15), 1 | s);
+    r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+  };
+}
