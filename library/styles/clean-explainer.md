@@ -18,6 +18,12 @@ uses:
 - type/word-build
 - transition/blur-dissolve
 - fx/marquee-highlight
+- type/mask-reveal
+- type/scribble-highlight
+- scene/bar-chart
+- scene/line-chart
+- fx/odometer
+- transition/push
 avoids:
 - transition/torn-edge
 - texture/dither

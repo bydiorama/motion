@@ -33,6 +33,7 @@ beats:
   share: 5
   content: Product name with drifting collage
   primitives:
+  - type/char-cascade
   - type/typed-title
   - fx/depth-drift
 - name: collapse
@@ -51,6 +52,7 @@ beats:
   share: 52
   content: One feature every 2 to 3 s inside a fixed frame
   primitives:
+  - transition/slant-wipe
   - ui/tour-hold
   - transition/layout-locked-swap
   - transition/beat-cut

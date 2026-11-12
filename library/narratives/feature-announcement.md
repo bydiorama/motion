@@ -17,6 +17,7 @@ beats:
   share: 14
   content: Headline builds word by word
   primitives:
+  - type/mask-reveal
   - scene/kinetic-headline
   - type/word-build
   - type/inline-chips
@@ -24,6 +25,7 @@ beats:
   share: 14
   content: Big number with evidence around it
   primitives:
+  - fx/odometer
   - scene/stat-with-evidence
   - type/accent-number
 - name: prompt
@@ -42,6 +44,7 @@ beats:
   share: 8
   content: One line that widens the claim
   primitives:
+  - transition/push
   - transition/blur-dissolve
   - scene/kinetic-headline
 - name: breadth
@@ -54,6 +57,7 @@ beats:
   share: 12
   content: The highlight becomes the logo
   primitives:
+  - scene/logo-reveal
   - transition/collapse-to-anchor
   - scene/end-card
 since: 0.3.0

@@ -16,6 +16,9 @@ uses:
 - scene/specimen-grid
 - ui/collab-cursors
 - transition/light-dark-flip
+- type/tracking-in
+- type/scribble-highlight
+- type/mask-reveal
 avoids:
 - fx/mosaic-fill
 formats:

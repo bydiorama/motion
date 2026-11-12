@@ -205,6 +205,30 @@
                   "minItems": 2,
                   "maxItems": 3
                 }
+              },
+              "rotateX": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 3
+                }
+              },
+              "rotateY": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 3
+                }
+              },
+              "skew": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 3
+                }
               }
             }
           },
@@ -228,7 +252,14 @@
                 "enum": [
                   "transition/beat-cut",
                   "transition/blur-dissolve",
-                  "transition/step-wipe"
+                  "transition/step-wipe",
+                  "transition/push",
+                  "transition/iris",
+                  "transition/cover-reveal",
+                  "transition/dive-in",
+                  "transition/curtain",
+                  "transition/stack-over",
+                  "transition/slant-wipe"
                 ]
               },
               "duration": {
@@ -277,7 +308,25 @@
                     "fx/depth-drift",
                     "scene/marquee-wall",
                     "rig/orbit-ring",
-                    "texture/halftone-field"
+                    "texture/halftone-field",
+                    "type/mask-reveal",
+                    "type/char-cascade",
+                    "type/block-reveal",
+                    "type/word-roller",
+                    "type/tracking-in",
+                    "type/shimmer",
+                    "type/echo",
+                    "type/scribble-highlight",
+                    "fx/odometer",
+                    "fx/path-draw",
+                    "fx/shape-morph",
+                    "fx/grid-ripple",
+                    "scene/logo-reveal",
+                    "scene/bar-chart",
+                    "scene/line-chart",
+                    "texture/gradient-drift",
+                    "texture/grain",
+                    "ui/cursor-click"
                   ]
                 },
                 "props": {
@@ -390,7 +439,17 @@
                         "scale",
                         "blur",
                         "slide-left",
-                        "slide-right"
+                        "slide-right",
+                        "zoom",
+                        "pop",
+                        "focus",
+                        "mask-up",
+                        "mask-down",
+                        "wipe-up",
+                        "wipe-down",
+                        "wipe-left",
+                        "wipe-right",
+                        "swing"
                       ]
                     },
                     {
@@ -408,7 +467,17 @@
                             "scale",
                             "blur",
                             "slide-left",
-                            "slide-right"
+                            "slide-right",
+                            "zoom",
+                            "pop",
+                            "focus",
+                            "mask-up",
+                            "mask-down",
+                            "wipe-up",
+                            "wipe-down",
+                            "wipe-left",
+                            "wipe-right",
+                            "swing"
                           ]
                         },
                         "duration": {
@@ -439,6 +508,26 @@
                                 "expo.inOut",
                                 "back.out",
                                 "smooth",
+                                "quad.in",
+                                "quad.out",
+                                "quad.inOut",
+                                "quart.in",
+                                "quart.out",
+                                "quart.inOut",
+                                "quint.in",
+                                "quint.out",
+                                "quint.inOut",
+                                "circ.in",
+                                "circ.out",
+                                "circ.inOut",
+                                "back.in",
+                                "back.inOut",
+                                "elastic.out",
+                                "expressive.out",
+                                "expressive.in",
+                                "expressive.inOut",
+                                "snap.out",
+                                "anticipate.in",
                                 "ui.default",
                                 "ui.in",
                                 "ui.out",
@@ -498,7 +587,17 @@
                         "scale",
                         "blur",
                         "slide-left",
-                        "slide-right"
+                        "slide-right",
+                        "zoom",
+                        "pop",
+                        "focus",
+                        "mask-up",
+                        "mask-down",
+                        "wipe-up",
+                        "wipe-down",
+                        "wipe-left",
+                        "wipe-right",
+                        "swing"
                       ]
                     },
                     {
@@ -516,7 +615,17 @@
                             "scale",
                             "blur",
                             "slide-left",
-                            "slide-right"
+                            "slide-right",
+                            "zoom",
+                            "pop",
+                            "focus",
+                            "mask-up",
+                            "mask-down",
+                            "wipe-up",
+                            "wipe-down",
+                            "wipe-left",
+                            "wipe-right",
+                            "swing"
                           ]
                         },
                         "duration": {
@@ -547,6 +656,26 @@
                                 "expo.inOut",
                                 "back.out",
                                 "smooth",
+                                "quad.in",
+                                "quad.out",
+                                "quad.inOut",
+                                "quart.in",
+                                "quart.out",
+                                "quart.inOut",
+                                "quint.in",
+                                "quint.out",
+                                "quint.inOut",
+                                "circ.in",
+                                "circ.out",
+                                "circ.inOut",
+                                "back.in",
+                                "back.inOut",
+                                "elastic.out",
+                                "expressive.out",
+                                "expressive.in",
+                                "expressive.inOut",
+                                "snap.out",
+                                "anticipate.in",
                                 "ui.default",
                                 "ui.in",
                                 "ui.out",
@@ -653,6 +782,30 @@
                       }
                     },
                     "blur": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 3
+                      }
+                    },
+                    "rotateX": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 3
+                      }
+                    },
+                    "rotateY": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 3
+                      }
+                    },
+                    "skew": {
                       "type": "array",
                       "items": {
                         "type": "array",

@@ -82,27 +82,69 @@ function samplers(tracks: Tracks | undefined, defaultEase: EaseSpec, overrides: 
   return out;
 }
 
-interface Pose { x: number; y: number; scale: number; rotate: number; opacity: number; blur: number }
+interface Pose {
+  x: number; y: number; scale: number; rotate: number; opacity: number; blur: number;
+  rotateX: number; rotateY: number; skew: number;
+  /** Travel as a share of the layer's own height, for masks. */
+  yShare: number;
+  /** Clipped share of each side, 0..1: top, right, bottom, left. */
+  clip: [number, number, number, number];
+}
+const rest = (): Pose => ({ x: 0, y: 0, scale: 1, rotate: 0, opacity: 1, blur: 0, rotateX: 0, rotateY: 0, skew: 0, yShare: 0, clip: [0, 0, 0, 0] });
 
 function applyMove(p: Pose, m: ResolvedMove, k: number, leaving: boolean) {
   // `gone` is how far from rest: 1 before an entrance starts and after an exit ends.
+  // The overshoot of a springy ease is kept (gone < 0), so things can pass their mark.
   const gone = leaving ? k : 1 - k;
+  const g = Math.max(0, Math.min(1, gone));
   const amount = m.amount ?? 0;
   const dir = leaving ? -1 : 1;
-  p.opacity *= 1 - gone;
-  if (m.move === 'rise') p.y += dir * gone * amount;
-  else if (m.move === 'drop') p.y -= dir * gone * amount;
-  else if (m.move === 'slide-left') p.x += dir * gone * amount;
-  else if (m.move === 'slide-right') p.x -= dir * gone * amount;
-  else if (m.move === 'scale') p.scale *= 1 - gone * amount;
-  else if (m.move === 'blur') p.blur += gone * amount;
+  const fades = !m.move.startsWith('mask-') && !m.move.startsWith('wipe-');
+  if (fades) p.opacity *= m.move === 'pop' || m.move === 'swing' ? 1 - Math.min(1, g * 2.5) : 1 - g;
+  switch (m.move) {
+    case 'rise': p.y += dir * gone * amount; break;
+    case 'drop': p.y -= dir * gone * amount; break;
+    case 'slide-left': p.x += dir * gone * amount; break;
+    case 'slide-right': p.x -= dir * gone * amount; break;
+    case 'scale': case 'pop': p.scale *= 1 - gone * amount; break;
+    case 'zoom': p.scale *= 1 + gone * amount; break;
+    case 'blur': p.blur += g * amount; break;
+    case 'focus': p.blur += g * amount * 0.5; p.y += dir * gone * amount; break;
+    // A mask keeps going the way it came: in from below, out through the top.
+    case 'mask-up': p.yShare += gone * (leaving ? -1 : 1); break;
+    case 'mask-down': p.yShare += gone * (leaving ? 1 : -1); break;
+    // A wipe's edge travels in the named direction, uncovering or covering.
+    case 'wipe-up': p.clip[leaving ? 2 : 0] = Math.max(p.clip[leaving ? 2 : 0], g); break;
+    case 'wipe-down': p.clip[leaving ? 0 : 2] = Math.max(p.clip[leaving ? 0 : 2], g); break;
+    case 'wipe-left': p.clip[leaving ? 3 : 1] = Math.max(p.clip[leaving ? 3 : 1], g); break;
+    case 'wipe-right': p.clip[leaving ? 1 : 3] = Math.max(p.clip[leaving ? 1 : 3], g); break;
+    case 'swing': p.rotateX += dir * gone * amount; break;
+    default: break;
+  }
 }
 
-function writePose(el: HTMLElement, p: Pose) {
-  const still = p.x === 0 && p.y === 0 && p.scale === 1 && p.rotate === 0;
-  el.style.transform = still ? '' : `translate(${p.x}px, ${p.y}px) rotate(${p.rotate}deg) scale(${p.scale})`;
+function writePose(el: HTMLElement, p: Pose, depth: number) {
+  const flat = p.rotateX === 0 && p.rotateY === 0;
+  const still = p.x === 0 && p.y === 0 && p.scale === 1 && p.rotate === 0 && p.skew === 0 && p.yShare === 0 && flat;
+  const parts: string[] = [];
+  if (!flat) parts.push(`perspective(${depth}px)`);
+  if (p.yShare !== 0) parts.push(`translateY(${p.yShare * 100}%)`);
+  parts.push(`translate(${p.x}px, ${p.y}px)`);
+  if (!flat) parts.push(`rotateX(${p.rotateX}deg) rotateY(${p.rotateY}deg)`);
+  parts.push(`rotate(${p.rotate}deg)`);
+  if (p.skew !== 0) parts.push(`skewX(${p.skew}deg)`);
+  parts.push(`scale(${p.scale})`);
+  el.style.transform = still ? '' : parts.join(' ');
   el.style.opacity = p.opacity >= 1 ? '' : String(Math.max(0, p.opacity));
   el.style.filter = p.blur > 0.01 ? `blur(${p.blur}px)` : '';
+  // A mask hides what has left the layer's own box; it travels with the layer,
+  // so the clip is moved back by the same share.
+  const [t, r, b, l] = p.clip;
+  const mt = p.yShare < 0 ? -p.yShare : 0, mb = p.yShare > 0 ? p.yShare : 0;
+  const top = Math.max(t, mt), bottom = Math.max(b, mb);
+  el.style.clipPath = top + r + bottom + l > 0.0001
+    ? `inset(${(top * 100).toFixed(3)}% ${(r * 100).toFixed(3)}% ${(bottom * 100).toFixed(3)}% ${(l * 100).toFixed(3)}%)`
+    : '';
 }
 
 /** White or near-black, whichever has more contrast against the colour. */
@@ -225,12 +267,15 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
       const { spec } = scene;
       const on = t >= spec.start && (t < spec.end || scene === last);
       scene.el.style.visibility = on ? 'visible' : 'hidden';
+      // Off-screen scenes leave rendering entirely: some content (blend modes, SVG
+      // filters) still paints under visibility: hidden. Layout was measured at build.
+      scene.el.style.display = on ? '' : 'none';
       if (!on) return;
       const local = t - spec.start;
 
-      const cam: Pose = { x: 0, y: 0, scale: 1, rotate: 0, opacity: 1, blur: 0 };
+      const cam = rest();
       sample(cam, scene.tracks, local);
-      writePose(scene.cam, cam);
+      writePose(scene.cam, cam, W * 1.2);
 
       for (const layer of scene.layers) {
         const l = layer.spec;
@@ -239,11 +284,11 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
         layer.el.style.visibility = gone ? 'hidden' : 'inherit';
         if (gone) continue;
         layer.instance.seek(lt);
-        const pose: Pose = { x: 0, y: 0, scale: 1, rotate: 0, opacity: 1, blur: 0 };
+        const pose = rest();
         if (l.enter && layer.ease.enter) applyMove(pose, l.enter, progress(local, l.enter.start, l.enter.duration, layer.ease.enter), false);
         if (l.exit && layer.ease.exit && local >= l.exit.start) applyMove(pose, l.exit, progress(local, l.exit.start, l.exit.duration, layer.ease.exit), true);
         sample(pose, layer.tracks, lt);
-        writePose(layer.el, pose);
+        writePose(layer.el, pose, W * 0.8);
       }
 
       // Hand-over: this scene is the outgoing one while the next has already started.
@@ -281,6 +326,9 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
     if (s.rotate) pose.rotate += s.rotate(t);
     if (s.opacity) pose.opacity *= s.opacity(t);
     if (s.blur) pose.blur += s.blur(t);
+    if (s.rotateX) pose.rotateX += s.rotateX(t);
+    if (s.rotateY) pose.rotateY += s.rotateY(t);
+    if (s.skew) pose.skew += s.skew(t);
   }
 
   function audit(t: number): LayerBox[] {
@@ -288,17 +336,22 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
     const frame = stage.getBoundingClientRect();
     const k = frame.width > 0 ? W / frame.width : 1;
     const boxes: LayerBox[] = [];
-    for (const scene of scenes) {
-      if (scene.el.style.visibility === 'hidden') continue;
+    // A transition moves whole scenes off stage on purpose, so scenes in a hand-over are not audited.
+    const moving = new Set<number>();
+    scenes.forEach((s, i) => { if (s.handover) moving.add(i).add(i + 1); });
+    for (const [i, scene] of scenes.entries()) {
+      if (scene.el.style.visibility === 'hidden' || moving.has(i)) continue;
       for (const layer of scene.layers) {
         if (layer.el.style.visibility === 'hidden') continue;
+        // Full-bleed layers (textures, fields) may bleed past the edge by design.
+        const bleed = layer.el.offsetWidth >= W - 1 && layer.el.offsetHeight >= H - 1;
         const r = layer.el.getBoundingClientRect();
         const x = (r.left - frame.left) * k, y = (r.top - frame.top) * k, width = r.width * k, height = r.height * k;
         const round = (n: number) => Math.round(n * 10) / 10;
         boxes.push({
           scene: scene.spec.id, layer: layer.spec.id, use: layer.spec.use,
           x: round(x), y: round(y), width: round(width), height: round(height),
-          off: { left: round(Math.max(0, -x)), top: round(Math.max(0, -y)), right: round(Math.max(0, x + width - W)), bottom: round(Math.max(0, y + height - H)) },
+          off: bleed ? { left: 0, top: 0, right: 0, bottom: 0 } : { left: round(Math.max(0, -x)), top: round(Math.max(0, -y)), right: round(Math.max(0, x + width - W)), bottom: round(Math.max(0, y + height - H)) },
           empty: width < 1 || height < 1,
         });
       }

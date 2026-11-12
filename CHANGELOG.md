@@ -1,6 +1,15 @@
 # Changelog
 
 ## Unreleased
+- Added `docs/CRAFT.md`: the numbers behind designed motion — easing roles, spring presets, a duration scale for video, stagger and order, text reveals, composition and safe areas, transitions, logo-reveal patterns, end cards, data staging and loops. The `motion-film` skill reads it.
+- Eases: `quad`, `quart`, `quint` and `circ` (in, out, in-out), `back.in`, `back.inOut`, `elastic.out`, and five expressive curves: `expressive.out`, `expressive.in`, `expressive.inOut`, `snap.out`, `anticipate.in`.
+- Moves: `zoom`, `pop`, `focus`, `mask-up`, `mask-down`, `wipe-up`, `wipe-down`, `wipe-left`, `wipe-right`, `swing`. Masks and wipes uncover without fading; `pop` and `swing` bring their own spring when no ease is given. Tracks gain `rotateX`, `rotateY` and `skew`.
+- Props can be lists of numbers (`number[]`), for charts.
+- 18 primitives drawn by the runtime: `type/mask-reveal`, `type/char-cascade`, `type/block-reveal`, `type/word-roller`, `type/tracking-in`, `type/shimmer`, `type/echo`, `type/scribble-highlight`, `fx/odometer`, `fx/path-draw`, `fx/shape-morph`, `fx/grid-ripple`, `scene/logo-reveal`, `scene/bar-chart`, `scene/line-chart`, `texture/gradient-drift`, `texture/grain`, `ui/cursor-click`. Shared helpers split text into masked lines, words and letters, stagger from the start, end, centre, edges or at random (seeded, by distance on grids), and resample shapes for morphing.
+- 7 transitions drawn by the runtime: `transition/push`, `transition/iris`, `transition/cover-reveal`, `transition/dive-in`, `transition/curtain`, `transition/stack-over`, `transition/slant-wipe`.
+- Library: entries for the new primitives (most now `specified`), with params matching the runtime; `style/kinetic-poster` developed; styles and narratives use the new moves, drawable ones first so briefs and animatics can show them.
+- Added `films/craft-reel.film.json`, a reel that exercises every new move.
+- Runtime: scenes off screen are now `display: none` as well as hidden, because blend modes and SVG filters still painted through `visibility: hidden` and made frames depend on what was drawn before. Transitions hand over with scene opacity, never visibility. `check` no longer reports layers off stage while their scene is in a transition, or full-bleed textures that bleed by design. The primitive contract now says: children shown again use visibility `inherit`, never `visible`.
 - Added `motion wizard`: a one-question-per-screen page that turns a video type, feel, message, moves, length and formats into a brief to paste into Claude or ChatGPT. `--out` writes it as a single HTML file.
 - Added `motion brief <answers.json>`: the same brief without a browser. Briefs are deterministic, list drawable and not-yet-drawable moves apart, and include a starter film that validates.
 - Added `library.json`: styles, narratives and primitives from the library's front matter, written by `motion catalog`.

@@ -43,6 +43,26 @@
     "expo.inOut",
     "back.out",
     "smooth",
+    "quad.in",
+    "quad.out",
+    "quad.inOut",
+    "quart.in",
+    "quart.out",
+    "quart.inOut",
+    "quint.in",
+    "quint.out",
+    "quint.inOut",
+    "circ.in",
+    "circ.out",
+    "circ.inOut",
+    "back.in",
+    "back.inOut",
+    "elastic.out",
+    "expressive.out",
+    "expressive.in",
+    "expressive.inOut",
+    "snap.out",
+    "anticipate.in",
     "ui.default",
     "ui.in",
     "ui.out",
@@ -55,7 +75,17 @@
     "scale",
     "blur",
     "slide-left",
-    "slide-right"
+    "slide-right",
+    "zoom",
+    "pop",
+    "focus",
+    "mask-up",
+    "mask-down",
+    "wipe-up",
+    "wipe-down",
+    "wipe-left",
+    "wipe-right",
+    "swing"
   ],
   "tracks": [
     "x",
@@ -63,7 +93,10 @@
     "scale",
     "rotate",
     "opacity",
-    "blur"
+    "blur",
+    "rotateX",
+    "rotateY",
+    "skew"
   ],
   "sizes": [
     "hero",
@@ -602,6 +635,1112 @@
           "label": "Opacity"
         }
       }
+    },
+    {
+      "slug": "type/mask-reveal",
+      "summary": "Lines or words slide up from under an edge, one after another.",
+      "props": {
+        "text": {
+          "type": "string",
+          "required": true,
+          "label": "The text. Use \\n to set the line breaks yourself."
+        },
+        "accent": {
+          "type": "string[]",
+          "default": [],
+          "label": "Words set in the accent colour"
+        }
+      },
+      "params": {
+        "unit": {
+          "type": "choice",
+          "default": "line",
+          "options": [
+            "line",
+            "word"
+          ],
+          "label": "What rises together"
+        },
+        "stagger": {
+          "type": "number",
+          "default": 0.08,
+          "min": 0.04,
+          "max": 0.16,
+          "step": 0.005,
+          "unit": "s",
+          "label": "Delay between units"
+        },
+        "duration": {
+          "type": "number",
+          "default": 0.9,
+          "min": 0.5,
+          "max": 1.4,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time per unit"
+        },
+        "tilt": {
+          "type": "number",
+          "default": 0,
+          "min": 0,
+          "max": 8,
+          "step": 0.5,
+          "unit": "deg",
+          "label": "Tilt that settles as it rises"
+        },
+        "from": {
+          "type": "choice",
+          "default": "start",
+          "options": [
+            "start",
+            "end",
+            "center",
+            "edges",
+            "random"
+          ],
+          "label": "Which unit goes first"
+        },
+        "ease": {
+          "type": "ease",
+          "default": "expressive.out",
+          "label": "Curve of each rise"
+        }
+      }
+    },
+    {
+      "slug": "type/char-cascade",
+      "summary": "Letters arrive one by one: rising, turning, growing or coming into focus.",
+      "props": {
+        "text": {
+          "type": "string",
+          "required": true,
+          "label": "The text"
+        },
+        "accent": {
+          "type": "string[]",
+          "default": [],
+          "label": "Words set in the accent colour"
+        }
+      },
+      "params": {
+        "stagger": {
+          "type": "number",
+          "default": 0.03,
+          "min": 0.015,
+          "max": 0.06,
+          "step": 0.005,
+          "unit": "s",
+          "label": "Delay between letters"
+        },
+        "char_duration": {
+          "type": "number",
+          "default": 0.6,
+          "min": 0.3,
+          "max": 1,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time per letter"
+        },
+        "from": {
+          "type": "choice",
+          "default": "start",
+          "options": [
+            "start",
+            "end",
+            "center",
+            "edges",
+            "random"
+          ],
+          "label": "Which letter goes first"
+        },
+        "rise": {
+          "type": "number",
+          "default": 0.6,
+          "min": -1,
+          "max": 1.2,
+          "step": 0.05,
+          "unit": "em",
+          "label": "Rise (negative drops in)"
+        },
+        "rotate": {
+          "type": "number",
+          "default": 0,
+          "min": -90,
+          "max": 90,
+          "step": 1,
+          "unit": "deg",
+          "label": "Turn that settles"
+        },
+        "scale": {
+          "type": "number",
+          "default": 1,
+          "min": 0,
+          "max": 1.6,
+          "step": 0.05,
+          "unit": "x",
+          "label": "Start scale"
+        },
+        "blur": {
+          "type": "number",
+          "default": 8,
+          "min": 0,
+          "max": 24,
+          "step": 1,
+          "unit": "px",
+          "label": "Start blur"
+        }
+      }
+    },
+    {
+      "slug": "type/block-reveal",
+      "summary": "A solid block covers each line, then retracts as the line slides out from behind it.",
+      "props": {
+        "text": {
+          "type": "string",
+          "required": true,
+          "label": "The text. Use \\n to set the line breaks"
+        },
+        "accent": {
+          "type": "string[]",
+          "default": [],
+          "label": "Words set in the accent colour"
+        },
+        "fill": {
+          "type": "string",
+          "default": "accent",
+          "label": "Block colour: accent, inverse, primary or a CSS colour"
+        }
+      },
+      "params": {
+        "duration": {
+          "type": "number",
+          "default": 0.8,
+          "min": 0.5,
+          "max": 1.2,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time for one block to grow and retract"
+        },
+        "stagger": {
+          "type": "number",
+          "default": 0.08,
+          "min": 0.03,
+          "max": 0.2,
+          "step": 0.01,
+          "unit": "s",
+          "label": "Delay between lines"
+        },
+        "direction": {
+          "type": "choice",
+          "default": "right",
+          "options": [
+            "right",
+            "left"
+          ],
+          "label": "Which way the block travels"
+        }
+      }
+    },
+    {
+      "slug": "type/word-roller",
+      "summary": "Words roll vertically in a slot.",
+      "props": {
+        "before": {
+          "type": "string",
+          "default": "",
+          "label": "Text before the slot"
+        },
+        "words": {
+          "type": "string[]",
+          "required": true,
+          "label": "Words that take turns in the slot; the last one stays"
+        },
+        "after": {
+          "type": "string",
+          "default": "",
+          "label": "Text after the slot"
+        }
+      },
+      "params": {
+        "per_word": {
+          "type": "number",
+          "default": 0.9,
+          "min": 0.5,
+          "max": 1.6,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time each word stays"
+        },
+        "roll": {
+          "type": "number",
+          "default": 0.5,
+          "min": 0.3,
+          "max": 0.7,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time to roll to the next"
+        },
+        "direction": {
+          "type": "choice",
+          "default": "up",
+          "options": [
+            "up",
+            "down"
+          ],
+          "label": "Roll direction"
+        }
+      }
+    },
+    {
+      "slug": "type/tracking-in",
+      "summary": "Wide-spaced letters close up to their set spacing while coming into focus.",
+      "props": {
+        "text": {
+          "type": "string",
+          "required": true,
+          "label": "The title"
+        }
+      },
+      "params": {
+        "duration": {
+          "type": "number",
+          "default": 1.6,
+          "min": 0.8,
+          "max": 3,
+          "step": 0.1,
+          "unit": "s",
+          "label": "Time to close up"
+        },
+        "spread": {
+          "type": "number",
+          "default": 0.5,
+          "min": 0.1,
+          "max": 1.2,
+          "step": 0.05,
+          "unit": "em",
+          "label": "Extra spacing at the start"
+        },
+        "blur": {
+          "type": "number",
+          "default": 12,
+          "min": 0,
+          "max": 30,
+          "step": 1,
+          "unit": "px",
+          "label": "Start blur"
+        }
+      }
+    },
+    {
+      "slug": "type/shimmer",
+      "summary": "A band of light passes across the letters, again and again.",
+      "props": {
+        "text": {
+          "type": "string",
+          "required": true,
+          "label": "The text"
+        }
+      },
+      "params": {
+        "period": {
+          "type": "number",
+          "default": 2.4,
+          "min": 1.2,
+          "max": 4,
+          "step": 0.1,
+          "unit": "s",
+          "label": "Time between passes"
+        },
+        "band": {
+          "type": "number",
+          "default": 0.22,
+          "min": 0.1,
+          "max": 0.5,
+          "step": 0.01,
+          "unit": "ratio",
+          "label": "Width of the band"
+        },
+        "strength": {
+          "type": "number",
+          "default": 0.65,
+          "min": 0.3,
+          "max": 1,
+          "step": 0.05,
+          "unit": "ratio",
+          "label": "How dim the text is outside the band"
+        }
+      }
+    },
+    {
+      "slug": "type/echo",
+      "summary": "Copies of a headline trail behind it.",
+      "props": {
+        "text": {
+          "type": "string",
+          "required": true,
+          "label": "The headline"
+        }
+      },
+      "params": {
+        "copies": {
+          "type": "number",
+          "default": 4,
+          "min": 3,
+          "max": 6,
+          "step": 1,
+          "unit": "copies",
+          "label": "Outlined copies"
+        },
+        "lag": {
+          "type": "number",
+          "default": 0.06,
+          "min": 0.03,
+          "max": 0.12,
+          "step": 0.005,
+          "unit": "s",
+          "label": "Delay between copies"
+        },
+        "distance": {
+          "type": "number",
+          "default": 1.2,
+          "min": 0.4,
+          "max": 3,
+          "step": 0.1,
+          "unit": "em",
+          "label": "How far below they start"
+        },
+        "settle": {
+          "type": "number",
+          "default": 0,
+          "min": 0,
+          "max": 0.6,
+          "step": 0.02,
+          "unit": "em",
+          "label": "Gap between copies at rest (0 hides them under the headline)"
+        }
+      }
+    },
+    {
+      "slug": "type/scribble-highlight",
+      "summary": "A hand-drawn mark draws under or around a word.",
+      "props": {
+        "text": {
+          "type": "string",
+          "required": true,
+          "label": "The sentence"
+        },
+        "mark": {
+          "type": "string[]",
+          "required": true,
+          "label": "Words to mark (a run of words gets one mark)"
+        }
+      },
+      "params": {
+        "duration": {
+          "type": "number",
+          "default": 0.5,
+          "min": 0.3,
+          "max": 0.9,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time to draw the mark"
+        },
+        "kind": {
+          "type": "choice",
+          "default": "underline",
+          "options": [
+            "underline",
+            "circle",
+            "marker",
+            "strike"
+          ],
+          "label": "Mark"
+        },
+        "delay": {
+          "type": "number",
+          "default": 0.3,
+          "min": 0,
+          "max": 2,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Wait before drawing"
+        },
+        "weight": {
+          "type": "number",
+          "default": 0.08,
+          "min": 0.03,
+          "max": 0.4,
+          "step": 0.01,
+          "unit": "em",
+          "label": "Stroke weight (a marker uses about 0.35)"
+        }
+      }
+    },
+    {
+      "slug": "fx/odometer",
+      "summary": "Each digit rolls in its own column and lands on the value.",
+      "props": {
+        "value": {
+          "type": "number",
+          "required": true,
+          "label": "The number to land on"
+        },
+        "decimals": {
+          "type": "number",
+          "default": 0,
+          "label": "Decimal places"
+        },
+        "prefix": {
+          "type": "string",
+          "default": "",
+          "label": "Text before the number"
+        },
+        "suffix": {
+          "type": "string",
+          "default": "",
+          "label": "Text after the number"
+        }
+      },
+      "params": {
+        "duration": {
+          "type": "number",
+          "default": 1.6,
+          "min": 0.8,
+          "max": 3,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time for the last column to land"
+        },
+        "stagger": {
+          "type": "number",
+          "default": 0.08,
+          "min": 0,
+          "max": 0.2,
+          "step": 0.01,
+          "unit": "s",
+          "label": "Delay between columns, right to left"
+        },
+        "spins": {
+          "type": "number",
+          "default": 1,
+          "min": 0,
+          "max": 3,
+          "step": 1,
+          "unit": "turns",
+          "label": "Extra turns per column to its right"
+        },
+        "group": {
+          "type": "boolean",
+          "default": true,
+          "label": "Thousands separators"
+        }
+      }
+    },
+    {
+      "slug": "fx/path-draw",
+      "summary": "Lines draw themselves along their paths, then the shapes fill.",
+      "props": {
+        "paths": {
+          "type": "string[]",
+          "required": true,
+          "label": "SVG path data, one path per item, drawn in order"
+        },
+        "viewbox": {
+          "type": "string",
+          "default": "0 0 100 100",
+          "label": "SVG viewBox the paths are drawn in"
+        },
+        "fill": {
+          "type": "string",
+          "default": "none",
+          "label": "Fill once drawn: none, accent, primary or a CSS colour"
+        }
+      },
+      "params": {
+        "draw": {
+          "type": "number",
+          "default": 1,
+          "min": 0.4,
+          "max": 2.5,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time to draw one path"
+        },
+        "stagger": {
+          "type": "number",
+          "default": 0.12,
+          "min": 0,
+          "max": 0.5,
+          "step": 0.01,
+          "unit": "s",
+          "label": "Delay between paths"
+        },
+        "width": {
+          "type": "number",
+          "default": 30,
+          "min": 4,
+          "max": 100,
+          "step": 1,
+          "unit": "% of stage width",
+          "label": "Drawing width"
+        },
+        "stroke": {
+          "type": "number",
+          "default": 2,
+          "min": 0.5,
+          "max": 12,
+          "step": 0.25,
+          "unit": "px",
+          "label": "Stroke weight"
+        },
+        "fill_time": {
+          "type": "number",
+          "default": 0.4,
+          "min": 0.1,
+          "max": 1,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time for the fill to arrive"
+        }
+      }
+    },
+    {
+      "slug": "fx/shape-morph",
+      "summary": "One shape grows in, then turns into the next, and the next.",
+      "props": {
+        "shapes": {
+          "type": "string[]",
+          "default": [
+            "circle",
+            "squircle",
+            "star"
+          ],
+          "label": "Shapes in order: circle, square, squircle, triangle, diamond, hexagon, star, pill, plus, blob"
+        },
+        "fill": {
+          "type": "string",
+          "default": "accent",
+          "label": "accent, primary, surface, inverse, outline or a CSS colour"
+        }
+      },
+      "params": {
+        "hold": {
+          "type": "number",
+          "default": 0.6,
+          "min": 0.2,
+          "max": 2,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time each shape holds"
+        },
+        "morph": {
+          "type": "number",
+          "default": 0.7,
+          "min": 0.4,
+          "max": 1.2,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time to turn into the next"
+        },
+        "size": {
+          "type": "number",
+          "default": 22,
+          "min": 6,
+          "max": 60,
+          "step": 0.5,
+          "unit": "% of stage width",
+          "label": "Size"
+        },
+        "turn": {
+          "type": "number",
+          "default": 90,
+          "min": 0,
+          "max": 180,
+          "step": 5,
+          "unit": "deg",
+          "label": "Rotation per morph"
+        }
+      }
+    },
+    {
+      "slug": "fx/grid-ripple",
+      "summary": "A field of dots or tiles appears in a wave from one point, then keeps breathing.",
+      "props": {
+        "cell": {
+          "type": "string",
+          "default": "dot",
+          "label": "dot, square or plus"
+        }
+      },
+      "params": {
+        "cols": {
+          "type": "number",
+          "default": 24,
+          "min": 8,
+          "max": 48,
+          "step": 1,
+          "unit": "columns",
+          "label": "Columns (rows follow the frame)"
+        },
+        "stagger": {
+          "type": "number",
+          "default": 0.05,
+          "min": 0.02,
+          "max": 0.1,
+          "step": 0.005,
+          "unit": "s",
+          "label": "Delay per cell of distance"
+        },
+        "from": {
+          "type": "choice",
+          "default": "center",
+          "options": [
+            "start",
+            "end",
+            "center",
+            "edges",
+            "random"
+          ],
+          "label": "Where the wave starts"
+        },
+        "size": {
+          "type": "number",
+          "default": 0.22,
+          "min": 0.05,
+          "max": 0.9,
+          "step": 0.01,
+          "unit": "ratio of cell",
+          "label": "Mark size"
+        },
+        "pulse": {
+          "type": "number",
+          "default": 0.35,
+          "min": 0,
+          "max": 1,
+          "step": 0.05,
+          "unit": "ratio",
+          "label": "How much the field keeps breathing afterwards"
+        },
+        "opacity": {
+          "type": "number",
+          "default": 0.5,
+          "min": 0.1,
+          "max": 1,
+          "step": 0.05,
+          "unit": "ratio",
+          "label": "Opacity"
+        }
+      }
+    },
+    {
+      "slug": "scene/logo-reveal",
+      "summary": "The mark lands, then moves aside as the name slides out from behind it.",
+      "props": {
+        "name": {
+          "type": "string",
+          "default": "",
+          "label": "Wordmark text. Left out, the mark lands alone"
+        },
+        "tagline": {
+          "type": "string",
+          "default": "",
+          "label": "One short line under the lockup"
+        },
+        "mark_path": {
+          "type": "string",
+          "default": "",
+          "label": "SVG path data of the mark. Left out, a shape is used"
+        },
+        "mark_viewbox": {
+          "type": "string",
+          "default": "0 0 100 100",
+          "label": "viewBox of mark_path"
+        },
+        "mark_shape": {
+          "type": "string",
+          "default": "squircle",
+          "label": "Shape used when there is no mark_path"
+        }
+      },
+      "params": {
+        "mode": {
+          "type": "choice",
+          "default": "pop",
+          "options": [
+            "pop",
+            "draw",
+            "iris"
+          ],
+          "label": "How the mark arrives"
+        },
+        "arrive": {
+          "type": "number",
+          "default": 0.8,
+          "min": 0.5,
+          "max": 1.6,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time for the mark to land"
+        },
+        "slide": {
+          "type": "number",
+          "default": 0.8,
+          "min": 0.5,
+          "max": 1.2,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time for the name to slide out"
+        },
+        "mark_size": {
+          "type": "number",
+          "default": 1.1,
+          "min": 0.6,
+          "max": 2,
+          "step": 0.05,
+          "unit": "em",
+          "label": "Mark height, relative to the name"
+        },
+        "gap": {
+          "type": "number",
+          "default": 0.35,
+          "min": 0.1,
+          "max": 1,
+          "step": 0.05,
+          "unit": "em",
+          "label": "Gap between mark and name"
+        }
+      }
+    },
+    {
+      "slug": "scene/bar-chart",
+      "summary": "Bars grow from the baseline one after another, each value counting up with it.",
+      "props": {
+        "values": {
+          "type": "number[]",
+          "required": true,
+          "label": "Bar values"
+        },
+        "labels": {
+          "type": "string[]",
+          "default": [],
+          "label": "Bar labels, in the same order"
+        },
+        "highlight": {
+          "type": "string",
+          "default": "",
+          "label": "Label of the one bar set in the accent"
+        },
+        "suffix": {
+          "type": "string",
+          "default": "",
+          "label": "Text after each value, e.g. %"
+        },
+        "decimals": {
+          "type": "number",
+          "default": 0,
+          "label": "Decimal places"
+        }
+      },
+      "params": {
+        "grow": {
+          "type": "number",
+          "default": 0.9,
+          "min": 0.5,
+          "max": 1.4,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time for one bar to grow"
+        },
+        "stagger": {
+          "type": "number",
+          "default": 0.07,
+          "min": 0.03,
+          "max": 0.15,
+          "step": 0.005,
+          "unit": "s",
+          "label": "Delay between bars"
+        },
+        "orientation": {
+          "type": "choice",
+          "default": "vertical",
+          "options": [
+            "vertical",
+            "horizontal"
+          ],
+          "label": "Bars stand or lie"
+        },
+        "width": {
+          "type": "number",
+          "default": 64,
+          "min": 30,
+          "max": 90,
+          "step": 1,
+          "unit": "% of stage width",
+          "label": "Chart width"
+        },
+        "height": {
+          "type": "number",
+          "default": 46,
+          "min": 20,
+          "max": 75,
+          "step": 1,
+          "unit": "% of stage height",
+          "label": "Chart height"
+        }
+      }
+    },
+    {
+      "slug": "scene/line-chart",
+      "summary": "A line draws left to right behind a leading dot, the area fills, the last value lands.",
+      "props": {
+        "values": {
+          "type": "number[]",
+          "required": true,
+          "label": "Values, left to right"
+        },
+        "labels": {
+          "type": "string[]",
+          "default": [],
+          "label": "Labels under the first and last points (two items), or one per point"
+        },
+        "suffix": {
+          "type": "string",
+          "default": "",
+          "label": "Text after the end value"
+        },
+        "decimals": {
+          "type": "number",
+          "default": 0,
+          "label": "Decimal places of the end value"
+        }
+      },
+      "params": {
+        "draw": {
+          "type": "number",
+          "default": 2,
+          "min": 1.2,
+          "max": 3.5,
+          "step": 0.1,
+          "unit": "s",
+          "label": "Time to draw the line"
+        },
+        "width": {
+          "type": "number",
+          "default": 70,
+          "min": 30,
+          "max": 90,
+          "step": 1,
+          "unit": "% of stage width",
+          "label": "Chart width"
+        },
+        "height": {
+          "type": "number",
+          "default": 44,
+          "min": 20,
+          "max": 75,
+          "step": 1,
+          "unit": "% of stage height",
+          "label": "Chart height"
+        },
+        "area": {
+          "type": "boolean",
+          "default": true,
+          "label": "Fill under the line"
+        },
+        "grid": {
+          "type": "number",
+          "default": 4,
+          "min": 0,
+          "max": 8,
+          "step": 1,
+          "unit": "lines",
+          "label": "Guide lines"
+        }
+      }
+    },
+    {
+      "slug": "texture/gradient-drift",
+      "summary": "Soft fields of colour drift and blend behind the content, looping without a seam.",
+      "props": {
+        "colors": {
+          "type": "string[]",
+          "default": [],
+          "label": "CSS colours of the fields. Left out, shades of the accent"
+        }
+      },
+      "params": {
+        "period": {
+          "type": "number",
+          "default": 12,
+          "min": 6,
+          "max": 24,
+          "step": 0.5,
+          "unit": "s",
+          "label": "Time for one full loop"
+        },
+        "fields": {
+          "type": "number",
+          "default": 4,
+          "min": 2,
+          "max": 6,
+          "step": 1,
+          "unit": "fields",
+          "label": "Colour fields"
+        },
+        "softness": {
+          "type": "number",
+          "default": 14,
+          "min": 6,
+          "max": 24,
+          "step": 0.5,
+          "unit": "% of stage width",
+          "label": "Blur"
+        },
+        "reach": {
+          "type": "number",
+          "default": 0.18,
+          "min": 0.05,
+          "max": 0.35,
+          "step": 0.01,
+          "unit": "ratio",
+          "label": "How far the fields wander"
+        },
+        "strength": {
+          "type": "number",
+          "default": 0.85,
+          "min": 0.2,
+          "max": 1,
+          "step": 0.05,
+          "unit": "ratio",
+          "label": "Opacity"
+        }
+      }
+    },
+    {
+      "slug": "texture/grain",
+      "summary": "Fine film grain over the frame, changing a set number of times a second.",
+      "props": {},
+      "params": {
+        "amount": {
+          "type": "number",
+          "default": 0.08,
+          "min": 0.02,
+          "max": 0.25,
+          "step": 0.01,
+          "unit": "ratio",
+          "label": "Strength"
+        },
+        "rate": {
+          "type": "number",
+          "default": 12,
+          "min": 0,
+          "max": 24,
+          "step": 1,
+          "unit": "per s",
+          "label": "Changes per second (0 holds still)"
+        },
+        "size": {
+          "type": "number",
+          "default": 1,
+          "min": 0.5,
+          "max": 3,
+          "step": 0.1,
+          "unit": "x",
+          "label": "Grain size"
+        }
+      }
+    },
+    {
+      "slug": "ui/cursor-click",
+      "summary": "A drawn cursor moves to a target and clicks.",
+      "props": {
+        "label": {
+          "type": "string",
+          "default": "",
+          "label": "A name tag beside the cursor, for a collaborator"
+        }
+      },
+      "params": {
+        "from_x": {
+          "type": "number",
+          "default": 78,
+          "min": 0,
+          "max": 100,
+          "step": 0.5,
+          "unit": "% of width",
+          "label": "Start, across",
+          "pad": {
+            "name": "start",
+            "axis": "x"
+          }
+        },
+        "from_y": {
+          "type": "number",
+          "default": 82,
+          "min": 0,
+          "max": 100,
+          "step": 0.5,
+          "unit": "% of height",
+          "label": "Start, down",
+          "pad": {
+            "name": "start",
+            "axis": "y"
+          }
+        },
+        "to_x": {
+          "type": "number",
+          "default": 50,
+          "min": 0,
+          "max": 100,
+          "step": 0.5,
+          "unit": "% of width",
+          "label": "Target, across",
+          "pad": {
+            "name": "target",
+            "axis": "x"
+          }
+        },
+        "to_y": {
+          "type": "number",
+          "default": 50,
+          "min": 0,
+          "max": 100,
+          "step": 0.5,
+          "unit": "% of height",
+          "label": "Target, down",
+          "pad": {
+            "name": "target",
+            "axis": "y"
+          }
+        },
+        "travel": {
+          "type": "number",
+          "default": 0.7,
+          "min": 0.3,
+          "max": 1.8,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time to reach the target"
+        },
+        "arc": {
+          "type": "number",
+          "default": 0.06,
+          "min": 0,
+          "max": 0.2,
+          "step": 0.01,
+          "unit": "ratio",
+          "label": "Bow of the path"
+        },
+        "size": {
+          "type": "number",
+          "default": 2.4,
+          "min": 1.5,
+          "max": 4,
+          "step": 0.1,
+          "unit": "% of width",
+          "label": "Cursor size"
+        }
+      }
     }
   ],
   "transitions": [
@@ -674,6 +1813,333 @@
           "step": 1,
           "unit": "bars",
           "label": "Number of bars"
+        }
+      }
+    },
+    {
+      "slug": "transition/push",
+      "summary": "The next scene pushes the current one out of frame, with parallax and motion blur.",
+      "params": {
+        "duration": {
+          "type": "number",
+          "default": 0.7,
+          "min": 0.3,
+          "max": 1.2,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Length of the hand-over"
+        },
+        "direction": {
+          "type": "choice",
+          "default": "left",
+          "options": [
+            "left",
+            "right",
+            "up",
+            "down"
+          ],
+          "label": "Which way the frame travels"
+        },
+        "parallax": {
+          "type": "number",
+          "default": 0.35,
+          "min": 0,
+          "max": 1,
+          "step": 0.05,
+          "unit": "ratio",
+          "label": "How much less the outgoing scene travels"
+        },
+        "blur": {
+          "type": "number",
+          "default": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.05,
+          "unit": "ratio",
+          "label": "Motion blur at full speed (1 = a half-frame shutter)"
+        }
+      }
+    },
+    {
+      "slug": "transition/iris",
+      "summary": "The next scene opens from a point in a growing circle.",
+      "params": {
+        "duration": {
+          "type": "number",
+          "default": 0.8,
+          "min": 0.4,
+          "max": 1.4,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Length of the hand-over"
+        },
+        "x": {
+          "type": "number",
+          "default": 50,
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "unit": "% of width",
+          "label": "Centre, across",
+          "pad": {
+            "name": "centre",
+            "axis": "x"
+          }
+        },
+        "y": {
+          "type": "number",
+          "default": 50,
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "unit": "% of height",
+          "label": "Centre, down",
+          "pad": {
+            "name": "centre",
+            "axis": "y"
+          }
+        },
+        "shape": {
+          "type": "choice",
+          "default": "circle",
+          "options": [
+            "circle",
+            "rounded"
+          ],
+          "label": "Opening shape"
+        },
+        "push_in": {
+          "type": "number",
+          "default": 0.06,
+          "min": 0,
+          "max": 0.2,
+          "step": 0.01,
+          "unit": "ratio",
+          "label": "How much the outgoing scene pushes in"
+        }
+      }
+    },
+    {
+      "slug": "transition/cover-reveal",
+      "summary": "Colour panels sweep across and cover the cut, then sweep on to uncover the next scene.",
+      "params": {
+        "duration": {
+          "type": "number",
+          "default": 1,
+          "min": 0.6,
+          "max": 1.6,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Length of the hand-over"
+        },
+        "direction": {
+          "type": "choice",
+          "default": "up",
+          "options": [
+            "up",
+            "down",
+            "left",
+            "right"
+          ],
+          "label": "Which way the panels travel"
+        },
+        "panels": {
+          "type": "number",
+          "default": 2,
+          "min": 1,
+          "max": 3,
+          "step": 1,
+          "unit": "panels",
+          "label": "Panels, one behind the other"
+        },
+        "lag": {
+          "type": "number",
+          "default": 0.12,
+          "min": 0,
+          "max": 0.3,
+          "step": 0.01,
+          "unit": "ratio",
+          "label": "How far each panel trails the one before"
+        }
+      }
+    },
+    {
+      "slug": "transition/dive-in",
+      "summary": "The camera pushes into a point until it fills the frame.",
+      "params": {
+        "duration": {
+          "type": "number",
+          "default": 0.5,
+          "min": 0.4,
+          "max": 0.9,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Length of the hand-over"
+        },
+        "scale_to": {
+          "type": "number",
+          "default": 8,
+          "min": 3,
+          "max": 12,
+          "step": 0.5,
+          "unit": "x",
+          "label": "How far the camera pushes in"
+        },
+        "x": {
+          "type": "number",
+          "default": 50,
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "unit": "% of width",
+          "label": "Point to dive into, across",
+          "pad": {
+            "name": "point",
+            "axis": "x"
+          }
+        },
+        "y": {
+          "type": "number",
+          "default": 50,
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "unit": "% of height",
+          "label": "Point to dive into, down",
+          "pad": {
+            "name": "point",
+            "axis": "y"
+          }
+        }
+      }
+    },
+    {
+      "slug": "transition/curtain",
+      "summary": "Two panels part or close.",
+      "params": {
+        "duration": {
+          "type": "number",
+          "default": 0.8,
+          "min": 0.5,
+          "max": 1.4,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Length of the hand-over"
+        },
+        "axis": {
+          "type": "choice",
+          "default": "vertical",
+          "options": [
+            "vertical",
+            "horizontal"
+          ],
+          "label": "Panels meet along a vertical or a horizontal line"
+        },
+        "fill": {
+          "type": "choice",
+          "default": "inverse",
+          "options": [
+            "inverse",
+            "accent",
+            "surface",
+            "base"
+          ],
+          "label": "Panel colour"
+        }
+      }
+    },
+    {
+      "slug": "transition/stack-over",
+      "summary": "The next scene slides over the current one, which recedes and dims beneath it.",
+      "params": {
+        "duration": {
+          "type": "number",
+          "default": 0.7,
+          "min": 0.4,
+          "max": 1.2,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Length of the hand-over"
+        },
+        "direction": {
+          "type": "choice",
+          "default": "up",
+          "options": [
+            "up",
+            "down",
+            "left",
+            "right"
+          ],
+          "label": "Which way the new scene travels"
+        },
+        "recede": {
+          "type": "number",
+          "default": 0.94,
+          "min": 0.88,
+          "max": 0.98,
+          "step": 0.01,
+          "unit": "x",
+          "label": "Scale the old scene shrinks to"
+        },
+        "dim": {
+          "type": "number",
+          "default": 0.7,
+          "min": 0.2,
+          "max": 0.8,
+          "step": 0.05,
+          "unit": "ratio",
+          "label": "Brightness the old scene dims to"
+        },
+        "radius": {
+          "type": "number",
+          "default": 2,
+          "min": 0,
+          "max": 6,
+          "step": 0.5,
+          "unit": "% of width",
+          "label": "Corner radius while moving"
+        }
+      }
+    },
+    {
+      "slug": "transition/slant-wipe",
+      "summary": "A slanted edge cuts across the frame, uncovering the next scene; the old one drifts back.",
+      "params": {
+        "duration": {
+          "type": "number",
+          "default": 0.6,
+          "min": 0.4,
+          "max": 0.9,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Length of the hand-over"
+        },
+        "slant": {
+          "type": "number",
+          "default": 20,
+          "min": 0,
+          "max": 40,
+          "step": 1,
+          "unit": "% of width",
+          "label": "Slant of the edge"
+        },
+        "direction": {
+          "type": "choice",
+          "default": "left",
+          "options": [
+            "left",
+            "right"
+          ],
+          "label": "Which way the edge travels"
+        },
+        "drift": {
+          "type": "number",
+          "default": 8,
+          "min": 0,
+          "max": 15,
+          "step": 1,
+          "unit": "% of width",
+          "label": "How far the old scene drifts"
         }
       }
     }

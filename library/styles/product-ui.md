@@ -18,6 +18,10 @@ uses:
 - ui/tour-hold
 - ui/streamed-result
 - transition/blur-dissolve
+- type/shimmer
+- transition/stack-over
+- transition/push
+- fx/odometer
 avoids:
 - texture/ascii
 - transition/torn-edge

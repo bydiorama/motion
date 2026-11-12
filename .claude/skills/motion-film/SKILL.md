@@ -20,7 +20,7 @@ Follow it in order. Each step is cheap; skipping one costs a round with the pers
 
 1. **Read the brief, then the catalog.** If there is no brief, ask for the four things one needs: what it is about, the one thing to remember, the length, the format. Or point the person at `node bin/motion.mjs wizard`. Read `catalog.json` before writing a single layer: it is the only list of what can be drawn.
 2. **Plan scenes from beats.** One scene per beat is a good start. Merge beats under 1.5 s. Write each scene's `intent` in one line before its layers.
-3. **Write the film.** See the rules below and `reference/film.md` for the shape.
+3. **Write the film.** See the rules below, `reference/film.md` for the shape, and `docs/CRAFT.md` for the numbers that make motion look designed: eases, durations, reveal patterns, end cards and safe areas.
 4. **Validate until clean.** `node bin/motion.mjs validate films/<name>.film.json`. Fix exactly what each error says; the hint names the fix and "did you mean" names the slug. Warnings about params out of range are real: bring them back in range unless the brief asks otherwise.
 5. **Look.** `node bin/motion.mjs stills films/<name>.film.json` writes key frames and `sheet.png` to `films/out/<name>/stills/`. Open the sheet. Check: text collides, leaves the frame, is too long to read, or the accent appears more than once per scene.
 6. **Check.** `node bin/motion.mjs check films/<name>.film.json` must report frames that repeat exactly and nothing off stage.
@@ -39,6 +39,10 @@ Render only when asked: `node bin/motion.mjs render films/<name>.film.json` (nee
 - **Text must be readable twice** in the time it stays. One line of on-screen text per idea. The message gets at least 1.5 s of stillness.
 - **One accent per scene.** The accent colour marks the one thing that matters in that frame.
 - **The last frame is a poster.** Set `poster` to a moment that reads as a still.
+- **Masks over fades.** Reveal text with `type/mask-reveal`, `type/block-reveal` or the `mask-up` and `wipe-*` moves; keep `fade` for supporting text.
+- **One hero move per scene.** Everything else in the frame enters quietly or holds.
+- **Exits are quicker than entrances** (60–75% of the time) and use an ease-in, never the entrance played backwards.
+- **Nothing is dead still.** A scene's `tracks` can carry a slow linear drift (`scale` 1.03 → 1 over the scene) under the holds.
 
 ## Never
 
@@ -54,3 +58,4 @@ Return the whole film as one JSON code block, then a short list of beats you cou
 ## Reference
 
 - `reference/film.md`: the film shape, with every field, and common errors with their fixes.
+- `docs/CRAFT.md`: the craft rules, with numbers: easing, springs, durations, staggers, text reveals, transitions, logo reveals, data scenes, end cards and safe areas.

@@ -60,9 +60,30 @@ export function moveLayer(slug: string, id = 'move', text?: string): Layer | und
     case 'scene/marquee-wall': return { id, use: slug, props: { items: [...WORDS, ...WORDS], highlight: 'Review' }, params: { highlight_at: 1.2 }, style: { size: 'title' } };
     case 'rig/orbit-ring': return { id, use: slug, props: { items: WORDS.slice(0, 6) } };
     case 'texture/halftone-field': return { id, use: slug, params: { cell: 20, reach: 1 } };
+    case 'type/mask-reveal': return { id, use: slug, props: { text: text ?? 'Motion that\nfeels designed' }, style: { size: 'headline', width: 86, css: BIG } };
+    case 'type/char-cascade': return { id, use: slug, props: { text: text && text.length <= 12 ? text : 'Kinetic' }, params: { from: 'center' }, style: { size: 'hero' } };
+    case 'type/block-reveal': return { id, use: slug, props: { text: text ?? 'Brand.\nMotion.' }, style: { size: 'headline', width: 86, css: BIG } };
+    case 'type/word-roller': return { id, use: slug, props: { before: 'Made for', words: ['teams', 'films', 'brands'] }, style: { size: 'headline', css: BIG } };
+    case 'type/tracking-in': return { id, use: slug, props: { text: text ?? 'ATLAS' }, style: { size: 'hero' } };
+    case 'type/shimmer': return { id, use: slug, props: { text: text ?? 'Shipped' }, style: { size: 'hero' } };
+    case 'type/echo': return { id, use: slug, props: { text: text && text.length <= 12 ? text : 'Again' }, style: { size: 'hero' } };
+    case 'type/scribble-highlight': return { id, use: slug, props: { text: text ?? 'Ship it today', mark: [(text ?? 'Ship it today').split(/\s+/).pop() ?? ''] }, params: { delay: 0.1 }, style: { size: 'headline', width: 86, css: BIG } };
+    case 'fx/odometer': return { id, use: slug, props: { value: 12480 }, style: { size: 'hero' } };
+    case 'fx/path-draw': return { id, use: slug, props: { paths: ['M10 50 C 30 10, 70 10, 90 50 S 70 90, 50 70', 'M20 80 L 80 20'], viewbox: '0 0 100 100' }, params: { width: 30, stroke: 4 } };
+    case 'fx/shape-morph': return { id, use: slug, props: { shapes: ['circle', 'squircle', 'star'] }, params: { size: 34 } };
+    case 'fx/grid-ripple': return { id, use: slug, params: { cols: 20, opacity: 0.8 } };
+    case 'scene/logo-reveal': return { id, use: slug, props: { name: 'Atlas', tagline: text ?? '' }, style: { size: 'hero' } };
+    case 'scene/bar-chart': return { id, use: slug, props: { values: [32, 48, 41, 76, 58], labels: ['A', 'B', 'C', 'D', 'E'], highlight: 'D' }, params: { width: 70, height: 62 }, style: { size: 'headline' } };
+    case 'scene/line-chart': return { id, use: slug, props: { values: [12, 18, 15, 24, 22, 31, 29, 42] }, params: { width: 80, height: 60, draw: 1.4 }, style: { size: 'headline' } };
+    case 'texture/gradient-drift': return { id, use: slug, params: { period: 6 } };
+    case 'texture/grain': return { id, use: slug, params: { amount: 0.22 } };
+    case 'ui/cursor-click': return { id, use: slug, params: { size: 4 } };
     default: return undefined;
   }
 }
+
+/** Moves that fill the stage and loop, so their thumbnails get a set length and no padding. */
+const FULL_STAGE = new Set(['scene/marquee-wall', 'texture/halftone-field', 'texture/gradient-drift', 'texture/grain', 'fx/grid-ripple', 'ui/cursor-click']);
 
 /** A thumbnail film for one drawable move or transition. */
 export function movePreview(slug: string, tone: Tone): Film | undefined {
@@ -74,7 +95,7 @@ export function movePreview(slug: string, tone: Tone): Film | undefined {
   }
   const layer = moveLayer(slug);
   if (!layer) return undefined;
-  const full = slug === 'scene/marquee-wall' || slug === 'texture/halftone-field';
+  const full = FULL_STAGE.has(slug);
   return film(slug, [scene('only', [layer], {
     hold: 1.2, background: slug === 'rig/orbit-ring' ? 'sunken' : 'base',
     ...(full ? { length: 3.5, layout: { padding: 0, justify: 'center' } } : {}),

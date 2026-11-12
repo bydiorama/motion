@@ -16,6 +16,9 @@ uses:
 - rig/rolodex
 - rig/flip-ticker
 - texture/depth-fade
+- texture/gradient-drift
+- texture/grain
+- fx/shape-morph
 avoids:
 - transition/beat-cut
 - fx/radial-burst

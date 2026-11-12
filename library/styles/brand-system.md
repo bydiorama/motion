@@ -18,6 +18,12 @@ uses:
 - fx/stagger-fill
 - type/style-multiply
 - transition/step-wipe
+- scene/logo-reveal
+- fx/path-draw
+- fx/shape-morph
+- fx/grid-ripple
+- type/mask-reveal
+- transition/cover-reveal
 avoids:
 - texture/dither
 - transition/torn-edge

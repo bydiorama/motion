@@ -1,0 +1,119 @@
+{
+  "$schema": "../schema/film.schema.json",
+  "motion": "0.5",
+  "title": "Craft reel: every move the runtime draws",
+  "size": [1920, 1080],
+  "fps": 60,
+  "poster": 3,
+  "theme": { "scheme": "light", "accent": "#2440F0" },
+  "scenes": [
+    {
+      "id": "open",
+      "intent": "A headline placed line by line from under its own edge, over a slow colour field.",
+      "background": "base",
+      "layers": [
+        { "id": "field", "use": "texture/gradient-drift", "params": { "strength": 0.35, "period": 12 } },
+        { "id": "eyebrow", "use": "el/text", "props": { "text": "Motion library 0.5" }, "style": { "size": "caption", "color": "muted", "font": "mono" }, "enter": "mask-up" },
+        { "id": "title", "use": "type/mask-reveal", "at": 0.15, "props": { "text": "Motion that\nfeels designed,\nnot generated.", "accent": ["designed"] }, "params": { "tilt": 3 }, "style": { "size": "hero" } }
+      ],
+      "hold": 1.2,
+      "tracks": { "scale": [[0, 1.03], [4, 1, "linear"]] },
+      "out": { "use": "transition/push", "params": { "direction": "left" } }
+    },
+    {
+      "id": "letters",
+      "intent": "Display word arriving letter by letter from the centre, out of focus.",
+      "background": "inverse",
+      "layers": [
+        { "id": "word", "use": "type/char-cascade", "props": { "text": "Kinetic" }, "params": { "from": "center", "rotate": -12, "scale": 0.6 }, "style": { "size": "hero", "css": { "font-size": "calc(var(--m-u) * 16)" } } },
+        { "id": "sub", "use": "type/tracking-in", "at": "word.end - 0.3", "props": { "text": "TYPE IN MOTION" }, "style": { "size": "title", "font": "mono", "color": "muted" } }
+      ],
+      "hold": 0.8,
+      "out": { "use": "transition/iris", "params": { "x": 50, "y": 46 } }
+    },
+    {
+      "id": "roller",
+      "intent": "One sentence, one changing word.",
+      "layers": [
+        { "id": "line", "use": "type/word-roller", "props": { "before": "We make", "words": ["films", "brands", "products", "it move"] }, "style": { "size": "headline" } },
+        { "id": "mark", "use": "type/scribble-highlight", "at": "line.end + 0.2", "props": { "text": "Every frame drawn from time alone.", "mark": ["time", "alone"] }, "params": { "kind": "underline" }, "style": { "size": "title", "color": "secondary" } }
+      ],
+      "hold": 1,
+      "out": { "use": "transition/cover-reveal", "params": { "direction": "up", "panels": 2 } }
+    },
+    {
+      "id": "blocks",
+      "intent": "Lines uncovered by retracting blocks.",
+      "background": "sunken",
+      "layers": [
+        { "id": "lines", "use": "type/block-reveal", "props": { "text": "Brand.\nProduct.\nMotion.", "accent": ["motion"] }, "style": { "size": "hero" } }
+      ],
+      "hold": 0.8,
+      "out": { "use": "transition/slant-wipe" }
+    },
+    {
+      "id": "numbers",
+      "intent": "A number that rolls like a counter, beside a growing chart.",
+      "layout": { "gap": 60 },
+      "layers": [
+        { "id": "count", "use": "fx/odometer", "props": { "value": 12480, "suffix": " frames" }, "style": { "size": "headline" } },
+        { "id": "bars", "use": "scene/bar-chart", "at": 0.3, "props": { "values": [32, 48, 41, 76, 58], "labels": ["Q1", "Q2", "Q3", "Q4", "Q5"], "highlight": "Q4", "suffix": "%" }, "params": { "height": 40, "width": 56 }, "style": { "size": "title" } }
+      ],
+      "hold": 1,
+      "out": { "use": "transition/stack-over" }
+    },
+    {
+      "id": "line",
+      "intent": "A line drawn behind a leading dot.",
+      "layers": [
+        { "id": "chart", "use": "scene/line-chart", "props": { "values": [12, 18, 15, 24, 22, 31, 29, 42], "labels": ["Jan", "Aug"], "suffix": "k" }, "style": { "size": "title" } }
+      ],
+      "hold": 0.8,
+      "out": { "use": "transition/curtain" }
+    },
+    {
+      "id": "shapes",
+      "intent": "Shapes turning into each other, over a breathing grid.",
+      "background": "base",
+      "layers": [
+        { "id": "grid", "use": "fx/grid-ripple", "params": { "opacity": 0.25 }, "style": { "color": "muted" } },
+        { "id": "shape", "use": "fx/shape-morph", "props": { "shapes": ["circle", "squircle", "star", "blob"] } }
+      ],
+      "hold": 0.6,
+      "out": { "use": "transition/dive-in" }
+    },
+    {
+      "id": "ui",
+      "intent": "A cursor travels to a button and clicks.",
+      "background": "sunken",
+      "layers": [
+        { "id": "button", "use": "el/box", "props": { "fill": "accent" }, "params": { "width": 420, "height": 120, "radius": 60 }, "place": { "x": 50, "y": 50 }, "enter": "pop" },
+        { "id": "label", "use": "el/text", "at": 0.15, "props": { "text": "Publish" }, "place": { "x": 50, "y": 50 }, "style": { "size": "title", "color": "on-accent" }, "enter": "focus" },
+        { "id": "cursor", "use": "ui/cursor-click", "at": 0.4, "props": { "label": "Ana" }, "params": { "to_x": 52, "to_y": 53 } },
+        { "id": "shine", "use": "type/shimmer", "at": 1.6, "props": { "text": "Shipped to everyone" }, "place": { "x": 50, "y": 70 }, "style": { "size": "title" }, "enter": "rise" }
+      ],
+      "hold": 1.2,
+      "out": { "use": "transition/blur-dissolve" }
+    },
+    {
+      "id": "echo",
+      "intent": "A headline with outlined copies trailing it.",
+      "background": "accent",
+      "layers": [
+        { "id": "head", "use": "type/echo", "props": { "text": "Again" }, "params": { "settle": 0.18 }, "style": { "size": "hero", "css": { "font-size": "calc(var(--m-u) * 15)" } } }
+      ],
+      "hold": 0.8,
+      "out": { "use": "transition/cover-reveal", "params": { "direction": "left", "panels": 1 } }
+    },
+    {
+      "id": "end",
+      "intent": "Mark lands, the name slides out from behind it.",
+      "layers": [
+        { "id": "draw", "use": "fx/path-draw", "props": { "paths": ["M10 50 C 30 10, 70 10, 90 50 S 70 90, 50 70", "M20 80 L 80 20"], "viewbox": "0 0 100 100" }, "params": { "width": 14, "stroke": 3 }, "place": { "x": 50, "y": 22 }, "style": { "color": "muted" } },
+        { "id": "logo", "use": "scene/logo-reveal", "at": 0.4, "props": { "name": "bydiorama", "tagline": "Motion, by design." }, "style": { "size": "hero" } },
+        { "id": "grain", "use": "texture/grain" }
+      ],
+      "hold": "$hold_end"
+    }
+  ]
+}

@@ -16,6 +16,10 @@ uses:
 - fx/radial-burst
 - transition/beat-cut
 - scene/mosaic
+- type/char-cascade
+- transition/iris
+- transition/stack-over
+- texture/grain
 avoids:
 - texture/halftone-field
 formats:
