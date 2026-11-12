@@ -1,6 +1,7 @@
 ---
 slug: narrative/platform-launch
 kind: narrative
+family: product
 summary: For a product made of several tools.
 status: draft
 origin: observed

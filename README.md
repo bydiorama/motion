@@ -10,6 +10,16 @@ A video = **one narrative + one style + brand input**.
 | Style | Our named look: a set of preferred primitives, timing and surface | `library/styles/` |
 | Narrative | A story structure: beats in order, with a share of time each | `library/narratives/` |
 
+The runtime turns this vocabulary into films:
+
+| Part | What it is | Where |
+|---|---|---|
+| Film | A video as JSON: scenes of layers, each layer a primitive with props and params. An agent writes it | `films/<name>.film.json` |
+| Tune | A person's overrides and pinned notes, kept beside the film. The agent reads it back | `films/<name>.tune.json` |
+| Runtime | Resolves a film (checks, timing, tokens) and draws any frame from its time alone | `src/` |
+| Studio | DialKit panel and timeline for directing a film; writes only the tune | `motion preview` |
+| Catalog | What a film may use: primitives, params, tokens, eases. Generated | `catalog.json`, `schema/film.schema.json` |
+
 Other parts:
 
 - `INDEX.md`: one line per entry. Generated. Start here.
@@ -35,10 +45,42 @@ python3 tools/build_showcase.py                     # rebuild showcase/index.htm
 
 Setup: `pip install -r requirements.txt` (Python 3.10+). Recipe checks also need Chrome.
 
+## Start with a brief
+
+```bash
+node bin/motion.mjs wizard                    # questions in the browser, at http://127.0.0.1:4322
+node bin/motion.mjs wizard --out wizard.html  # the same page as one file you can share
+node bin/motion.mjs brief answers.json        # the same brief from saved answers, no browser
+```
+
+The wizard asks one question per screen: video type (product, brand, motion graphics or social, ten in all), feel, message, what's on screen, moves, length, formats, and whether an agent or a chat assistant will make it. The look follows from the video type. Video types, feels and moves have thumbnails drawn by the runtime itself (`src/wizard/previews.ts`): the selected one plays, the rest hold a still. It then writes a Markdown brief to copy into Claude or ChatGPT. The brief has the beats with timings, the moves that can be drawn (and the ones in the library that can't be drawn yet), timing tokens, a starter film that validates, and what "done" means. The same answers always give the same brief: the wizard and `motion brief` call one pure function (`src/brief/brief.ts`).
+
+Agents working in this repository use the `motion-film` skill (`.claude/skills/motion-film/`). It sets the order of work: read the brief and catalog, plan beats, write, validate, look at stills, check, hand over to the studio, then answer notes.
+
+## Films
+
+```bash
+pnpm install                                         # Node 24+
+node bin/motion.mjs catalog                          # what a film may use (read this first)
+node bin/motion.mjs validate films/showcase.film.json  # errors with paths, hints and "did you mean"
+node bin/motion.mjs preview films/showcase.film.json   # studio at http://127.0.0.1:4321
+node bin/motion.mjs stills films/showcase.film.json    # key frames and a contact sheet
+node bin/motion.mjs check films/showcase.film.json     # frames repeat exactly, nothing off stage
+node bin/motion.mjs render films/showcase.film.json    # MP4 and a report (needs ffmpeg)
+node bin/motion.mjs bake films/showcase.film.json      # write agreed tuning into the film
+pnpm verify                                          # type-check, tests, catalog, films
+```
+
+The studio is one screen: scenes on the left, each with a still and its intent, the stage with a transport under it (Space plays, ←/→ step a frame, Shift steps a second, [ and ] jump between scenes), an inspector with Tune, Notes and Issues on the right, and the DialKit timeline along the bottom.
+
+Agents write the film and never the tune. People direct in the studio: every dial is generated from the film and the catalog, dragging a scene clip sets its length, and notes pinned to a moment are stored for the agent. Overrides address scenes and layers by id, so they survive the agent rewriting the film; an override whose target is gone is reported, not dropped.
+
+The studio is drawn in bydiorama/ui's Graphite theme (Aspekta, no chroma). Films read `--ui-*` tokens too: pass a ui theme with `--css` and the stage uses its colours, fonts and easing curves (`ui.default`, `ui.spring`, …). `node scripts/ui-theme.ts` regenerates the studio theme from the ui token resolver.
+
 ## The one rule
 
 Entries describe **patterns, not sources**. No links, no brand names, no "seen in". References are inspiration: they are watched, broken into generic observations, and then thrown away. See `docs/MAINTENANCE.md`.
 
 ## Licence
 
-No licence file is included yet, so the content is not licensed for reuse by others. Add one before making the repository public. The showcase bundles the DialKit stylesheet under its MIT licence (`showcase/vendor/DIALKIT-LICENSE`).
+No licence file is included yet, so the content is not licensed for reuse by others. Add one before making the repository public. The showcase and the studio bundle the DialKit stylesheet under its MIT licence (`showcase/vendor/DIALKIT-LICENSE`). The studio bundles the Aspekta typeface under the SIL Open Font License (`src/studio/theme/fonts/OFL.txt`).

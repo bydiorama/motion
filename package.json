@@ -1,0 +1,34 @@
+{
+  "name": "@bydiorama/motion",
+  "version": "0.4.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "description": "Diorama motion library: films as data, written by agents, directed by people.",
+  "type": "module",
+  "packageManager": "pnpm@10.30.3",
+  "engines": {
+    "node": ">=22.18.0"
+  },
+  "bin": {
+    "motion": "./bin/motion.mjs"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "motion": "node bin/motion.mjs",
+    "build": "node bin/motion.mjs bundle",
+    "catalog": "node bin/motion.mjs catalog --write",
+    "test": "node --test \"src/**/*.test.ts\"",
+    "type-check": "tsc --noEmit",
+    "verify": "pnpm run type-check && pnpm run test && node bin/motion.mjs catalog --check && node bin/motion.mjs validate films/*.film.json"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "dialkit": "2.1.0",
+    "esbuild": "0.28.1",
+    "playwright": "1.62.1",
+    "typescript": "^6",
+    "yaml": "2.8.1"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "motion-studio",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "bin/motion.mjs",
+        "preview",
+        "films/showcase.film.json",
+        "--port",
+        "4321"
+      ],
+      "port": 4321
+    },
+    {
+      "name": "motion-wizard",
+      "runtimeExecutable": "node",
+      "runtimeArgs": [
+        "bin/motion.mjs",
+        "wizard",
+        "--port",
+        "4322"
+      ],
+      "port": 4322
+    }
+  ]
+}

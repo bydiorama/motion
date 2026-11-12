@@ -1,0 +1,672 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Motion film (0.4.0)",
+  "type": "object",
+  "required": [
+    "motion",
+    "size",
+    "scenes"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "motion": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "size": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "fps": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "seed": {
+      "type": "integer"
+    },
+    "poster": {
+      "type": "number",
+      "minimum": 0
+    },
+    "loop": {
+      "type": "boolean"
+    },
+    "narrative": {
+      "type": "string"
+    },
+    "style": {
+      "type": "string"
+    },
+    "tokens": {
+      "type": "object"
+    },
+    "theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scheme": {
+          "enum": [
+            "light",
+            "dark"
+          ]
+        },
+        "accent": {
+          "type": "string"
+        },
+        "onAccent": {
+          "type": "string"
+        },
+        "vars": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "scenes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "layers"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]*$"
+          },
+          "length": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "hold": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0
+              },
+              {
+                "type": "string",
+                "pattern": "^\\$"
+              }
+            ]
+          },
+          "background": {
+            "anyOf": [
+              {
+                "enum": [
+                  "base",
+                  "surface",
+                  "sunken",
+                  "accent",
+                  "inverse"
+                ]
+              },
+              {
+                "type": "string"
+              }
+            ]
+          },
+          "scheme": {
+            "enum": [
+              "light",
+              "dark"
+            ]
+          },
+          "layout": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "align": {
+                "enum": [
+                  "start",
+                  "center",
+                  "end"
+                ]
+              },
+              "justify": {
+                "enum": [
+                  "start",
+                  "center",
+                  "end",
+                  "between"
+                ]
+              },
+              "gap": {
+                "type": "number"
+              },
+              "padding": {
+                "type": "number"
+              }
+            }
+          },
+          "tracks": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "x": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 3
+                }
+              },
+              "y": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 3
+                }
+              },
+              "scale": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 3
+                }
+              },
+              "rotate": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 3
+                }
+              },
+              "opacity": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 3
+                }
+              },
+              "blur": {
+                "type": "array",
+                "items": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 3
+                }
+              }
+            }
+          },
+          "uses": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "intent": {
+            "type": "string"
+          },
+          "out": {
+            "type": "object",
+            "required": [
+              "use"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "use": {
+                "enum": [
+                  "transition/beat-cut",
+                  "transition/blur-dissolve",
+                  "transition/step-wipe"
+                ]
+              },
+              "duration": {
+                "anyOf": [
+                  {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^\\$"
+                  }
+                ]
+              },
+              "params": {
+                "type": "object"
+              }
+            }
+          },
+          "layers": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "use"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9-]*$"
+                },
+                "use": {
+                  "enum": [
+                    "el/text",
+                    "el/box",
+                    "el/image",
+                    "el/html",
+                    "el/slot",
+                    "type/word-build",
+                    "type/typed-title",
+                    "type/scramble",
+                    "fx/counter-roll",
+                    "fx/stagger-fill",
+                    "fx/depth-drift",
+                    "scene/marquee-wall",
+                    "rig/orbit-ring",
+                    "texture/halftone-field"
+                  ]
+                },
+                "props": {
+                  "type": "object"
+                },
+                "params": {
+                  "type": "object"
+                },
+                "at": {
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0
+                    },
+                    {
+                      "type": "string",
+                      "description": "e.g. \"headline.end + 0.2\" or \"scene.end - 1\""
+                    }
+                  ]
+                },
+                "style": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "size": {
+                      "enum": [
+                        "hero",
+                        "headline",
+                        "title",
+                        "body",
+                        "caption"
+                      ]
+                    },
+                    "color": {
+                      "enum": [
+                        "primary",
+                        "secondary",
+                        "muted",
+                        "accent",
+                        "inverse",
+                        "on-accent"
+                      ]
+                    },
+                    "font": {
+                      "enum": [
+                        "display",
+                        "body",
+                        "mono"
+                      ]
+                    },
+                    "weight": {
+                      "type": "number"
+                    },
+                    "align": {
+                      "enum": [
+                        "left",
+                        "center",
+                        "right"
+                      ]
+                    },
+                    "width": {
+                      "type": "number",
+                      "exclusiveMinimum": 0,
+                      "maximum": 100
+                    },
+                    "css": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                },
+                "place": {
+                  "type": "object",
+                  "required": [
+                    "x",
+                    "y"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "x": {
+                      "type": "number"
+                    },
+                    "y": {
+                      "type": "number"
+                    },
+                    "anchor": {
+                      "enum": [
+                        "center",
+                        "top-left",
+                        "top",
+                        "top-right",
+                        "left",
+                        "right",
+                        "bottom-left",
+                        "bottom",
+                        "bottom-right"
+                      ]
+                    }
+                  }
+                },
+                "enter": {
+                  "anyOf": [
+                    {
+                      "enum": [
+                        "fade",
+                        "rise",
+                        "drop",
+                        "scale",
+                        "blur",
+                        "slide-left",
+                        "slide-right"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "move"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "move": {
+                          "enum": [
+                            "fade",
+                            "rise",
+                            "drop",
+                            "scale",
+                            "blur",
+                            "slide-left",
+                            "slide-right"
+                          ]
+                        },
+                        "duration": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "string",
+                              "pattern": "^\\$"
+                            }
+                          ]
+                        },
+                        "ease": {
+                          "anyOf": [
+                            {
+                              "enum": [
+                                "linear",
+                                "sine.in",
+                                "sine.out",
+                                "sine.inOut",
+                                "cubic.in",
+                                "cubic.out",
+                                "cubic.inOut",
+                                "expo.in",
+                                "expo.out",
+                                "expo.inOut",
+                                "back.out",
+                                "smooth",
+                                "ui.default",
+                                "ui.in",
+                                "ui.out",
+                                "ui.spring"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "pattern": "^\\$"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "type": "number"
+                              },
+                              "minItems": 4,
+                              "maxItems": 4
+                            },
+                            {
+                              "type": "object",
+                              "required": [
+                                "spring"
+                              ],
+                              "properties": {
+                                "spring": {
+                                  "type": "object",
+                                  "required": [
+                                    "duration"
+                                  ],
+                                  "properties": {
+                                    "duration": {
+                                      "type": "number"
+                                    },
+                                    "bounce": {
+                                      "type": "number"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "amount": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                  ]
+                },
+                "exit": {
+                  "anyOf": [
+                    {
+                      "enum": [
+                        "fade",
+                        "rise",
+                        "drop",
+                        "scale",
+                        "blur",
+                        "slide-left",
+                        "slide-right"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "move"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "move": {
+                          "enum": [
+                            "fade",
+                            "rise",
+                            "drop",
+                            "scale",
+                            "blur",
+                            "slide-left",
+                            "slide-right"
+                          ]
+                        },
+                        "duration": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "string",
+                              "pattern": "^\\$"
+                            }
+                          ]
+                        },
+                        "ease": {
+                          "anyOf": [
+                            {
+                              "enum": [
+                                "linear",
+                                "sine.in",
+                                "sine.out",
+                                "sine.inOut",
+                                "cubic.in",
+                                "cubic.out",
+                                "cubic.inOut",
+                                "expo.in",
+                                "expo.out",
+                                "expo.inOut",
+                                "back.out",
+                                "smooth",
+                                "ui.default",
+                                "ui.in",
+                                "ui.out",
+                                "ui.spring"
+                              ]
+                            },
+                            {
+                              "type": "string",
+                              "pattern": "^\\$"
+                            },
+                            {
+                              "type": "array",
+                              "items": {
+                                "type": "number"
+                              },
+                              "minItems": 4,
+                              "maxItems": 4
+                            },
+                            {
+                              "type": "object",
+                              "required": [
+                                "spring"
+                              ],
+                              "properties": {
+                                "spring": {
+                                  "type": "object",
+                                  "required": [
+                                    "duration"
+                                  ],
+                                  "properties": {
+                                    "duration": {
+                                      "type": "number"
+                                    },
+                                    "bounce": {
+                                      "type": "number"
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        },
+                        "amount": {
+                          "type": "number"
+                        },
+                        "at": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "string",
+                              "description": "e.g. \"headline.end + 0.2\" or \"scene.end - 1\""
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
+                },
+                "tracks": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "x": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 3
+                      }
+                    },
+                    "y": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 3
+                      }
+                    },
+                    "scale": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 3
+                      }
+                    },
+                    "rotate": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 3
+                      }
+                    },
+                    "opacity": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 3
+                      }
+                    },
+                    "blur": {
+                      "type": "array",
+                      "items": {
+                        "type": "array",
+                        "minItems": 2,
+                        "maxItems": 3
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,1088 @@
+{
+  "styles": [
+    {
+      "slug": "style/brand-system",
+      "summary": "Calm grid, generous space. For identity presentations.",
+      "character": "Everything sits on one grid and moves along it. Long holds, one colour change per beat, and the mark is the only thing that is ever centred.",
+      "uses": [
+        "scene/specimen-grid",
+        "scene/grid-wall",
+        "fx/mosaic-fill",
+        "fx/stagger-fill",
+        "type/style-multiply",
+        "transition/step-wipe"
+      ],
+      "avoids": [
+        "texture/dither",
+        "transition/torn-edge",
+        "type/scramble"
+      ],
+      "formats": [
+        "16:9",
+        "4:5"
+      ],
+      "duration": {
+        "min": 40,
+        "max": 90
+      },
+      "beat": 3
+    },
+    {
+      "slug": "style/clean-explainer",
+      "summary": "Bright, precise, product-first. For feature announcements.",
+      "character": "Ease-out entrances, word-by-word text, enlarged product UI. Nothing on screen that is not about the message.",
+      "uses": [
+        "scene/kinetic-headline",
+        "scene/stat-with-evidence",
+        "scene/zoomed-ui",
+        "type/word-build",
+        "transition/blur-dissolve",
+        "fx/marquee-highlight"
+      ],
+      "avoids": [
+        "transition/torn-edge",
+        "texture/dither"
+      ],
+      "formats": [
+        "16:9",
+        "1:1"
+      ],
+      "duration": {
+        "min": 18,
+        "max": 25
+      },
+      "beat": 2.5
+    },
+    {
+      "slug": "style/dark-showcase",
+      "summary": "Cinematic, dense, confident. For launches of platforms and multi-tool products.",
+      "character": "Bursts and dives carry the energy at the start and end. The product tour in the middle uses hard cuts inside a fixed layout.",
+      "uses": [
+        "scene/hero-object",
+        "rig/tumbling-object",
+        "transition/dive-in",
+        "fx/radial-burst",
+        "transition/beat-cut",
+        "scene/mosaic"
+      ],
+      "avoids": [
+        "texture/halftone-field"
+      ],
+      "formats": [
+        "16:9"
+      ],
+      "duration": {
+        "min": 35,
+        "max": 50
+      },
+      "beat": 2
+    },
+    {
+      "slug": "style/editorial-type",
+      "summary": "Typography is the hero. For type, design and writing tools, and brand manifestos.",
+      "character": "About one style change per second, on the music. Layout grids may stay visible. Poster-like frames.",
+      "uses": [
+        "type/writing-ticker",
+        "type/per-word-restyle",
+        "type/style-multiply",
+        "scene/specimen-grid",
+        "ui/collab-cursors",
+        "transition/light-dark-flip"
+      ],
+      "avoids": [
+        "fx/mosaic-fill"
+      ],
+      "formats": [
+        "1:1",
+        "16:9"
+      ],
+      "duration": {
+        "min": 30,
+        "max": 45
+      },
+      "beat": 1
+    },
+    {
+      "slug": "style/kinetic-poster",
+      "summary": "A single poster frame that moves. For social and outdoor screens.",
+      "character": "Not developed yet. Big display type, masks and wipes, loopable.",
+      "uses": [
+        "type/parting",
+        "transition/step-wipe",
+        "transition/curtain",
+        "type/echo"
+      ],
+      "avoids": [],
+      "formats": [
+        "4:5",
+        "9:16"
+      ],
+      "duration": {
+        "min": 6,
+        "max": 10
+      },
+      "beat": 1.5
+    },
+    {
+      "slug": "style/product-ui",
+      "summary": "Interface up close, led by the cursor. For app demos.",
+      "character": "The interface is the hero, enlarged until its text is readable. The camera follows the cursor; nothing moves that the person using the app would not see move.",
+      "uses": [
+        "scene/zoomed-ui",
+        "ui/cursor-click",
+        "ui/prompt-typing",
+        "ui/tour-hold",
+        "ui/streamed-result",
+        "transition/blur-dissolve"
+      ],
+      "avoids": [
+        "texture/ascii",
+        "transition/torn-edge",
+        "rig/orbit-ring"
+      ],
+      "formats": [
+        "16:9",
+        "9:16"
+      ],
+      "duration": {
+        "min": 30,
+        "max": 60
+      },
+      "beat": 2.5
+    },
+    {
+      "slug": "style/studio-loop",
+      "summary": "Calm, endless, object-like. For portfolio posts, covers and presentation backgrounds.",
+      "character": "One rig, constant speed, seamless loop. Tiles mix photos, single glyphs on solid colour and short words. Offer a normal and a closer camera variant.",
+      "uses": [
+        "rig/orbit-ring",
+        "rig/rolodex",
+        "rig/flip-ticker",
+        "texture/depth-fade"
+      ],
+      "avoids": [
+        "transition/beat-cut",
+        "fx/radial-burst"
+      ],
+      "formats": [
+        "4:5",
+        "1:1",
+        "9:16",
+        "16:9",
+        "4:3",
+        "3:2"
+      ],
+      "duration": {
+        "min": 9,
+        "max": 18
+      }
+    }
+  ],
+  "narratives": [
+    {
+      "slug": "narrative/app-demo",
+      "summary": "Shows an app doing one real task, start to finish.",
+      "family": "product",
+      "duration": {
+        "min": 30,
+        "max": 60
+      },
+      "fits": [
+        "style/product-ui",
+        "style/clean-explainer"
+      ],
+      "beats": [
+        {
+          "name": "hook",
+          "share": 10,
+          "content": "The problem in one line",
+          "primitives": [
+            "scene/kinetic-headline",
+            "type/word-build"
+          ]
+        },
+        {
+          "name": "open",
+          "share": 12,
+          "content": "The app arrives, enlarged where it matters",
+          "primitives": [
+            "scene/zoomed-ui",
+            "transition/dive-in"
+          ]
+        },
+        {
+          "name": "flow",
+          "share": 30,
+          "content": "The cursor works through the task, one step per beat",
+          "primitives": [
+            "ui/cursor-click",
+            "ui/prompt-typing",
+            "ui/tour-hold"
+          ]
+        },
+        {
+          "name": "result",
+          "share": 18,
+          "content": "The outcome appears, with the number that proves it",
+          "primitives": [
+            "ui/streamed-result",
+            "fx/counter-roll"
+          ]
+        },
+        {
+          "name": "recap",
+          "share": 18,
+          "content": "Three features, named",
+          "primitives": [
+            "type/inline-chips",
+            "fx/stagger-fill"
+          ]
+        },
+        {
+          "name": "end",
+          "share": 12,
+          "content": "Name and where to get it",
+          "primitives": [
+            "scene/end-card"
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "narrative/brand-identity",
+      "summary": "Presents a new identity, from mark and idea to type, colour and use.",
+      "family": "brand",
+      "duration": {
+        "min": 40,
+        "max": 90
+      },
+      "fits": [
+        "style/brand-system",
+        "style/editorial-type"
+      ],
+      "beats": [
+        {
+          "name": "mark",
+          "share": 14,
+          "content": "The mark assembles from its parts",
+          "primitives": [
+            "scene/hero-object",
+            "fx/letter-interleave"
+          ]
+        },
+        {
+          "name": "idea",
+          "share": 14,
+          "content": "The idea behind it, in one sentence",
+          "primitives": [
+            "scene/kinetic-headline",
+            "type/word-build"
+          ]
+        },
+        {
+          "name": "type",
+          "share": 16,
+          "content": "The typeface, set large and in its weights",
+          "primitives": [
+            "scene/specimen-grid",
+            "type/style-multiply"
+          ]
+        },
+        {
+          "name": "colour",
+          "share": 14,
+          "content": "The palette fills the frame",
+          "primitives": [
+            "fx/mosaic-fill",
+            "transition/light-dark-flip"
+          ]
+        },
+        {
+          "name": "system",
+          "share": 16,
+          "content": "Grid, shapes and patterns drawn from the mark",
+          "primitives": [
+            "scene/grid-wall",
+            "fx/card-arrangements"
+          ]
+        },
+        {
+          "name": "applications",
+          "share": 16,
+          "content": "The identity on the surfaces it will live on",
+          "primitives": [
+            "scene/mosaic",
+            "rig/rolodex"
+          ]
+        },
+        {
+          "name": "end",
+          "share": 10,
+          "content": "The lockup, still",
+          "primitives": [
+            "transition/collapse-to-anchor",
+            "scene/end-card"
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "narrative/capability-through-type",
+      "summary": "For features that can be shown through text itself.",
+      "family": "graphics",
+      "duration": {
+        "min": 30,
+        "max": 45
+      },
+      "fits": [
+        "style/editorial-type"
+      ],
+      "beats": [
+        {
+          "name": "write",
+          "share": 15,
+          "content": "A sentence is written while it scrolls",
+          "primitives": [
+            "type/writing-ticker"
+          ]
+        },
+        {
+          "name": "restyle",
+          "share": 30,
+          "content": "Each word gets a different treatment",
+          "primitives": [
+            "type/per-word-restyle",
+            "ui/collab-cursors"
+          ]
+        },
+        {
+          "name": "multiply",
+          "share": 15,
+          "content": "One word becomes a grid of typefaces",
+          "primitives": [
+            "type/style-multiply",
+            "scene/specimen-grid"
+          ]
+        },
+        {
+          "name": "flip",
+          "share": 15,
+          "content": "Mood changes to dark",
+          "primitives": [
+            "transition/light-dark-flip",
+            "texture/dither"
+          ]
+        },
+        {
+          "name": "posters",
+          "share": 15,
+          "content": "Poster frames with visible grids",
+          "primitives": []
+        },
+        {
+          "name": "close",
+          "share": 10,
+          "content": "Closing line and logo",
+          "primitives": [
+            "scene/end-card"
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "narrative/data-story",
+      "summary": "Turns a few numbers into a short story.",
+      "family": "graphics",
+      "duration": {
+        "min": 20,
+        "max": 40
+      },
+      "fits": [
+        "style/clean-explainer",
+        "style/dark-showcase"
+      ],
+      "beats": [
+        {
+          "name": "claim",
+          "share": 15,
+          "content": "The claim, before the evidence",
+          "primitives": [
+            "type/word-build"
+          ]
+        },
+        {
+          "name": "number",
+          "share": 25,
+          "content": "The headline number rolls in",
+          "primitives": [
+            "fx/counter-roll",
+            "type/accent-number"
+          ]
+        },
+        {
+          "name": "context",
+          "share": 20,
+          "content": "What surrounds the number",
+          "primitives": [
+            "scene/stat-with-evidence",
+            "fx/depth-drift"
+          ]
+        },
+        {
+          "name": "compare",
+          "share": 25,
+          "content": "Before and after, or this against that",
+          "primitives": [
+            "rig/flip-ticker",
+            "fx/stagger-fill"
+          ]
+        },
+        {
+          "name": "end",
+          "share": 15,
+          "content": "Source and sign-off",
+          "primitives": [
+            "scene/end-card"
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "narrative/explainer",
+      "summary": "Motion graphics that explain how something works.",
+      "family": "graphics",
+      "duration": {
+        "min": 45,
+        "max": 90
+      },
+      "fits": [
+        "style/clean-explainer",
+        "style/brand-system"
+      ],
+      "beats": [
+        {
+          "name": "question",
+          "share": 10,
+          "content": "The question the video answers",
+          "primitives": [
+            "scene/kinetic-headline",
+            "type/focus-blur"
+          ]
+        },
+        {
+          "name": "setup",
+          "share": 16,
+          "content": "What is there before anything happens",
+          "primitives": [
+            "fx/stagger-fill",
+            "scene/grid-wall"
+          ]
+        },
+        {
+          "name": "mechanism",
+          "share": 30,
+          "content": "How it works, one step per beat",
+          "primitives": [
+            "transition/step-wipe",
+            "fx/card-arrangements",
+            "type/inline-chips"
+          ]
+        },
+        {
+          "name": "proof",
+          "share": 18,
+          "content": "The number that shows it works",
+          "primitives": [
+            "scene/stat-with-evidence",
+            "fx/counter-roll"
+          ]
+        },
+        {
+          "name": "takeaway",
+          "share": 14,
+          "content": "The answer, in one line",
+          "primitives": [
+            "type/word-build"
+          ]
+        },
+        {
+          "name": "end",
+          "share": 12,
+          "content": "Who made it",
+          "primitives": [
+            "scene/end-card"
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "narrative/feature-announcement",
+      "summary": "For one new capability.",
+      "family": "product",
+      "duration": {
+        "min": 18,
+        "max": 25
+      },
+      "fits": [
+        "style/clean-explainer"
+      ],
+      "beats": [
+        {
+          "name": "headline",
+          "share": 14,
+          "content": "Headline builds word by word",
+          "primitives": [
+            "scene/kinetic-headline",
+            "type/word-build",
+            "type/inline-chips"
+          ]
+        },
+        {
+          "name": "stat",
+          "share": 14,
+          "content": "Big number with evidence around it",
+          "primitives": [
+            "scene/stat-with-evidence",
+            "type/accent-number"
+          ]
+        },
+        {
+          "name": "prompt",
+          "share": 16,
+          "content": "A request is typed and sent",
+          "primitives": [
+            "scene/zoomed-ui",
+            "ui/prompt-typing",
+            "ui/cursor-click"
+          ]
+        },
+        {
+          "name": "result",
+          "share": 18,
+          "content": "The answer streams in",
+          "primitives": [
+            "ui/streamed-result"
+          ]
+        },
+        {
+          "name": "context",
+          "share": 8,
+          "content": "One line that widens the claim",
+          "primitives": [
+            "transition/blur-dissolve",
+            "scene/kinetic-headline"
+          ]
+        },
+        {
+          "name": "breadth",
+          "share": 18,
+          "content": "Wall of related items, one highlighted",
+          "primitives": [
+            "scene/marquee-wall",
+            "fx/marquee-highlight"
+          ]
+        },
+        {
+          "name": "end",
+          "share": 12,
+          "content": "The highlight becomes the logo",
+          "primitives": [
+            "transition/collapse-to-anchor",
+            "scene/end-card"
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "narrative/infinite-loop",
+      "summary": "One scene that repeats without a visible seam.",
+      "family": "social",
+      "duration": {
+        "min": 9,
+        "max": 18
+      },
+      "fits": [
+        "style/studio-loop"
+      ],
+      "beats": [
+        {
+          "name": "loop",
+          "share": 100,
+          "content": "One rig in constant motion",
+          "primitives": [
+            "rig/orbit-ring",
+            "rig/rolodex",
+            "rig/flip-ticker"
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "narrative/platform-launch",
+      "summary": "For a product made of several tools.",
+      "family": "product",
+      "duration": {
+        "min": 35,
+        "max": 50
+      },
+      "fits": [
+        "style/dark-showcase"
+      ],
+      "beats": [
+        {
+          "name": "hook",
+          "share": 5,
+          "content": "Hero object built from the brand mark",
+          "primitives": [
+            "scene/hero-object",
+            "rig/tumbling-object"
+          ]
+        },
+        {
+          "name": "dive",
+          "share": 1,
+          "content": "Camera pushes into the object",
+          "primitives": [
+            "transition/dive-in"
+          ]
+        },
+        {
+          "name": "burst",
+          "share": 4,
+          "content": "Assets explode outward",
+          "primitives": [
+            "fx/radial-burst"
+          ]
+        },
+        {
+          "name": "title",
+          "share": 5,
+          "content": "Product name with drifting collage",
+          "primitives": [
+            "type/typed-title",
+            "fx/depth-drift"
+          ]
+        },
+        {
+          "name": "collapse",
+          "share": 2,
+          "content": "Everything shrinks into the first interface element",
+          "primitives": [
+            "transition/collapse-to-anchor"
+          ]
+        },
+        {
+          "name": "use",
+          "share": 6,
+          "content": "A query is typed and results fill the frame",
+          "primitives": [
+            "ui/prompt-typing",
+            "ui/streamed-result",
+            "scene/grid-wall"
+          ]
+        },
+        {
+          "name": "tour",
+          "share": 52,
+          "content": "One feature every 2 to 3 s inside a fixed frame",
+          "primitives": [
+            "ui/tour-hold",
+            "transition/layout-locked-swap",
+            "transition/beat-cut"
+          ]
+        },
+        {
+          "name": "delight",
+          "share": 8,
+          "content": "A playful or illustrated moment",
+          "primitives": [
+            "fx/letter-interleave"
+          ]
+        },
+        {
+          "name": "proof",
+          "share": 7,
+          "content": "Thousands of items tile the frame",
+          "primitives": [
+            "scene/mosaic",
+            "fx/mosaic-fill"
+          ]
+        },
+        {
+          "name": "bookend",
+          "share": 10,
+          "content": "Return to the hero object so the film loops",
+          "primitives": [
+            "rig/tumbling-object",
+            "scene/end-card"
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "narrative/social-teaser",
+      "summary": "A short vertical hook for a feed.",
+      "family": "social",
+      "duration": {
+        "min": 6,
+        "max": 15
+      },
+      "fits": [
+        "style/kinetic-poster",
+        "style/studio-loop"
+      ],
+      "beats": [
+        {
+          "name": "hook",
+          "share": 30,
+          "content": "One word or number that stops the scroll",
+          "primitives": [
+            "type/scramble",
+            "type/split-flap"
+          ]
+        },
+        {
+          "name": "payoff",
+          "share": 45,
+          "content": "What it means, cut on the beat",
+          "primitives": [
+            "type/word-build",
+            "transition/beat-cut"
+          ]
+        },
+        {
+          "name": "end",
+          "share": 25,
+          "content": "Name and call to action",
+          "primitives": [
+            "scene/end-card"
+          ]
+        }
+      ]
+    },
+    {
+      "slug": "narrative/title-sequence",
+      "summary": "Opens an event, a series or a talk with names and a title.",
+      "family": "brand",
+      "duration": {
+        "min": 20,
+        "max": 45
+      },
+      "fits": [
+        "style/editorial-type",
+        "style/dark-showcase"
+      ],
+      "beats": [
+        {
+          "name": "open",
+          "share": 15,
+          "content": "Texture and a first mark of light",
+          "primitives": [
+            "texture/halftone-field",
+            "transition/curtain"
+          ]
+        },
+        {
+          "name": "names",
+          "share": 40,
+          "content": "Names and roles, one at a time",
+          "primitives": [
+            "type/typed-title",
+            "type/word-roller",
+            "type/writing-ticker"
+          ]
+        },
+        {
+          "name": "title",
+          "share": 30,
+          "content": "The title, set large",
+          "primitives": [
+            "scene/kinetic-headline",
+            "type/echo"
+          ]
+        },
+        {
+          "name": "date",
+          "share": 15,
+          "content": "Date and place",
+          "primitives": [
+            "type/split-flap",
+            "scene/end-card"
+          ]
+        }
+      ]
+    }
+  ],
+  "primitives": [
+    {
+      "slug": "fx/card-arrangements",
+      "summary": "Cards move between fan, stack, scatter and wheel layouts.",
+      "status": "draft"
+    },
+    {
+      "slug": "fx/counter-roll",
+      "summary": "A number rolls up to its value.",
+      "status": "draft"
+    },
+    {
+      "slug": "fx/depth-drift",
+      "summary": "A floating collage on several depth planes.",
+      "status": "specified"
+    },
+    {
+      "slug": "fx/letter-interleave",
+      "summary": "Letters of a word alternate with pictures in one grid.",
+      "status": "draft"
+    },
+    {
+      "slug": "fx/marquee-highlight",
+      "summary": "Scrolling rows with one item emphasised.",
+      "status": "draft"
+    },
+    {
+      "slug": "fx/mosaic-fill",
+      "summary": "A grid of more than a thousand tiles revealed fast.",
+      "status": "draft"
+    },
+    {
+      "slug": "fx/radial-burst",
+      "summary": "Items fly outward from the centre with thin streaks.",
+      "status": "draft"
+    },
+    {
+      "slug": "fx/stagger-fill",
+      "summary": "Items appear one after another.",
+      "status": "specified"
+    },
+    {
+      "slug": "rig/flip-ticker",
+      "summary": "A row of cards where a rotation wave travels along the row.",
+      "status": "draft"
+    },
+    {
+      "slug": "rig/orbit-ring",
+      "summary": "Tiles on a tilted ring that rotates forever.",
+      "status": "draft"
+    },
+    {
+      "slug": "rig/rolodex",
+      "summary": "Cards on a short cylinder that spins while the whole rig swings.",
+      "status": "draft"
+    },
+    {
+      "slug": "rig/tumbling-object",
+      "summary": "A cube or tile that turns in quarter steps.",
+      "status": "draft"
+    },
+    {
+      "slug": "scene/end-card",
+      "summary": "The logo alone.",
+      "status": "specified"
+    },
+    {
+      "slug": "scene/grid-wall",
+      "summary": "A masonry or regular grid of media.",
+      "status": "draft"
+    },
+    {
+      "slug": "scene/hero-object",
+      "summary": "One object alone on an empty canvas.",
+      "status": "draft"
+    },
+    {
+      "slug": "scene/kinetic-headline",
+      "summary": "A centred headline that builds while you read it.",
+      "status": "specified"
+    },
+    {
+      "slug": "scene/marquee-wall",
+      "summary": "Rows of chips or logos scrolling sideways.",
+      "status": "draft"
+    },
+    {
+      "slug": "scene/mosaic",
+      "summary": "Thousands of tiny tiles filling the frame.",
+      "status": "draft"
+    },
+    {
+      "slug": "scene/specimen-grid",
+      "summary": "The same word or glyph shown in many styles at once.",
+      "status": "specified"
+    },
+    {
+      "slug": "scene/stat-with-evidence",
+      "summary": "A big number with supporting thumbnails floating around it.",
+      "status": "draft"
+    },
+    {
+      "slug": "scene/zoomed-ui",
+      "summary": "One interface component enlarged to fill the frame.",
+      "status": "specified"
+    },
+    {
+      "slug": "texture/ascii",
+      "summary": "Brightness mapped to characters.",
+      "status": "draft"
+    },
+    {
+      "slug": "texture/depth-fade",
+      "summary": "Elements facing away lose colour and opacity.",
+      "status": "draft"
+    },
+    {
+      "slug": "texture/dither",
+      "summary": "Ordered dither of a soft shape.",
+      "status": "draft"
+    },
+    {
+      "slug": "texture/halftone-field",
+      "summary": "Squares or dots sized by a gradient.",
+      "status": "draft"
+    },
+    {
+      "slug": "transition/beat-cut",
+      "summary": "A plain cut placed on a music beat.",
+      "status": "specified"
+    },
+    {
+      "slug": "transition/blur-dissolve",
+      "summary": "One scene blurs out while the next blurs in.",
+      "status": "draft"
+    },
+    {
+      "slug": "transition/collapse-to-anchor",
+      "summary": "Everything shrinks into one element that starts the next scene.",
+      "status": "specified"
+    },
+    {
+      "slug": "transition/curtain",
+      "summary": "Two panels part or close.",
+      "status": "draft"
+    },
+    {
+      "slug": "transition/dive-in",
+      "summary": "The camera pushes into a point until it fills the frame.",
+      "status": "draft"
+    },
+    {
+      "slug": "transition/layout-locked-swap",
+      "summary": "The frame stays still and only the inner content changes.",
+      "status": "draft"
+    },
+    {
+      "slug": "transition/light-dark-flip",
+      "summary": "The background inverts behind a held element.",
+      "status": "draft"
+    },
+    {
+      "slug": "transition/step-wipe",
+      "summary": "Stepped bars sweep across the frame.",
+      "status": "draft"
+    },
+    {
+      "slug": "transition/torn-edge",
+      "summary": "A wipe with a jagged, paper-like edge.",
+      "status": "draft"
+    },
+    {
+      "slug": "transition/zoom-through-letter",
+      "summary": "The camera flies through the opening of a letter.",
+      "status": "specified"
+    },
+    {
+      "slug": "type/accent-number",
+      "summary": "The key number is set in the accent colour.",
+      "status": "draft"
+    },
+    {
+      "slug": "type/echo",
+      "summary": "Copies of a headline trail behind it.",
+      "status": "draft"
+    },
+    {
+      "slug": "type/focus-blur",
+      "summary": "One word is sharp and the others are blurred.",
+      "status": "draft"
+    },
+    {
+      "slug": "type/inline-chips",
+      "summary": "Icons sit inside a sentence as if they were words.",
+      "status": "draft"
+    },
+    {
+      "slug": "type/parting",
+      "summary": "A line splits apart to reveal something between.",
+      "status": "draft"
+    },
+    {
+      "slug": "type/per-word-restyle",
+      "summary": "Each word changes to a new style in turn.",
+      "status": "draft"
+    },
+    {
+      "slug": "type/scramble",
+      "summary": "Characters cycle randomly before settling.",
+      "status": "draft"
+    },
+    {
+      "slug": "type/scribble-highlight",
+      "summary": "A hand-drawn mark draws under or around a word.",
+      "status": "draft"
+    },
+    {
+      "slug": "type/split-flap",
+      "summary": "Characters flip like a departure board.",
+      "status": "draft"
+    },
+    {
+      "slug": "type/style-multiply",
+      "summary": "One word multiplies into many typefaces.",
+      "status": "draft"
+    },
+    {
+      "slug": "type/typed-title",
+      "summary": "Characters appear one by one with a caret.",
+      "status": "specified"
+    },
+    {
+      "slug": "type/word-build",
+      "summary": "Words rise and fade in one by one.",
+      "status": "draft"
+    },
+    {
+      "slug": "type/word-roller",
+      "summary": "Words roll vertically in a slot.",
+      "status": "draft"
+    },
+    {
+      "slug": "type/writing-ticker",
+      "summary": "A sentence is typed while the line scrolls left.",
+      "status": "draft"
+    },
+    {
+      "slug": "ui/collab-cursors",
+      "summary": "Coloured cursors with name tags select and edit.",
+      "status": "draft"
+    },
+    {
+      "slug": "ui/cursor-click",
+      "summary": "A drawn cursor moves to a target and clicks.",
+      "status": "draft"
+    },
+    {
+      "slug": "ui/prompt-typing",
+      "summary": "Text is typed into an input field.",
+      "status": "specified"
+    },
+    {
+      "slug": "ui/streamed-result",
+      "summary": "An answer appears row by row.",
+      "status": "specified"
+    },
+    {
+      "slug": "ui/tour-hold",
+      "summary": "A product screen held still to show one feature.",
+      "status": "draft"
+    }
+  ]
+}

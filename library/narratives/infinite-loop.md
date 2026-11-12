@@ -1,6 +1,7 @@
 ---
 slug: narrative/infinite-loop
 kind: narrative
+family: social
 summary: One scene that repeats without a visible seam.
 status: specified
 origin: observed

@@ -1,0 +1,95 @@
+{
+  "$schema": "../schema/film.schema.json",
+  "motion": "0.4",
+  "title": "Motion Library showcase",
+  "size": [1920, 1080],
+  "fps": 60,
+  "loop": true,
+  "poster": 23.4,
+  "style": "style/clean-explainer",
+  "theme": { "accent": "#2440F0" },
+  "scenes": [
+    {
+      "id": "title",
+      "intent": "Name the library and what it is for.",
+      "uses": ["scene/kinetic-headline", "type/word-build", "texture/halftone-field"],
+      "length": 3.4,
+      "background": "sunken",
+      "layers": [
+        { "id": "field", "use": "texture/halftone-field", "params": { "grow": 2.7 } },
+        { "id": "eyebrow", "use": "el/text", "at": 0.1, "props": { "text": "Motion Library · v0.4" }, "style": { "size": "caption", "color": "muted", "font": "mono" }, "enter": { "move": "fade", "duration": 0.5 } },
+        { "id": "headline", "use": "type/word-build", "at": 0.35, "props": { "text": "A shared vocabulary for motion video", "accent": ["video"] }, "params": { "rise": 20 }, "style": { "size": "headline", "width": 78 } },
+        { "id": "sub", "use": "el/text", "at": "headline.end + 0.05", "props": { "text": "Named moves, our own styles, repeatable renders." }, "style": { "size": "title", "color": "muted" }, "enter": { "move": "rise", "amount": 20 } }
+      ],
+      "out": { "use": "transition/blur-dissolve" }
+    },
+    {
+      "id": "counts",
+      "intent": "How much is in the library, with its entries drifting around the numbers.",
+      "uses": ["scene/stat-with-evidence", "fx/counter-roll", "fx/depth-drift"],
+      "length": 4.4,
+      "background": "sunken",
+      "layers": [
+        { "id": "evidence", "use": "fx/depth-drift", "props": { "items": ["fx/radial-burst", "type/echo", "rig/rolodex", "ui/tour-hold", "scene/mosaic", "transition/curtain", "texture/ascii", "type/scramble", "fx/mosaic-fill"] } },
+        { "id": "primitives", "use": "fx/counter-roll", "at": 0.2, "props": { "value": 54 }, "place": { "x": 29, "y": 46, "anchor": "bottom-left" }, "style": { "size": "hero", "color": "accent" }, "enter": { "move": "rise", "amount": 24 } },
+        { "id": "primitives-label", "use": "el/text", "at": "primitives.start", "props": { "text": "primitives" }, "place": { "x": 29, "y": 48, "anchor": "top-left" }, "style": { "size": "title" }, "enter": { "move": "rise", "amount": 24 } },
+        { "id": "styles", "use": "fx/counter-roll", "at": 0.45, "props": { "value": 5 }, "place": { "x": 53, "y": 46, "anchor": "bottom-left" }, "style": { "size": "hero", "color": "accent" }, "enter": { "move": "rise", "amount": 24 } },
+        { "id": "styles-label", "use": "el/text", "at": "styles.start", "props": { "text": "styles" }, "place": { "x": 53, "y": 48, "anchor": "top-left" }, "style": { "size": "title" }, "enter": { "move": "rise", "amount": 24 } },
+        { "id": "narratives", "use": "fx/counter-roll", "at": 0.7, "props": { "value": 4 }, "place": { "x": 66, "y": 46, "anchor": "bottom-left" }, "style": { "size": "hero", "color": "accent" }, "enter": { "move": "rise", "amount": 24 } },
+        { "id": "narratives-label", "use": "el/text", "at": "narratives.start", "props": { "text": "narratives" }, "place": { "x": 66, "y": 48, "anchor": "top-left" }, "style": { "size": "title" }, "enter": { "move": "rise", "amount": 24 } },
+        { "id": "caption", "use": "el/text", "props": { "text": "63 entries, one file each." }, "place": { "x": 4, "y": 94, "anchor": "bottom-left" }, "style": { "size": "title" } }
+      ],
+      "out": { "use": "transition/blur-dissolve" }
+    },
+    {
+      "id": "names",
+      "intent": "Every move has a name; one of them is picked out.",
+      "uses": ["scene/marquee-wall", "fx/marquee-highlight"],
+      "length": 5.0,
+      "background": "sunken",
+      "layout": { "padding": 0, "justify": "start" },
+      "layers": [
+        { "id": "wall", "use": "scene/marquee-wall", "props": { "highlight": "transition/blur-dissolve", "items": ["scene/hero-object", "transition/dive-in", "fx/stagger-fill", "type/per-word-restyle", "scene/marquee-wall", "type/word-build", "scene/mosaic", "scene/end-card", "transition/step-wipe", "transition/beat-cut", "fx/radial-burst", "type/split-flap", "type/typed-title", "scene/zoomed-ui", "type/writing-ticker", "ui/prompt-typing", "fx/depth-drift", "transition/blur-dissolve", "fx/counter-roll", "rig/tumbling-object", "transition/curtain", "ui/cursor-click", "rig/orbit-ring", "ui/tour-hold", "ui/collab-cursors", "texture/dither", "rig/flip-ticker", "ui/streamed-result", "type/word-roller", "transition/torn-edge", "rig/rolodex", "scene/grid-wall", "texture/ascii", "texture/halftone-field", "type/focus-blur", "type/scramble", "type/echo", "fx/mosaic-fill", "fx/letter-interleave"] }, "params": { "speed": 70, "highlight_at": 1.9 }, "style": { "size": "body", "font": "mono", "css": { "margin-top": "110px" } } },
+        { "id": "caption", "use": "el/text", "props": { "text": "Every move has a name." }, "place": { "x": 4, "y": 94, "anchor": "bottom-left" }, "style": { "size": "title" } }
+      ],
+      "out": { "use": "transition/blur-dissolve" }
+    },
+    {
+      "id": "ring",
+      "intent": "One move serves many styles: the same tiles, seen from every side.",
+      "uses": ["rig/orbit-ring", "texture/depth-fade"],
+      "length": 5.2,
+      "background": "sunken",
+      "layers": [
+        { "id": "orbit", "use": "rig/orbit-ring", "props": { "items": ["Aa", "scene", "fx", "transition", "3D", "type", "→", "rig", "ui", "texture", "↻", "style"] }, "params": { "tilt_x": 22, "tilt_z": -14, "period": 13.8, "min_opacity": 0.32 } },
+        { "id": "caption", "use": "el/text", "props": { "text": "One move serves many styles." }, "place": { "x": 4, "y": 94, "anchor": "bottom-left" }, "style": { "size": "title" } }
+      ],
+      "out": { "use": "transition/blur-dissolve" }
+    },
+    {
+      "id": "status",
+      "intent": "Entries earn trust in four steps.",
+      "uses": ["fx/stagger-fill"],
+      "length": 4.2,
+      "background": "sunken",
+      "layers": [
+        { "id": "steps", "use": "fx/stagger-fill", "at": 0.3, "props": { "items": ["draft", "specified", "recipe", "tested"] }, "params": { "stagger": 0.06 }, "style": { "size": "title", "font": "mono" } },
+        { "id": "note", "use": "el/text", "at": "steps.end + 0.6", "props": { "text": "one observation → seen twice, or designed → code exists → rendered and approved" }, "style": { "size": "caption", "color": "muted", "font": "mono" }, "enter": "fade" },
+        { "id": "caption", "use": "el/text", "props": { "text": "Entries earn trust in four steps." }, "place": { "x": 4, "y": 94, "anchor": "bottom-left" }, "style": { "size": "title" } }
+      ],
+      "out": { "use": "transition/blur-dissolve" }
+    },
+    {
+      "id": "formula",
+      "intent": "The whole idea in one line, and hold.",
+      "uses": ["type/word-build", "scene/end-card", "texture/halftone-field"],
+      "length": 4.2,
+      "background": "sunken",
+      "layers": [
+        { "id": "field", "use": "texture/halftone-field", "props": { "edge": "bottom" }, "params": { "grow": 3.2, "reach": 0.5 } },
+        { "id": "line", "use": "type/word-build", "at": 0.2, "props": { "text": "narrative + style + brand = video", "accent": ["video"] }, "params": { "rise": 20 }, "style": { "size": "headline", "width": 94 } },
+        { "id": "foot", "use": "el/text", "at": "line.end + 0.1", "props": { "text": "one narrative, one style, your brand" }, "style": { "size": "caption", "color": "muted", "font": "mono" }, "enter": { "move": "rise", "amount": 20 } }
+      ]
+    }
+  ]
+}

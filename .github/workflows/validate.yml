@@ -34,3 +34,22 @@ jobs:
           for f in $(find recipes -name '*.js' -not -path 'recipes/_lib/*'); do
             slug="${f#recipes/}"; python3 tools/check_recipe.py "${slug%.js}"
           done
+
+  runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Type-check, test, catalog up to date, films valid
+        run: pnpm verify
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Catalog matches the library
+        run: python3 tools/validate.py
