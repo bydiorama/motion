@@ -1,0 +1,17 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Recipe harness</title>
+<style>
+  html,body{margin:0;height:100%;background:#fff;color:#111;font:600 72px/1.15 Inter,Helvetica,Arial,sans-serif}
+  #stage{width:100vw;height:100vh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+</style>
+<div id="stage"></div>
+<script type="module">
+  // Open as _harness.html?recipe=type/word-build&copy=Your+text&t=0.4
+  const q = new URLSearchParams(location.search);
+  const mod = await import(`./${q.get('recipe')}.js`);
+  const inst = mod.build(document.getElementById('stage'), {}, { copy: q.get('copy') || undefined });
+  window.recipe = { duration: inst.duration, seek: (t) => inst.seek(t) };
+  inst.seek(q.has('t') ? parseFloat(q.get('t')) : inst.duration);
+  window.ready = true;
+</script>

@@ -1,0 +1,4 @@
+# Needed for tools/validate.py, build_index.py, new_entry.py, build_showcase.py
+pyyaml>=6
+# Only needed for tools/check_recipe.py (also needs Chrome installed)
+playwright>=1.40

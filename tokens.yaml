@@ -1,0 +1,12 @@
+# Global motion defaults. Styles override these; primitives read them.
+# Change a value here and every video made after that follows it.
+fps: 30
+master_size: {loop: [1080, 1350], film: [1920, 1080]}
+beat: 2.5            # s, default length of one story beat
+hold_end: 1.5        # s, end card hold
+duration: {instant: 0, fast: 0.3, base: 0.5, slow: 0.8}
+stagger: {tight: 0.03, base: 0.08, loose: 0.12}
+ease_enter: expo.out     # things arriving
+ease_exit: cubic.in      # things leaving
+ease_move: cubic.inOut   # camera and layout moves
+ease_loop: linear        # marquees and loops

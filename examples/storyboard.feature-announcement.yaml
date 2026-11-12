@@ -1,0 +1,15 @@
+# Example of what the director skill will output and the renderer will read.
+library_version: 0.3.0
+narrative: narrative/feature-announcement
+style: style/clean-explainer
+format: '16:9'
+duration: 20
+brand: {design_system: null}   # link to a design-system file when one exists
+scenes:
+- {id: headline, start: 0.0, length: 2.8, copy: "Meet the new shared calendar", uses: [scene/kinetic-headline, type/word-build]}
+- {id: stat, start: 2.8, length: 2.8, copy: "12 teams, one schedule", uses: [scene/stat-with-evidence, type/accent-number], out: transition/blur-dissolve}
+- {id: prompt, start: 5.6, length: 3.2, copy: "Find a free hour next week", uses: [scene/zoomed-ui, ui/prompt-typing, ui/cursor-click]}
+- {id: result, start: 8.8, length: 3.6, uses: [ui/streamed-result], out: transition/blur-dissolve}
+- {id: context, start: 12.4, length: 1.6, copy: "Works with the tools you already use", uses: [scene/kinetic-headline]}
+- {id: breadth, start: 14.0, length: 3.6, uses: [scene/marquee-wall, fx/marquee-highlight], out: transition/collapse-to-anchor}
+- {id: end, start: 17.6, length: 2.4, uses: [scene/end-card]}

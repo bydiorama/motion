@@ -1,0 +1,4 @@
+* text=auto eol=lf
+showcase/index.html linguist-generated=true
+INDEX.md linguist-generated=true
+showcase/vendor/* linguist-vendored=true

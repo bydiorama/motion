@@ -1,0 +1,36 @@
+name: validate
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  library:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      - name: Validate entries and storyboards
+        run: python3 tools/validate.py
+      - name: Generated files are up to date
+        run: |
+          python3 tools/build_index.py
+          python3 tools/build_showcase.py
+          git diff --exit-code INDEX.md showcase/index.html
+
+  recipes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml playwright
+      - name: Check every recipe
+        run: |
+          for f in $(find recipes -name '*.js' -not -path 'recipes/_lib/*'); do
+            slug="${f#recipes/}"; python3 tools/check_recipe.py "${slug%.js}"
+          done

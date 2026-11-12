@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Motion Library Showcase</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style id="dialkit-css">/*DIALKIT_CSS*/</style>
+<style>
+  /* Layout idea: a 16:9 film stage with a DialKit parameter panel beside it and the DialKit
+     timeline dock as transport. Every dial feeds the film's pure seek(t). Single light page theme
+     by choice; the stage itself can switch between a light and a dark look. */
+  :root {
+    color-scheme: light;
+    --page: #F5F6F8;
+    --stage: #E7EAEE;
+    --paper: #FFFFFF;
+    --ink: #12151B;
+    --muted: #646B78;
+    --line: #CDD2DA;
+    --accent: #2440F0;
+    --tint: #D5DBFF;
+    --display: "Bricolage Grotesque", "Helvetica Neue", Arial, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body { background: var(--page); color: var(--ink); font-family: var(--display); font-size: 16px; line-height: 1.45; }
+  main { max-width: 1320px; margin: 0 auto; padding: 28px 20px 40px; display: flex; flex-direction: column; gap: 16px; }
+  header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 24px; }
+  h1 { font-size: 22px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--muted); font-size: 15px; }
+
+  .work { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; }
+  .left { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  #panel { min-width: 0; height: 620px; max-height: 80vh; border: 1px solid var(--line); border-radius: 14px; overflow-y: auto; background: #fafafa; }
+  #dock { min-width: 0; }
+  #dock .dialkit-timeline { position: static; }
+  #dock .dialkit-timeline-dock { max-height: none !important; }
+  @media (max-width: 860px) { .work { grid-template-columns: minmax(0, 1fr); } #panel { height: 520px; } }
+  .stage[data-look="dark"] { --stage: #0E1015; --ink: #F1F3F7; --paper: #1B1F28; --muted: #8C94A4; --line: #2B303B; }
+  .stage { color: var(--ink); --tint: color-mix(in srgb, var(--accent) 22%, var(--stage)); }
+
+  /* ---------- stage ---------- */
+  .stage { position: relative; width: 100%; aspect-ratio: 16 / 9; background: var(--stage); border-radius: 14px; overflow: hidden; container-type: size; }
+  .sc { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2.4cqw; text-align: center; visibility: hidden; isolation: isolate; }
+  .cap { position: absolute; left: 4cqw; bottom: 3.4cqw; font-size: 2.3cqw; font-weight: 600; letter-spacing: -0.01em; }
+  .mono { font-family: var(--mono); font-size: 1.45cqw; color: var(--muted); letter-spacing: 0.02em; }
+  .w { display: inline-block; will-change: transform, opacity; }
+  .acc { color: var(--accent); }
+
+  .head { font-size: 6.4cqw; font-weight: 700; line-height: 1.05; letter-spacing: -0.03em; max-width: 78cqw; min-height: 2.1em; display: flex; flex-wrap: wrap; justify-content: center; align-content: center; gap: 0 0.26em; }
+  .sub { font-size: 2.3cqw; color: var(--muted); }
+
+  /* texture/halftone-field */
+  .half { position: absolute; inset: 0; z-index: -1; pointer-events: none; opacity: var(--tex, 1);
+    background-image: radial-gradient(circle, var(--accent) 0.26cqw, transparent 0.3cqw), radial-gradient(circle, var(--muted) 0.16cqw, transparent 0.2cqw);
+    background-size: 2cqw 2cqw; background-position: 0 0, 1cqw 1cqw;
+    -webkit-mask-image: radial-gradient(ellipse 62% 52% at 50% -6%, #000 0%, transparent calc(var(--g, 0) * 100%));
+            mask-image: radial-gradient(ellipse 62% 52% at 50% -6%, #000 0%, transparent calc(var(--g, 0) * 100%)); }
+  .half.low { transform: scaleY(-1); }
+
+  /* fx/depth-drift */
+  .ev { position: absolute; left: 0; top: 0; padding: 0.7cqw 1.4cqw; border-radius: 10cqw; background: var(--paper); color: var(--ink); font-family: var(--mono); font-size: 1.4cqw; white-space: nowrap; will-change: transform; }
+
+  /* stats */
+  .stats { display: flex; gap: 7cqw; align-items: flex-end; }
+  .stat { display: flex; flex-direction: column; align-items: flex-start; gap: 0.4cqw; text-align: left; }
+  .stat b { font-size: 12cqw; line-height: 0.9; font-weight: 700; letter-spacing: -0.04em; color: var(--accent); font-variant-numeric: tabular-nums; min-width: 1.15em; }
+  .stat span { font-size: 2.3cqw; font-weight: 600; }
+
+  /* marquee wall */
+  #s3 { gap: 1.5cqw; justify-content: flex-start; padding-top: 5.5cqw; }
+  .row { width: 100%; overflow: hidden; }
+  .track { display: flex; width: max-content; will-change: transform; }
+  .chip { color: var(--ink); position: relative; flex: none; margin-right: 1.4cqw; padding: 1.1cqw 2cqw; border-radius: 10cqw; background: var(--paper); font-family: var(--mono); font-size: 1.75cqw; white-space: nowrap; opacity: calc(1 - 0.68 * var(--k, 0)); }
+  .chip.hl { opacity: 1; transform: scale(calc(1 + 0.1 * var(--k, 0))); z-index: 1; }
+  .chip.hl::after { content: attr(data-s); position: absolute; inset: 0; display: grid; place-items: center; border-radius: inherit; background: var(--accent); color: #fff; opacity: var(--k, 0); }
+
+  /* orbit ring */
+  .persp { position: absolute; inset: 0; perspective: 120cqw; perspective-origin: 50% 42%; }
+  .ring { position: absolute; left: 50%; top: 45%; width: 0; height: 0; transform-style: preserve-3d; transform: rotateX(-22deg) rotateZ(-14deg); }
+  .tile { position: absolute; left: -5.5cqw; top: -5.5cqw; width: 11cqw; height: 11cqw; border-radius: 1.3cqw; display: grid; place-items: center; font-weight: 700; font-size: 4.4cqw; letter-spacing: -0.03em; background: var(--paper); color: var(--ink); will-change: transform, opacity; }
+  .tile.i { background: var(--ink); color: var(--stage); }
+  .tile.a { background: var(--accent); color: #fff; }
+  .tile.t { background: var(--tint); color: var(--accent); }
+  .tile.n { font-family: var(--mono); font-weight: 500; font-size: 1.5cqw; letter-spacing: 0; }
+
+  /* status pipeline */
+  .pipe { position: relative; display: grid; grid-template-columns: repeat(4, 17cqw); gap: 4cqw; }
+  .rail { position: absolute; left: 8.5cqw; right: 8.5cqw; top: 2.6cqw; height: 0.3cqw; background: var(--line); }
+  .rail i { position: absolute; inset: 0; background: var(--ink); transform-origin: 0 50%; }
+  .step { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1.2cqw; }
+  .pill { position: relative; padding: 1.2cqw 0; width: 100%; border-radius: 10cqw; background: var(--paper); font-family: var(--mono); font-size: 1.9cqw; font-weight: 500; }
+  .pill::after { content: attr(data-s); position: absolute; inset: 0; display: grid; place-items: center; border-radius: inherit; background: var(--ink); color: var(--stage); opacity: var(--a, 0); }
+  .step:last-child .pill::after { background: var(--accent); color: #fff; }
+  .step small { font-size: 1.6cqw; color: var(--muted); opacity: var(--a, 0); }
+
+  /* end card */
+  .formula { font-size: 4.9cqw; max-width: 94cqw; min-height: 1.1em; }
+
+  /* ---------- transport ---------- */
+  .bar { display: flex; align-items: center; gap: 12px; }
+  button { font: inherit; color: inherit; cursor: pointer; }
+  #play { flex: none; width: 44px; height: 44px; border-radius: 50%; border: 0; background: var(--ink); color: #fff; display: grid; place-items: center; }
+  #play svg { width: 16px; height: 16px; fill: currentColor; }
+  #scrub { flex: 1; min-width: 0; accent-color: var(--accent); height: 28px; }
+  #time { font-family: var(--mono); font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .chapters { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chapters button { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 6px 14px; font-size: 14px; font-weight: 600; }
+  .chapters button[aria-current="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .now { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: 14px; color: var(--muted); min-height: 30px; }
+  .now code { font-family: var(--mono); font-size: 12.5px; color: var(--ink); background: var(--paper); border: 1px solid var(--line); border-radius: 6px; padding: 2px 7px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Motion Library showcase</h1>
+    <p>A film built from the library's own entries. Tune it live with the dials; drag the clips to retime it.</p>
+  </header>
+
+  <div class="work"><div class="left">
+  <div class="stage" id="stage" role="img" aria-label="Animated showcase of the Motion Library: title, entry counts, a wall of entry names, an orbiting ring of tiles, the four status steps, and a closing formula.">
+    <section class="sc" id="s1">
+      <div class="half"></div>
+      <div class="mono" id="s1eye">Motion Library · v0.3</div>
+      <div class="head" id="s1head"></div>
+      <div class="sub" id="s1sub">Named moves, our own styles, repeatable renders.</div>
+    </section>
+
+    <section class="sc" id="s2">
+      <div class="stats" id="stats"></div>
+      <div class="cap">63 entries, one file each.</div>
+    </section>
+
+    <section class="sc" id="s3">
+      <div class="cap">Every move has a name.</div>
+    </section>
+
+    <section class="sc" id="s4">
+      <div class="persp"><div class="ring" id="ring"></div></div>
+      <div class="cap">One move serves many styles.</div>
+    </section>
+
+    <section class="sc" id="s5">
+      <div class="pipe" id="pipe"><div class="rail"><i id="railfill"></i></div></div>
+      <div class="mono" id="s5note">today: draft 50 · specified 13 · recipe 0 · tested 0</div>
+      <div class="cap">Entries earn trust in four steps.</div>
+    </section>
+
+    <section class="sc" id="s6">
+      <div class="half low"></div>
+      <div class="head formula" id="s6head"></div>
+      <div class="mono" id="s6foot">one narrative, one style, your brand</div>
+    </section>
+  </div>
+
+  <div class="now" id="now" aria-live="off"></div>
+  <div id="dock"></div>
+  </div>
+  <div id="panel"></div></div>
+</main>
+
+<!--DIALKIT_JS-->
+<script>
+(() => {
+  if (!window.DialKit) { document.getElementById('now').textContent = 'The DialKit script did not load, so the film cannot play. Reload the page to try again.'; return; }
+  // ---- helpers: everything drawn is a pure function of time and the current dial values ----
+  const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+  const frac = (x) => ((x % 1) + 1) % 1;
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
+  const io = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+  const outExpo = (x) => (x >= 1 ? 1 : 1 - Math.pow(2, -10 * x));
+
+  function bezier(x1, y1, x2, y2) {
+    const cx = 3 * x1, bx = 3 * (x2 - x1) - cx, ax = 1 - cx - bx;
+    const cy = 3 * y1, by = 3 * (y2 - y1) - cy, ay = 1 - cy - by;
+    const fx = (u) => ((ax * u + bx) * u + cx) * u, fy = (u) => ((ay * u + by) * u + cy) * u;
+    return (x) => {
+      if (x <= 0) return 0; if (x >= 1) return 1;
+      let u = x;
+      for (let i = 0; i < 8; i++) { const d = (3 * ax * u + 2 * bx) * u + cx; if (Math.abs(d) < 1e-6) break; u -= (fx(u) - x) / d; }
+      return fy(clamp(u));
+    };
+  }
+  // Turns a DialKit transition value (easing or spring) into f(secondsSinceStart) -> progress.
+  function motionFn(tr) {
+    if (tr && tr.type === 'spring') {
+      let k, c, m = tr.mass || 1;
+      if (tr.visualDuration != null) {
+        const root = (2 * Math.PI) / (Math.max(0.05, tr.visualDuration) * 1.2);
+        k = root * root; c = 2 * clamp(1 - (tr.bounce || 0), 0.05, 1) * Math.sqrt(k); m = 1;
+      } else { k = tr.stiffness || 100; c = tr.damping || 10; }
+      const w0 = Math.sqrt(k / m), z = c / (2 * Math.sqrt(k * m));
+      return (dt) => {
+        if (dt <= 0) return 0;
+        if (z < 1) { const wd = w0 * Math.sqrt(1 - z * z); return 1 - Math.exp(-z * w0 * dt) * (Math.cos(wd * dt) + ((z * w0) / wd) * Math.sin(wd * dt)); }
+        return 1 - Math.exp(-w0 * dt) * (1 + w0 * dt);
+      };
+    }
+    const e = (tr && tr.ease) || [0.16, 1, 0.3, 1], d = Math.max(0.01, (tr && tr.duration) || 0.5), bz = bezier(e[0], e[1], e[2], e[3]);
+    return (dt) => bz(clamp(dt / d));
+  }
+
+  const SCENES = [
+    { id: 's1', key: 'title',   name: 'Title',   uses: ['scene/kinetic-headline', 'type/word-build', 'texture/halftone-field'] },
+    { id: 's2', key: 'counts',  name: 'Counts',  uses: ['scene/stat-with-evidence', 'fx/counter-roll', 'fx/depth-drift'] },
+    { id: 's3', key: 'names',   name: 'Names',   uses: ['scene/marquee-wall', 'fx/marquee-highlight'] },
+    { id: 's4', key: 'ring',    name: 'Ring',    uses: ['rig/orbit-ring', 'texture/depth-fade'] },
+    { id: 's5', key: 'status',  name: 'Status',  uses: ['fx/stagger-fill'] },
+    { id: 's6', key: 'formula', name: 'Formula', uses: ['type/word-build', 'scene/end-card'] },
+  ];
+  SCENES.forEach((s) => (s.node = $(s.id)));
+  const stage = $('stage');
+
+  // ---- dials ----
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const DEFAULT_HEAD = 'A shared vocabulary for motion video';
+  DialKit.createDialRoot({ target: $('panel'), mode: 'inline', theme: 'light', versions: 'menu' });
+  const kit = DialKit.createDialKit('Film', {
+    look: {
+      dark: false,
+      accent: '#2440F0',
+      texture: [1, 0, 1, 0.05],
+      headline: { type: 'text', default: DEFAULT_HEAD },
+    },
+    entrance: {
+      motion: { type: 'easing', duration: 0.5, ease: [0.16, 1, 0.3, 1] },
+      stagger: [0.1, 0.02, 0.3, 0.01],
+      rise: [1.3, 0, 6, 0.1],
+      dissolve: [1.4, 0, 4, 0.1],
+    },
+    ring: {
+      _collapsed: true,
+      tilt: { type: 'pad', x: [-14, -45, 45, 1], y: [22, -60, 60, 1], labels: { x: 'roll', y: 'pitch' } },
+      speed: [26, -90, 90, 1],
+      radius: [24, 16, 32, 0.5],
+      depthFade: [0.68, 0, 1, 0.01],
+    },
+    wall: {
+      _collapsed: true,
+      speed: [1, 0, 4, 0.1],
+      dim: [0.68, 0, 1, 0.01],
+    },
+    replay: { type: 'action' },
+  }, { onAction: () => tl.replay() });
+
+  const tl = DialKit.createDialTimeline('Showcase', {
+    duration: 24.4,
+    title:   { at: 0,    duration: 3.4 },
+    counts:  { at: 3.4,  duration: 4.0 },
+    names:   { at: 7.4,  duration: 4.6 },
+    ring:    { at: 12.0, duration: 4.8 },
+    status:  { at: 16.8, duration: 3.8 },
+    formula: { at: 20.6, duration: 3.8 },
+  }, { loop: true, autoplay: !reduced });
+  DialKit.createDialTimelineRoot({ target: $('dock'), theme: 'light', defaultOpen: true });
+
+  let P = kit.values, E = motionFn(P.entrance.motion);
+
+  // type/word-build
+  function makeWords(host, words) {
+    host.replaceChildren();
+    return words.map((w) => { const s = el('span', 'w' + (w.acc ? ' acc' : ''), w.t || w); host.appendChild(s); return s; });
+  }
+  function wordBuild(spans, t, start) {
+    spans.forEach((s, i) => {
+      const st = start + i * P.entrance.stagger, k = E(t - st);
+      s.style.display = t >= st ? 'inline-block' : 'none';
+      s.style.opacity = clamp(k * 1.6);
+      s.style.transform = `translateY(${(1 - k) * P.entrance.rise}cqw)`;
+    });
+  }
+  const rise = (node, t, start) => { const k = E(t - start); node.style.opacity = clamp(k * 1.6); node.style.transform = `translateY(${(1 - k) * P.entrance.rise * 0.8}cqw)`; };
+
+  // scene 1
+  let s1words = [], headText = null;
+  function setHeadline(text) {
+    if (text === headText) return; headText = text;
+    const parts = (text.trim() || DEFAULT_HEAD).split(/\s+/);
+    s1words = makeWords($('s1head'), parts.map((w, i) => (i === parts.length - 1 ? { t: w, acc: true } : w)));
+  }
+
+  // scene 2
+  const STATS = [[54, 'primitives'], [5, 'styles'], [4, 'narratives']].map(([n, label]) => {
+    const box = el('div', 'stat'), b = el('b', '', '0');
+    box.append(b, el('span', '', label)); $('stats').appendChild(box); return { n, b, box };
+  });
+  const EVID = [['fx/radial-burst', 6, 9, 0], ['type/echo', 30, 18, 2], ['rig/rolodex', 56, 8, 1], ['ui/tour-hold', 80, 16, 0], ['scene/mosaic', 90, 40, 2],
+                ['transition/curtain', 1, 66, 1], ['texture/ascii', 46, 80, 0], ['type/scramble', 66, 88, 2], ['fx/mosaic-fill', 84, 74, 1]].map(([s, x, y, plane]) => {
+    const n = el('span', 'ev', s); $('s2').insertBefore(n, $('stats')); return { n, x, y, plane };
+  });
+
+  // scene 3
+  const ROWS = [
+    ['scene/hero-object', 'type/word-build', 'fx/radial-burst', 'ui/prompt-typing', 'transition/curtain', 'texture/dither', 'rig/rolodex', 'type/scramble'],
+    ['transition/dive-in', 'scene/mosaic', 'type/split-flap', 'fx/depth-drift', 'ui/cursor-click', 'rig/flip-ticker', 'scene/grid-wall', 'type/echo'],
+    ['fx/stagger-fill', 'scene/end-card', 'type/typed-title', 'transition/blur-dissolve', 'rig/orbit-ring', 'ui/streamed-result', 'texture/ascii'],
+    ['type/per-word-restyle', 'transition/step-wipe', 'scene/zoomed-ui', 'fx/counter-roll', 'ui/tour-hold', 'type/word-roller', 'texture/halftone-field', 'fx/mosaic-fill'],
+    ['scene/marquee-wall', 'transition/beat-cut', 'type/writing-ticker', 'rig/tumbling-object', 'ui/collab-cursors', 'transition/torn-edge', 'type/focus-blur', 'fx/letter-interleave'],
+  ];
+  const tracks = ROWS.map((slugs, i) => {
+    const row = el('div', 'row'), track = el('div', 'track');
+    for (let copy = 0; copy < 2; copy++) slugs.forEach((s) => {
+      const c = el('span', 'chip' + (s === 'transition/blur-dissolve' ? ' hl' : ''), s); c.dataset.s = s; track.appendChild(c);
+    });
+    row.appendChild(track); $('s3').insertBefore(row, $('s3').querySelector('.cap'));
+    return { track, dir: i % 2 ? -1 : 1, rate: [0.05, 0.062, 0.03, 0.055, 0.045][i], off: [0.1, 0.5, 0.92, 0.3, 0.7][i] };
+  });
+
+  // scene 4
+  const TILES = [['Aa', 'i'], ['scene', 'n'], ['fx', 'a'], ['transition', 'n t'], ['3D', ''], ['type', 'n i'], ['→', 't'], ['rig', 'n'], ['ui', 'i'], ['texture', 'n a'], ['↻', ''], ['style', 'n t']];
+  const tiles = TILES.map(([txt, cls]) => { const n = el('div', 'tile ' + cls, txt); $('ring').appendChild(n); return n; });
+
+  // scene 5
+  const STEPS = [['draft', 'one observation'], ['specified', 'seen twice, or designed'], ['recipe', 'code exists'], ['tested', 'rendered and approved']].map(([s, note]) => {
+    const step = el('div', 'step'), pill = el('div', 'pill', s);
+    pill.dataset.s = s; step.append(pill, el('small', '', note)); $('pipe').appendChild(step); return step;
+  });
+
+  // scene 6
+  const s6words = makeWords($('s6head'), ['narrative', '+', 'style', '+', 'brand', '=', { t: 'video', acc: true }]);
+
+  const draw = {
+    s1(t, len) {
+      $('s1').style.setProperty('--g', outExpo(clamp(t / Math.max(1, len * 0.8))));
+      $('s1eye').style.opacity = clamp((t - 0.1) / 0.5);
+      wordBuild(s1words, t, 0.35);
+      rise($('s1sub'), t, 0.35 + s1words.length * P.entrance.stagger + 0.45);
+    },
+    s2(t) {
+      STATS.forEach((s, i) => {
+        const st = 0.2 + i * 0.25;
+        s.b.textContent = Math.round(s.n * outExpo(clamp((t - st) / 1.1)));
+        rise(s.box, t, st);
+      });
+      EVID.forEach((e, i) => {
+        const depth = [1, 0.6, 0.3][e.plane];
+        e.n.style.transform = `translate(${e.x + (t - 2) * depth * 1.6}cqw, ${e.y * 0.5625}cqw) scale(${0.75 + depth * 0.4})`;
+        e.n.style.opacity = clamp((t - 0.1 - i * 0.06) / 0.5) * (0.35 + depth * 0.5);
+        e.n.style.filter = e.plane === 0 ? 'blur(0.06cqw)' : 'none';
+      });
+    },
+    s3(t) {
+      tracks.forEach((r) => {
+        const p = frac(t * r.rate * P.wall.speed + r.off);
+        r.track.style.transform = `translateX(${-(r.dir > 0 ? p : 1 - p) * 50}%)`;
+      });
+      $('s3').style.setProperty('--k', io(clamp((t - 1.9) / 0.6)) * P.wall.dim / 0.68);
+    },
+    s4(t) {
+      $('ring').style.transform = `rotateX(${-P.ring.tilt.y}deg) rotateZ(${P.ring.tilt.x}deg)`;
+      tiles.forEach((n, i) => {
+        const ang = i * 30 + t * P.ring.speed;
+        const facing = (Math.cos((ang * Math.PI) / 180) + 1) / 2;
+        n.style.transform = `rotateY(${ang}deg) translateZ(${P.ring.radius}cqw)`;
+        n.style.opacity = 1 - P.ring.depthFade * (1 - facing);
+      });
+    },
+    s5(t) {
+      $('railfill').style.transform = `scaleX(${clamp((t - 0.3) / 2.4)})`;
+      STEPS.forEach((n, i) => n.style.setProperty('--a', clamp(E(t - 0.3 - i * 0.8))));
+      $('s5note').style.opacity = clamp((t - 2.9) / 0.5);
+    },
+    s6(t, len) {
+      $('s6').style.setProperty('--g', outExpo(clamp(t / Math.max(1, len * 0.8))) * 0.8);
+      wordBuild(s6words, t, 0.2);
+      rise($('s6foot'), t, 0.2 + s6words.length * P.entrance.stagger + 0.5);
+    },
+  };
+
+  // transition/blur-dissolve between scenes; scene start and length come from the timeline clips
+  const FADE = 0.4;
+  let shown = null;
+  function render(v) {
+    const t = v.time, dur = v.duration;
+    let active = null, best = 0;
+    SCENES.forEach((s) => {
+      const c = v[s.key], a = c.at, b = c.at + c.duration;
+      const fin = a <= 0.001 ? 1 : clamp((t - (a - FADE / 2)) / FADE);
+      const fout = b >= dur - 0.001 ? clamp((b - t) / FADE) : clamp((b + FADE / 2 - t) / FADE);
+      const o = Math.min(fin, fout);
+      s.node.style.visibility = o > 0 ? 'visible' : 'hidden';
+      if (o <= 0) return;
+      s.node.style.opacity = o;
+      s.node.style.filter = o < 1 && P.entrance.dissolve > 0 ? `blur(${(1 - o) * P.entrance.dissolve}cqw)` : 'none';
+      draw[s.id](t - a, c.duration);
+      if (o > best) { best = o; active = s; }
+    });
+    if (active !== shown) {
+      shown = active;
+      $('now').replaceChildren(...(active ? ['Built from', ...active.uses.map((u) => el('code', '', u))] : ['']));
+    }
+  }
+
+  kit.subscribe((values) => {
+    P = values; E = motionFn(P.entrance.motion);
+    stage.dataset.look = P.look.dark ? 'dark' : 'light';
+    stage.style.setProperty('--accent', P.look.accent);
+    stage.style.setProperty('--tex', P.look.texture);
+    setHeadline(P.look.headline);
+    render(tl.values);
+  });
+  tl.subscribe(render);
+  if (reduced) tl.seek(23.4);
+  window.film = { tl, kit };
+})();
+</script>
+</body>
+</html>
