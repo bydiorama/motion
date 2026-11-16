@@ -10,7 +10,8 @@ import { buildCatalog } from '../catalog.ts';
 import { describeTimeline, resolveFilm, type Resolution } from '../film/resolve.ts';
 import { applyTune, bake } from '../film/tune.ts';
 import type { Issue, Timeline } from '../film/types.ts';
-import { open } from './browser.ts';
+import { open, type Session } from './browser.ts';
+import type { LayerBox } from '../dom/mount.ts';
 import { bundle, wizardPage, filmName, inlineCss, readFilm, readJson, readTune, ROOT, tunePath, writeJson } from './files.ts';
 import { filmSchema } from './schema.ts';
 import { readLibrary } from './library.ts';
@@ -34,7 +35,8 @@ Write and check
 Look
   preview <film> [--port n]         The studio: scrub, tune, pin notes. Saves <film>.tune.json
   stills <film> [--at 1.2,3] [--scale n]   Frames as PNG plus a contact sheet, in out/<film>/
-  check <film> [--json]             Draw it and test: repeatable frames, layers on stage, page errors
+  check <film> [--json] [--loop]    Draw it and test: repeatable frames, layers on stage, page errors;
+                                    --loop (or "loop": true) measures the seam from last frame to first
 
 Deliver
   render <film> [--out file.mp4] [--scale 2] [--crf 15]   MP4 through ffmpeg, plus a report
@@ -50,7 +52,7 @@ interface Args { _: string[]; flags: Record<string, string | boolean>; css: stri
 
 function parse(argv: string[]): Args {
   const out: Args = { _: [], flags: {}, css: [] };
-  const BOOL = new Set(['json', 'write', 'check', 'no-tune', 'help']);
+  const BOOL = new Set(['json', 'write', 'check', 'no-tune', 'help', 'loop', 'sections', 'keep-banners', 'keep-header']);
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
     if (!a.startsWith('--')) { out._.push(a); continue; }
@@ -246,6 +248,7 @@ async function stills(args: Args) {
 async function check(args: Args) {
   const file = need(args), json = !!args.flags.json, l = load(file, args), t = timelineOrExit(l, json);
   const issues: (Issue & { t?: number })[] = [...l.res.issues];
+  let loop: Seam | undefined;
   const s = await open(file, { css: args.css, size: t.size, timeline: t, ...browserOpt(args) });
   try {
     // 1. A frame must depend on its time alone: draw the same moments in two orders and compare.
@@ -256,30 +259,112 @@ async function check(args: Args) {
     for (const time of [...times].reverse()) {
       if ((await shot(time)) !== forward.get(time)) issues.push({ level: 'error', code: 'not-repeatable', path: 'film', t: time, message: `The frame at ${time.toFixed(2)} s differs depending on what was drawn before it.`, hint: 'A primitive keeps state between seeks, or uses a clock or unseeded randomness.' });
     }
-    // 2. Layers must be on the stage and have a size once they have settled.
+    // 2. Layers must be on the stage and have a size once they have settled. In a
+    // scene whose camera moves, a layer is expected to be off stage for part of the
+    // time (a canvas the camera travels over), so it is reported only if the camera
+    // never brings any of it into view.
     const seen = new Set<string>();
-    for (const m of keyMoments(t)) {
+    const roving = new Set(t.scenes.filter(movesCamera).map((sc) => sc.id));
+    const inView = new Map<string, { b: LayerBox; t: number } | null>();
+    const [W, H] = t.size;
+    for (const m of auditMoments(t, roving)) {
       for (const b of await s.audit(m.t)) {
         const p = `scenes.${b.scene}.layers.${b.layer}`;
         const sides = (Object.entries(b.off) as [string, number][]).filter(([, px]) => px > 1);
         if (b.empty && !seen.has(`${p}:empty`)) {
           seen.add(`${p}:empty`);
           issues.push({ level: 'warning', code: 'empty-layer', path: p, t: m.t, message: `Layer "${b.layer}" has no size at ${m.t.toFixed(2)} s, so it shows nothing.` });
+        } else if (roving.has(b.scene)) {
+          const visible = b.x < W && b.x + b.width > 0 && b.y < H && b.y + b.height > 0;
+          if (visible) inView.set(p, null);
+          else if (!inView.has(p)) inView.set(p, { b, t: m.t });
         } else if (sides.length && !seen.has(`${p}:off`)) {
           seen.add(`${p}:off`);
-          issues.push({ level: 'warning', code: 'off-stage', path: p, t: m.t, message: `Layer "${b.layer}" runs off the stage at ${m.t.toFixed(2)} s: ${sides.map(([side, px]) => `${px} px past the ${side}`).join(', ')}.`, hint: 'Shorten the text, pick a smaller style.size, or set style.width.' });
+          issues.push({ level: 'warning', code: 'off-stage', path: p, t: m.t, message: `Layer "${b.layer}" runs off the stage at ${m.t.toFixed(2)} s: ${sides.map(([side, px]) => `${px} px past the ${side}`).join(', ')}.`, hint: 'Shorten the text, pick a smaller style.size, or set style.width (in % of the stage). A placed layer is as wide as its text, up to style.width.' });
         }
       }
     }
+    for (const [p, first] of inView) {
+      if (!first) continue;
+      issues.push({ level: 'warning', code: 'never-in-view', path: p, t: first.t, message: `Layer "${first.b.layer}" is never on stage: the camera does not bring it into view while it is shown.`, hint: 'Move it where the camera passes, move the camera to it, or remove it.' });
+    }
+    // 3. A loop's last frame must lead into its first as a normal frame leads into the next.
+    if (args.flags.loop || readFilm(file).loop === true) loop = await seam(s, t);
     for (const e of s.errors) issues.push({ level: 'error', code: 'page-error', path: 'film', message: e });
   } finally { await s.close(); }
   const errors = issues.filter((i) => i.level === 'error').length;
-  if (json) print({ ok: errors === 0, file, duration: t.duration, frames: t.frames, issues });
+  if (loop && !loop.seamless) {
+    const still = loop.step < 0.05;
+    issues.push({ level: 'warning', code: 'loop-seam', path: 'film', t: t.duration, message: `The loop jumps: last frame to first changes ${loop.seam} (mean per channel, 0–255), ${still ? 'while the frames at both ends hold still' : `${loop.ratio}× a normal frame-to-frame step here (${loop.step})`}.`,
+      hint: 'End each move where the film began, or end footage on the frame before the opening shot (el/video "continues").' });
+  }
+  if (json) print({ ok: errors === 0, file, duration: t.duration, frames: t.frames, issues, ...(loop ? { loop } : {}) });
   else {
     issues.forEach((i) => console.log(line(i)));
+    if (loop) console.log(`Loop seam: last frame to first changes ${loop.seam}; a normal step changes ${loop.step} (median of ${loop.steps.length} steps at both ends)${loop.step >= 0.05 ? `, so the seam is ${loop.ratio}× a step` : ''}: ${loop.seamless ? 'seamless' : 'it shows'}.`);
     console.log(`${file}: ${errors ? `${errors} error(s)` : 'ok'}, ${issues.length - errors} warning(s). Frames repeat exactly: ${issues.some((i) => i.code === 'not-repeatable') ? 'NO' : 'yes'}.`);
   }
   if (errors) process.exit(1);
+}
+
+/** A scene whose camera moves: tracks that move or turn the whole scene, or a camera that follows a line. */
+function movesCamera(sc: Timeline['scenes'][number]): boolean {
+  const tr = sc.source.tracks ?? {};
+  return !!sc.source.follow || (['x', 'y', 'scale', 'rotate', 'rotateX', 'rotateY'] as const).some((k) => (tr[k]?.length ?? 0) > 1);
+}
+
+/** Key moments, plus every quarter second of scenes whose camera moves. */
+function auditMoments(t: Timeline, roving: Set<string>): { t: number; label: string }[] {
+  const out = keyMoments(t), have = new Set(out.map((m) => Math.round(m.t * t.fps)));
+  for (const sc of t.scenes) {
+    if (!roving.has(sc.id)) continue;
+    for (let x = sc.start; x < sc.end; x += 0.25) {
+      const f = Math.min(t.frames - 1, Math.round(x * t.fps));
+      if (!have.has(f)) { have.add(f); out.push({ t: f / t.fps, label: `${sc.id} camera` }); }
+    }
+  }
+  return out.sort((a, b) => a.t - b.t);
+}
+
+export interface Seam { seam: number; step: number; ratio: number; seamless: boolean; steps: number[] }
+
+/**
+ * How much the picture changes from the last frame to the first, next to how much
+ * it changes from one frame to the next at both ends of the film. A raw score
+ * misleads: handheld footage changes a lot every frame, a still title not at all.
+ */
+async function seam(s: Session, t: Timeline): Promise<Seam> {
+  const n = Math.min(6, Math.floor(t.frames / 2));
+  const shot = async (f: number) => { await s.seek(f / t.fps); return (await s.page.screenshot({ type: 'png' })).toString('base64'); };
+  const head: string[] = [], tail: string[] = [];
+  for (let f = 0; f < n; f++) head.push(await shot(f));
+  for (let f = t.frames - n; f < t.frames; f++) tail.push(await shot(f));
+  const pairs: [string, string][] = [...tail.slice(0, -1).map((a, i) => [a, tail[i + 1]!] as [string, string]), ...head.slice(0, -1).map((a, i) => [a, head[i + 1]!] as [string, string]), [tail[tail.length - 1]!, head[0]!]];
+  const page = await s.page.context().newPage();
+  try {
+    const diffs = await page.evaluate(async (list) => {
+      const pixels = async (b64: string) => {
+        const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob());
+        const w = 480, h = Math.max(1, Math.round((bmp.height / bmp.width) * w));
+        const c = new OffscreenCanvas(w, h), g = c.getContext('2d')!;
+        g.drawImage(bmp, 0, 0, w, h);
+        return g.getImageData(0, 0, w, h).data;
+      };
+      const out: number[] = [];
+      for (const [a, b] of list) {
+        const [pa, pb] = await Promise.all([pixels(a), pixels(b)]);
+        let sum = 0;
+        for (let i = 0; i < pa.length; i += 4) sum += Math.abs(pa[i]! - pb[i]!) + Math.abs(pa[i + 1]! - pb[i + 1]!) + Math.abs(pa[i + 2]! - pb[i + 2]!);
+        out.push(sum / ((pa.length / 4) * 3));
+      }
+      return out;
+    }, pairs);
+    const r2 = (x: number) => Number(x.toFixed(2));
+    const steps = diffs.slice(0, -1), sorted = [...steps].sort((a, b) => a - b);
+    const step = sorted.length ? sorted[Math.floor(sorted.length / 2)]! : 0, value = diffs[diffs.length - 1]!;
+    // Seamless when the seam is no bigger than a frame step and a half, or too small to see.
+    return { seam: r2(value), step: r2(step), ratio: r2(value / Math.max(step, 0.05)), seamless: value <= Math.max(1.5 * step, 0.5), steps: steps.map(r2) };
+  } finally { await page.close(); }
 }
 
 async function render(args: Args) {
