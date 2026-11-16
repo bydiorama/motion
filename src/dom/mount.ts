@@ -5,6 +5,7 @@ import { track } from '../core/track.ts';
 import { resolveFilm } from '../film/resolve.ts';
 import { applyTune } from '../film/tune.ts';
 import type { Film, Issue, ResolvedLayer, ResolvedMove, ResolvedScene, Timeline, Tracks, Tune } from '../film/types.ts';
+import { directionalBlur, streak } from '../primitives/blur.ts';
 import { PRIMITIVES, TRANSITIONS } from '../primitives/index.ts';
 import type { Ctx, Instance } from '../primitives/types.ts';
 import { merge, type Tokens } from '../tokens.ts';
@@ -57,7 +58,7 @@ export interface Mounted {
   destroy(): void;
 }
 
-interface LiveLayer { spec: ResolvedLayer; el: HTMLElement; instance: Instance; tracks: Sampler; ease: { enter?: (x: number) => number; exit?: (x: number) => number } }
+interface LiveLayer { spec: ResolvedLayer; el: HTMLElement; instance: Instance; tracks: Sampler; ease: { enter?: (x: number) => number; exit?: (x: number) => number }; shutter: number }
 interface LiveScene { spec: ResolvedScene; el: HTMLElement; cam: HTMLElement; layers: LiveLayer[]; tracks: Sampler; handover: boolean }
 type Sampler = Partial<Record<keyof Tracks, (t: number) => number>>;
 
@@ -123,7 +124,7 @@ function applyMove(p: Pose, m: ResolvedMove, k: number, leaving: boolean) {
   }
 }
 
-function writePose(el: HTMLElement, p: Pose, depth: number) {
+function writePose(el: HTMLElement, p: Pose, depth: number, smear = '') {
   const flat = p.rotateX === 0 && p.rotateY === 0;
   const still = p.x === 0 && p.y === 0 && p.scale === 1 && p.rotate === 0 && p.skew === 0 && p.yShare === 0 && flat;
   const parts: string[] = [];
@@ -136,7 +137,7 @@ function writePose(el: HTMLElement, p: Pose, depth: number) {
   parts.push(`scale(${p.scale})`);
   el.style.transform = still ? '' : parts.join(' ');
   el.style.opacity = p.opacity >= 1 ? '' : String(Math.max(0, p.opacity));
-  el.style.filter = p.blur > 0.01 ? `blur(${p.blur}px)` : '';
+  el.style.filter = [smear, p.blur > 0.01 ? `blur(${p.blur}px)` : ''].filter(Boolean).join(' ');
   // A mask hides what has left the layer's own box; it travels with the layer,
   // so the clip is moved back by the same share.
   const [t, r, b, l] = p.clip;
@@ -146,6 +147,9 @@ function writePose(el: HTMLElement, p: Pose, depth: number) {
     ? `inset(${(top * 100).toFixed(3)}% ${(r * 100).toFixed(3)}% ${(bottom * 100).toFixed(3)}% ${(l * 100).toFixed(3)}%)`
     : '';
 }
+
+/** A layer's shutter: `true` is the film-standard half frame, a number is the share of a frame. */
+const shutterOf = (v: unknown): number => (v === true ? 0.5 : typeof v === 'number' && Number.isFinite(v) ? clamp(v, 0, 1) : 0);
 
 /** White or near-black, whichever has more contrast against the colour. */
 function readableOn(colour: string, probe: HTMLElement): string {
@@ -191,7 +195,7 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
   if (film.title) { stage.setAttribute('role', 'img'); stage.setAttribute('aria-label', film.title); }
 
   const ctx: Ctx = {
-    tokens, seed: film.seed ?? 1, size: [W, H], easeOverrides: ui.ease, slots: options.slots ?? {},
+    tokens, seed: film.seed ?? 1, size: [W, H], fps: timeline.fps, easeOverrides: ui.ease, slots: options.slots ?? {},
     ease: (spec) => resolveEase(spec, ui.ease),
   };
 
@@ -254,6 +258,7 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
       return {
         spec: layer, el: le, instance, tracks: samplers(layer.source.tracks, tokens.ease_move, ui.ease),
         ease: { ...(layer.enter ? { enter: ctx.ease(layer.enter.ease) } : {}), ...(layer.exit ? { exit: ctx.ease(layer.exit.ease) } : {}) },
+        shutter: shutterOf(layer.source.motionBlur),
       };
     });
     return { spec, el, cam, layers, tracks: samplers(s.tracks, tokens.ease_move, ui.ease), handover: false };
@@ -263,6 +268,19 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
 
   function seek(time: number) {
     const t = clamp(time, 0, timeline.duration);
+    // First take off every finished hand-over's styles, including on scenes not on
+    // screen. It must come before this frame's hand-overs are drawn: a scene can be
+    // the incoming side of one transition and the outgoing side of the next, and
+    // clearing the old one afterwards would wipe what the new one just wrote.
+    scenes.forEach((scene, i) => {
+      const next = scenes[i + 1];
+      if (!scene.handover || !next || !scene.spec.out) return;
+      if (t >= next.spec.start && t < scene.spec.end && scene.spec.out.duration > 0) return;
+      const tr = TRANSITIONS[scene.spec.out.use]!;
+      tr.clear(scene.el);
+      tr.clear(next.el);
+      scene.handover = false;
+    });
     scenes.forEach((scene, i) => {
       const { spec } = scene;
       const on = t >= spec.start && (t < spec.end || scene === last);
@@ -284,11 +302,15 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
         layer.el.style.visibility = gone ? 'hidden' : 'inherit';
         if (gone) continue;
         layer.instance.seek(lt);
-        const pose = rest();
-        if (l.enter && layer.ease.enter) applyMove(pose, l.enter, progress(local, l.enter.start, l.enter.duration, layer.ease.enter), false);
-        if (l.exit && layer.ease.exit && local >= l.exit.start) applyMove(pose, l.exit, progress(local, l.exit.start, l.exit.duration, layer.ease.exit), true);
-        sample(pose, layer.tracks, lt);
-        writePose(layer.el, pose, W * 0.8);
+        const pose = poseAt(layer, local);
+        // Motion blur: the layer's speed from the poses half a frame either side,
+        // smeared along its path only, and gone the moment it stops.
+        let smear = '';
+        if (layer.shutter > 0) {
+          const h = 0.5 / timeline.fps, a = poseAt(layer, local - h), b = poseAt(layer, local + h);
+          smear = directionalBlur(layer.el, streak(b.x - a.x, layer.shutter), streak(b.y - a.y, layer.shutter));
+        }
+        writePose(layer.el, pose, W * 0.8, smear);
       }
 
       // Hand-over: this scene is the outgoing one while the next has already started.
@@ -297,26 +319,22 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
       if (out && next) {
         const active = t >= next.spec.start && t < spec.end && out.duration > 0;
         const tr = TRANSITIONS[out.use]!;
+        // Finished hand-overs were cleared at the top of seek.
         if (active) {
           tr.apply(scene.el, next.el, (t - next.spec.start) / out.duration, out.params, ctx);
           scene.handover = true;
-        } else if (scene.handover) {
-          tr.clear(scene.el);
-          tr.clear(next.el);
-          scene.handover = false;
         }
       }
     });
-    // A scene that is not on screen may still carry a finished hand-over's styles.
-    scenes.forEach((scene, i) => {
-      const next = scenes[i + 1];
-      if (!scene.handover || !next || !scene.spec.out) return;
-      if (t >= next.spec.start && t < scene.spec.end) return;
-      const tr = TRANSITIONS[scene.spec.out.use]!;
-      tr.clear(scene.el);
-      tr.clear(next.el);
-      scene.handover = false;
-    });
+  }
+
+  /** Where a layer's enter, exit and tracks put it at `local` seconds into its scene. */
+  function poseAt(layer: LiveLayer, local: number): Pose {
+    const l = layer.spec, pose = rest();
+    if (l.enter && layer.ease.enter) applyMove(pose, l.enter, progress(local, l.enter.start, l.enter.duration, layer.ease.enter), false);
+    if (l.exit && layer.ease.exit && local >= l.exit.start) applyMove(pose, l.exit, progress(local, l.exit.start, l.exit.duration, layer.ease.exit), true);
+    sample(pose, layer.tracks, local - l.start);
+    return pose;
   }
 
   function sample(pose: Pose, s: Sampler, t: number) {

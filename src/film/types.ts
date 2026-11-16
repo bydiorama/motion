@@ -84,6 +84,12 @@ export interface Layer {
   exit?: MoveName | ExitMove;
   /** Keyframes in seconds from the layer start. */
   tracks?: Tracks;
+  /**
+   * Motion blur while the layer moves: `true` for a half-frame shutter, or the
+   * share of a frame the shutter is open (0–1). Smears along the path only and
+   * is gone when the layer stops.
+   */
+  motionBlur?: boolean | number;
 }
 
 export type Surface = 'base' | 'surface' | 'sunken' | 'accent' | 'inverse';

@@ -6,6 +6,7 @@
 import { FEELS } from '../brief/brief.ts';
 import type { Feel, LibraryNarrative } from '../brief/types.ts';
 import type { Film, Layer, Scene } from '../film/types.ts';
+import { TRANSITIONS } from '../primitives/index.ts';
 
 const SIZE: [number, number] = [1920, 1080];
 const SANS = 'Aspekta, "Helvetica Neue", Helvetica, Arial, sans-serif';
@@ -78,18 +79,26 @@ export function moveLayer(slug: string, id = 'move', text?: string): Layer | und
     case 'texture/gradient-drift': return { id, use: slug, params: { period: 6 } };
     case 'texture/grain': return { id, use: slug, params: { amount: 0.22 } };
     case 'ui/cursor-click': return { id, use: slug, params: { size: 4 } };
+    case 'type/fill-text': return { id, use: slug, props: { text: text ?? 'Noise into signal', accent: text ? [] : ['signal'] }, style: { size: 'headline', width: 86, css: BIG } };
+    case 'texture/signal-field': return { id, use: slug, params: { cols: 24, settle_at: 0.4 } };
+    case 'rig/tab-stack': return { id, use: slug, props: { items: ['Monitor', 'Detect', 'Respond', 'Report'], details: ['', '', '', 'Every signal, in one place.'] }, params: { width: 80, slide_at: 0.5, slide: 1.2 } };
+    case 'rig/browser-window': return { id, use: slug, props: { lift: [36, 54, 28, 38] }, params: { width: 90, move: 0.9 } };
+    case 'fx/pin-drop': return { id, use: slug, props: { points: [28, 70, 70, 55], labels: ['Found', 'Here'] }, params: { size: 28, stem: 220 } };
     default: return undefined;
   }
 }
 
 /** Moves that fill the stage and loop, so their thumbnails get a set length and no padding. */
-const FULL_STAGE = new Set(['scene/marquee-wall', 'texture/halftone-field', 'texture/gradient-drift', 'texture/grain', 'fx/grid-ripple', 'ui/cursor-click']);
+const FULL_STAGE = new Set(['scene/marquee-wall', 'texture/halftone-field', 'texture/gradient-drift', 'texture/grain', 'fx/grid-ripple', 'ui/cursor-click', 'texture/signal-field', 'fx/pin-drop']);
+
+const handover = (slug: string): number => { const d = TRANSITIONS[slug]?.duration; return typeof d === 'number' ? d : 0.8; };
 
 /** A thumbnail film for one drawable move or transition. */
 export function movePreview(slug: string, tone: Tone): Film | undefined {
   if (slug.startsWith('transition/')) {
     return film(slug, [
-      scene('before', [{ id: 'a', use: 'el/text', props: { text: 'Before' }, style: { size: 'hero' } }], { length: 1.4, background: 'base', out: { use: slug } }),
+      // Long hand-overs get a longer first scene, so the hand-over still fits inside it.
+      scene('before', [{ id: 'a', use: 'el/text', props: { text: 'Before' }, style: { size: 'hero' } }], { length: Math.max(1.4, handover(slug) + 0.6), background: 'base', out: { use: slug } }),
       scene('after', [{ id: 'b', use: 'el/text', props: { text: 'After' }, style: { size: 'hero' } }], { length: 1.6, background: 'inverse' }),
     ], tone);
   }

@@ -79,13 +79,21 @@
         "type/char-cascade",
         "transition/iris",
         "transition/stack-over",
-        "texture/grain"
+        "texture/grain",
+        "texture/signal-field",
+        "type/fill-text",
+        "transition/camera-travel",
+        "transition/whip-pan",
+        "transition/signal-wipe",
+        "transition/fly-past",
+        "fx/pin-drop"
       ],
       "avoids": [
         "texture/halftone-field"
       ],
       "formats": [
-        "16:9"
+        "16:9",
+        "4:5"
       ],
       "duration": {
         "min": 35,
@@ -169,7 +177,10 @@
         "type/shimmer",
         "transition/stack-over",
         "transition/push",
-        "fx/odometer"
+        "fx/odometer",
+        "rig/browser-window",
+        "rig/tab-stack",
+        "transition/camera-travel"
       ],
       "avoids": [
         "texture/ascii",
@@ -893,6 +904,77 @@
           ]
         }
       ]
+    },
+    {
+      "slug": "narrative/website-launch",
+      "summary": "Shows a new website as one journey, each page handing over to the next.",
+      "family": "product",
+      "duration": {
+        "min": 18,
+        "max": 30
+      },
+      "fits": [
+        "style/dark-showcase",
+        "style/product-ui"
+      ],
+      "beats": [
+        {
+          "name": "idea",
+          "share": 13,
+          "content": "The site's headline, doing what it says",
+          "primitives": [
+            "type/fill-text",
+            "texture/signal-field"
+          ]
+        },
+        {
+          "name": "site",
+          "share": 12,
+          "content": "The homepage pulls back into perspective; its key card lifts off the page",
+          "primitives": [
+            "rig/browser-window",
+            "transition/dive-in"
+          ]
+        },
+        {
+          "name": "product",
+          "share": 13,
+          "content": "The product itself, in depth, then out of the way",
+          "primitives": [
+            "fx/depth-drift",
+            "transition/fly-past"
+          ]
+        },
+        {
+          "name": "pages",
+          "share": 30,
+          "content": "Inner pages, reached by one camera move or a whip; features as stacked tabs that open one after another",
+          "primitives": [
+            "transition/camera-travel",
+            "rig/tab-stack",
+            "transition/whip-pan",
+            "type/fill-text"
+          ]
+        },
+        {
+          "name": "proof",
+          "share": 16,
+          "content": "Where it works, as places that light up",
+          "primitives": [
+            "fx/pin-drop",
+            "transition/signal-wipe"
+          ]
+        },
+        {
+          "name": "end",
+          "share": 16,
+          "content": "The logo alone, at rest",
+          "primitives": [
+            "scene/logo-reveal",
+            "scene/end-card"
+          ]
+        }
+      ]
     }
   ],
   "primitives": [
@@ -942,6 +1024,11 @@
       "status": "specified"
     },
     {
+      "slug": "fx/pin-drop",
+      "summary": "Markers land on places one by one, ripple together, and raise their labels on stems.",
+      "status": "specified"
+    },
+    {
       "slug": "fx/radial-burst",
       "summary": "Items fly outward from the centre with thin streaks.",
       "status": "draft"
@@ -954,6 +1041,11 @@
     {
       "slug": "fx/stagger-fill",
       "summary": "Items appear one after another.",
+      "status": "specified"
+    },
+    {
+      "slug": "rig/browser-window",
+      "summary": "A page in a browser window turns into perspective, then lifts one of its parts.",
       "status": "specified"
     },
     {
@@ -970,6 +1062,11 @@
       "slug": "rig/rolodex",
       "summary": "Cards on a short cylinder that spins while the whole rig swings.",
       "status": "draft"
+    },
+    {
+      "slug": "rig/tab-stack",
+      "summary": "Tabs stacked as stairs in depth; the open tab slides through them, then pops forward.",
+      "status": "specified"
     },
     {
       "slug": "rig/tumbling-object",
@@ -1067,6 +1164,11 @@
       "status": "draft"
     },
     {
+      "slug": "texture/signal-field",
+      "summary": "Points jitter like static, then fall into a calm dot grid from the centre out.",
+      "status": "specified"
+    },
+    {
       "slug": "transition/beat-cut",
       "summary": "A plain cut placed on a music beat.",
       "status": "specified"
@@ -1075,6 +1177,11 @@
       "slug": "transition/blur-dissolve",
       "summary": "One scene blurs out while the next blurs in.",
       "status": "draft"
+    },
+    {
+      "slug": "transition/camera-travel",
+      "summary": "The camera pulls back and travels to the next scene, laid beside this one in one world.",
+      "status": "specified"
     },
     {
       "slug": "transition/collapse-to-anchor",
@@ -1094,6 +1201,11 @@
     {
       "slug": "transition/dive-in",
       "summary": "The camera pushes into a point until it fills the frame.",
+      "status": "specified"
+    },
+    {
+      "slug": "transition/fly-past",
+      "summary": "The layers of a scene fly out past the camera, front first, revealing the next beneath.",
       "status": "specified"
     },
     {
@@ -1117,6 +1229,11 @@
       "status": "specified"
     },
     {
+      "slug": "transition/signal-wipe",
+      "summary": "A glowing accent line sweeps across and leaves the next scene behind it.",
+      "status": "specified"
+    },
+    {
       "slug": "transition/slant-wipe",
       "summary": "A slanted edge cuts across the frame, uncovering the next scene; the old one drifts back.",
       "status": "specified"
@@ -1135,6 +1252,11 @@
       "slug": "transition/torn-edge",
       "summary": "A wipe with a jagged, paper-like edge.",
       "status": "draft"
+    },
+    {
+      "slug": "transition/whip-pan",
+      "summary": "The camera whips to the next scene with a streak along the pan only, then brakes.",
+      "status": "specified"
     },
     {
       "slug": "transition/zoom-through-letter",
@@ -1159,6 +1281,11 @@
     {
       "slug": "type/echo",
       "summary": "Copies of a headline trail behind it.",
+      "status": "specified"
+    },
+    {
+      "slug": "type/fill-text",
+      "summary": "The whole line is there, dim; each word fills to full in reading order.",
       "status": "specified"
     },
     {

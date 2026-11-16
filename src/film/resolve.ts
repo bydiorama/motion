@@ -25,7 +25,7 @@ const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFin
 
 const FILM_KEYS = ['$schema', 'motion', 'title', 'size', 'fps', 'seed', 'poster', 'loop', 'narrative', 'style', 'tokens', 'theme', 'scenes'];
 const SCENE_KEYS = ['id', 'length', 'hold', 'background', 'scheme', 'layout', 'layers', 'tracks', 'out', 'uses', 'intent'];
-const LAYER_KEYS = ['id', 'use', 'props', 'params', 'at', 'style', 'place', 'enter', 'exit', 'tracks'];
+const LAYER_KEYS = ['id', 'use', 'props', 'params', 'at', 'style', 'place', 'enter', 'exit', 'tracks', 'motionBlur'];
 const STYLE_KEYS = ['size', 'color', 'font', 'weight', 'align', 'width', 'css'];
 
 const MOVE_AMOUNT: Record<MoveName, number> = {
@@ -295,6 +295,9 @@ export function resolveFilm(input: unknown): Resolution {
         else if (pl.anchor !== undefined && !(ANCHORS as readonly string[]).includes(pl.anchor)) err(`${lp}.place.anchor`, 'bad-value', `anchor is one of: ${oneOf(ANCHORS)}.`);
       }
       checkTracks(layer.tracks, `${lp}.tracks`);
+      if (layer.motionBlur !== undefined && typeof layer.motionBlur !== 'boolean' && !(isNum(layer.motionBlur) && layer.motionBlur >= 0 && layer.motionBlur <= 1)) {
+        err(`${lp}.motionBlur`, 'bad-value', 'motionBlur is true (a half-frame shutter) or the share of a frame the shutter is open, 0 to 1.');
+      }
       let duration = 0;
       try { duration = prim.duration(props, params, ctx); } catch { /* reported above as a bad prop or param */ }
       drafts.set(layer.id, { layer, path: lp, duration: Number.isFinite(duration) ? duration : 0, params, props });

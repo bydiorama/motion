@@ -58,3 +58,16 @@ test('transition dials round-trip eases and springs', () => {
   assert.deepEqual(sprung.ease, { spring: { duration: 0.4, bounce: 0.3 } });
   assert.ok(Math.abs(sprung.duration - springSpan({ duration: 0.4, bounce: 0.3 })) < 1e-6);
 });
+
+test('camera rigs get a path dropdown, an angle pad and a look pad', () => {
+  const rig = { motion: '0.5', size: [1080, 1350], scenes: [{ id: 'tabs', layers: [{ id: 'stack', use: 'rig/tab-stack', props: { items: ['One', 'Two', 'Three'] } }] }] } as unknown as Film;
+  const panel = buildPanel(rig)!;
+  const keys = [...panel.values.keys()].filter((k) => k.includes(`stack${SEP}`)).map((k) => k.split(SEP).at(-1));
+  for (const k of ['path', 'angle', 'look', 'ease', 'zoom', 'roll']) assert.ok(keys.includes(k), `${k} dial`);
+  const at = [...panel.values.keys()].find((k) => k.endsWith(`${SEP}path`))!;
+  assert.deepEqual(overridesFrom(nested(panel, { [at]: 'in-out' }), panel, panel, {}), { 'scenes.tabs.layers.stack.params.path': 'in-out' });
+  const angle = [...panel.values.keys()].find((k) => k.endsWith(`${SEP}angle`))!;
+  assert.deepEqual(overridesFrom(nested(panel, { [angle]: { x: 10, y: 5 } }), panel, panel, {}), {
+    'scenes.tabs.layers.stack.params.tilt': 10, 'scenes.tabs.layers.stack.params.pitch': 5,
+  });
+});

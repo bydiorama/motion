@@ -22,6 +22,9 @@ uses:
 - transition/stack-over
 - transition/push
 - fx/odometer
+- rig/browser-window
+- rig/tab-stack
+- transition/camera-travel
 avoids:
 - texture/ascii
 - transition/torn-edge

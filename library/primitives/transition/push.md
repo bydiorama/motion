@@ -43,5 +43,5 @@ The next scene pushes the current one out of frame. The outgoing scene travels l
 ## Rules
 
 - Strong in-out curve over 0.5–0.9 s.
-- Motion blur follows velocity: none at rest, about half a frame at full speed.
+- Motion blur follows velocity and smears along the push only: none at rest, a half-frame shutter (`blur: 0.5`) at full speed. A round blur would soften edges that are not moving.
 - Push in the direction of reading unless the story says otherwise.

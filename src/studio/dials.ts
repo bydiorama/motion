@@ -4,7 +4,7 @@
 // ranges), from the film (its scenes, layers, copy and moves) and from the
 // tokens. Nothing here is written per film, so a film an agent has just
 // produced is tunable the moment it opens. Pure: no DOM, no DialKit import.
-import { EASE_BEZIER, springSpan, type Bezier, type EaseSpec } from '../core/ease.ts';
+import { EASE_BEZIER, EASE_NAMES, springSpan, type Bezier, type EaseSpec } from '../core/ease.ts';
 import { resolveFilm } from '../film/resolve.ts';
 import type { Film, ResolvedLayer, ResolvedMove, ResolvedScene, Timeline } from '../film/types.ts';
 import { PRIMITIVES, TRANSITIONS } from '../primitives/index.ts';
@@ -17,7 +17,8 @@ export interface EasingDial { type: 'easing'; duration: number; ease: [number, n
 export interface SpringDial { type: 'spring'; visualDuration?: number; bounce?: number; stiffness?: number; damping?: number; mass?: number }
 export type TransitionDial = EasingDial | SpringDial;
 export interface PadDial { type: 'pad'; x: Slider; y: Slider; labels: { x: string; y: string } }
-export type Dial = Slider | boolean | TransitionDial | PadDial | { type: 'text'; default: string } | { type: 'color'; default: string } | { type: 'action'; label: string };
+export interface SelectDial { type: 'select'; options: string[]; default: string }
+export type Dial = Slider | boolean | TransitionDial | PadDial | SelectDial | { type: 'text'; default: string } | { type: 'color'; default: string } | { type: 'action'; label: string };
 export interface Folder { [key: string]: Dial | Folder | boolean }
 
 /** What a dial changes in the film: tune paths and the value for each. */
@@ -66,7 +67,7 @@ export const dialValue = (dial: Dial | boolean): unknown => {
   if (Array.isArray(dial)) return dial[0];
   if (typeof dial !== 'object') return dial;
   if (dial.type === 'pad') return { x: dial.x[0], y: dial.y[0] };
-  if (dial.type === 'text' || dial.type === 'color') return dial.default;
+  if (dial.type === 'text' || dial.type === 'color' || dial.type === 'select') return dial.default;
   if (dial.type === 'action') return undefined;
   return dial;
 };
@@ -93,6 +94,13 @@ function paramDials(b: Builder, folder: Folder, trail: string[], specs: Record<s
   const pads = new Map<string, { x?: [string, ParamSpec]; y?: [string, ParamSpec] }>();
   for (const [name, spec] of Object.entries(specs)) {
     if (spec.type === 'boolean') { b.add(folder, trail, name, Boolean(values[name]), (v) => ({ [`${base}.${name}`]: v })); continue; }
+    // Choices and named eases get a dropdown. An ease written as a curve or a spring has no name to pick, so it keeps no dial.
+    if (spec.type === 'choice' || spec.type === 'ease') {
+      const value = values[name] ?? spec.default;
+      const options = spec.type === 'choice' ? [...(spec.options ?? [])] : [...EASE_NAMES];
+      if (typeof value === 'string' && options.includes(value)) b.add(folder, trail, name, { type: 'select', options, default: value }, (v) => ({ [`${base}.${name}`]: v }));
+      continue;
+    }
     if (spec.type !== 'number' || (spec.max ?? 1) <= (spec.min ?? 0)) continue;
     if (spec.pad) { const p = pads.get(spec.pad.name) ?? {}; p[spec.pad.axis] = [name, spec]; pads.set(spec.pad.name, p); continue; }
     b.add(folder, trail, name, slider(Number(values[name] ?? spec.default), spec.min ?? 0, spec.max ?? 1, spec.step ?? 0.01), (v) => ({ [`${base}.${name}`]: v }));
