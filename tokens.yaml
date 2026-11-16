@@ -10,3 +10,4 @@ ease_enter: expo.out     # things arriving
 ease_exit: cubic.in      # things leaving
 ease_move: cubic.inOut   # camera and layout moves
 ease_loop: linear        # marquees and loops
+transitions: standard    # standard | calm: calm swaps transition defaults for quiet presets

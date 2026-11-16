@@ -5,11 +5,14 @@ import { createHash } from 'node:crypto';
 import { once } from 'node:events';
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { buildCatalog } from '../catalog.ts';
 import { describeTimeline, resolveFilm, type Resolution } from '../film/resolve.ts';
 import { applyTune, bake } from '../film/tune.ts';
 import type { Issue, Timeline } from '../film/types.ts';
-import { open } from './browser.ts';
+import { open, type Session } from './browser.ts';
+import { capture } from './capture.ts';
+import type { LayerBox } from '../dom/mount.ts';
 import { bundle, wizardPage, filmName, inlineCss, readFilm, readJson, readTune, ROOT, tunePath, writeJson } from './files.ts';
 import { filmSchema } from './schema.ts';
 import { readLibrary } from './library.ts';
@@ -25,6 +28,7 @@ Start
 
 Write and check
   catalog [--json|--write|--check]  What a film may use: primitives, params, tokens, eases
+  make <script.mjs> [--out f.json]  Run a script that returns a film; check it and write the JSON
   validate <film...> [--json]       Check films without a browser
   inspect <film> [--json]           The resolved timeline: where every scene and layer lands
   notes <film> [--json]             The person's open notes, with where each one points
@@ -32,7 +36,13 @@ Write and check
 Look
   preview <film> [--port n]         The studio: scrub, tune, pin notes. Saves <film>.tune.json
   stills <film> [--at 1.2,3] [--scale n]   Frames as PNG plus a contact sheet, in out/<film>/
-  check <film> [--json]             Draw it and test: repeatable frames, layers on stage, page errors
+  check <film> [--json] [--loop]    Draw it and test: repeatable frames, layers on stage, page errors;
+                                    --loop (or "loop": true) measures the seam from last frame to first
+
+Collect
+  capture <url> [--sections] [--selector css] [--out dir] [--width 1440] [--scale 2]
+          [--hide sel,sel] [--keep-banners] [--keep-header]
+                                    Screenshots of a page, or of each section, for a film to use
 
 Deliver
   render <film> [--out file.mp4] [--scale 2] [--crf 15]   MP4 through ffmpeg, plus a report
@@ -42,13 +52,15 @@ Deliver
 Options for every command that draws
   --css <file>    A stylesheet to load, e.g. a bydiorama/ui theme. Repeat for more.
   --no-tune       Ignore <film>.tune.json
+  --browser <path>  A Chromium-based browser to draw with (Chrome, Brave, Edge),
+                  when Playwright's own is not installed. Or set MOTION_CHROMIUM.
 `;
 
 interface Args { _: string[]; flags: Record<string, string | boolean>; css: string[] }
 
 function parse(argv: string[]): Args {
   const out: Args = { _: [], flags: {}, css: [] };
-  const BOOL = new Set(['json', 'write', 'check', 'no-tune', 'help']);
+  const BOOL = new Set(['json', 'write', 'check', 'no-tune', 'help', 'loop', 'sections', 'keep-banners', 'keep-header']);
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
     if (!a.startsWith('--')) { out._.push(a); continue; }
@@ -75,6 +87,8 @@ function load(file: string, args: Args): Loaded {
   }
   return { file, res, orphans };
 }
+
+const browserOpt = (args: Args): { browser?: string } => (typeof args.flags.browser === 'string' ? { browser: args.flags.browser } : {});
 
 function need(args: Args): string {
   const file = args._[1];
@@ -136,6 +150,47 @@ function catalog(args: Args) {
   }
 }
 
+/** Where `make` writes: beside the script, as <name>.film.json. */
+export const madePath = (script: string): string => script.replace(/(\.film)?\.(m?js|m?ts)$/, '') + '.film.json';
+
+async function make(args: Args) {
+  const script = need(args), json = !!args.flags.json;
+  const mod = await import(pathToFileURL(path.resolve(script)).href) as { default?: unknown };
+  let value = mod.default;
+  if (typeof value === 'function') value = await (value as () => unknown)();
+  if (value === undefined) throw new Error(`${script} has no default export. End it with: export default film({ ... })`);
+  const out = path.resolve(typeof args.flags.out === 'string' ? args.flags.out : madePath(script));
+  const res = resolveFilm(value);
+  if (json) print({ ok: res.ok, file: out, written: res.ok, issues: res.issues, ...(res.timeline ? { duration: res.timeline.duration } : {}) });
+  else res.issues.forEach((i) => console.log(line(i)));
+  if (!res.ok) {
+    if (!json) console.error(`Nothing written: the film has ${res.issues.filter((i) => i.level === 'error').length} error(s).`);
+    process.exit(1);
+  }
+  writeJson(out, value);
+  if (!json) console.log(`${path.relative(process.cwd(), out)} written: ${res.timeline!.duration.toFixed(2)} s, ${res.issues.length} warning(s).`);
+}
+
+async function captureCmd(args: Args) {
+  const url = args._[1];
+  if (!url) throw new Error('Name a page to capture: motion capture https://example.com --sections');
+  const href = /^[a-z]+:\/\//i.test(url) ? url : fs.existsSync(url) ? pathToFileURL(path.resolve(url)).href : `https://${url}`;
+  const host = new URL(href).hostname || filmName(url).replace(/\.html?$/, '') || 'page';
+  const num = (k: string, d: number) => { const v = Number(args.flags[k] ?? d); if (!(v > 0)) throw new Error(`--${k} takes a number above zero.`); return v; };
+  const shots = await capture({
+    url: href, out: path.resolve(typeof args.flags.out === 'string' ? args.flags.out : path.join('out', 'capture', host)),
+    sections: !!args.flags.sections, ...(typeof args.flags.selector === 'string' ? { selector: args.flags.selector } : {}),
+    width: num('width', 1440), scale: num('scale', 2),
+    hide: typeof args.flags.hide === 'string' ? args.flags.hide.split(',').map((x) => x.trim()).filter(Boolean) : [],
+    keepBanners: !!args.flags['keep-banners'], keepHeader: !!args.flags['keep-header'], ...browserOpt(args),
+  });
+  const dir = path.dirname(shots[0]!.file);
+  writeJson(path.join(dir, 'capture.json'), { url: href, width: num('width', 1440), scale: num('scale', 2), shots: shots.map((x) => ({ ...x, file: path.basename(x.file) })) });
+  if (args.flags.json) return print({ url: href, dir, shots });
+  console.log(`${shots.length} screenshot(s) at ${num('scale', 2)}× in ${path.relative(process.cwd(), dir) || '.'}/`);
+  for (const x of shots) console.log(`  ${path.basename(x.file).padEnd(32)} ${x.width}×${x.height} px at y ${x.y}`);
+}
+
 function validate(args: Args) {
   const files = args._.slice(1);
   if (!files.length) throw new Error('Name one or more film files.');
@@ -194,7 +249,7 @@ async function stills(args: Args) {
   const dir = path.join(path.dirname(path.resolve(file)), 'out', filmName(file), 'stills');
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(dir, { recursive: true });
-  const s = await open(file, { css: args.css, size: t.size, scale: Number(args.flags.scale ?? 1) });
+  const s = await open(file, { css: args.css, size: t.size, scale: Number(args.flags.scale ?? 1), timeline: t, ...browserOpt(args) });
   try {
     const shots: { t: number; label: string; file: string; data: string }[] = [];
     for (const m of at) {
@@ -221,7 +276,8 @@ async function stills(args: Args) {
 async function check(args: Args) {
   const file = need(args), json = !!args.flags.json, l = load(file, args), t = timelineOrExit(l, json);
   const issues: (Issue & { t?: number })[] = [...l.res.issues];
-  const s = await open(file, { css: args.css, size: t.size });
+  let loop: Seam | undefined;
+  const s = await open(file, { css: args.css, size: t.size, timeline: t, ...browserOpt(args) });
   try {
     // 1. A frame must depend on its time alone: draw the same moments in two orders and compare.
     const times = Array.from({ length: 6 }, (_, k) => Math.round((t.duration * k / 5) * t.fps) / t.fps);
@@ -231,30 +287,112 @@ async function check(args: Args) {
     for (const time of [...times].reverse()) {
       if ((await shot(time)) !== forward.get(time)) issues.push({ level: 'error', code: 'not-repeatable', path: 'film', t: time, message: `The frame at ${time.toFixed(2)} s differs depending on what was drawn before it.`, hint: 'A primitive keeps state between seeks, or uses a clock or unseeded randomness.' });
     }
-    // 2. Layers must be on the stage and have a size once they have settled.
+    // 2. Layers must be on the stage and have a size once they have settled. In a
+    // scene whose camera moves, a layer is expected to be off stage for part of the
+    // time (a canvas the camera travels over), so it is reported only if the camera
+    // never brings any of it into view.
     const seen = new Set<string>();
-    for (const m of keyMoments(t)) {
+    const roving = new Set(t.scenes.filter(movesCamera).map((sc) => sc.id));
+    const inView = new Map<string, { b: LayerBox; t: number } | null>();
+    const [W, H] = t.size;
+    for (const m of auditMoments(t, roving)) {
       for (const b of await s.audit(m.t)) {
         const p = `scenes.${b.scene}.layers.${b.layer}`;
         const sides = (Object.entries(b.off) as [string, number][]).filter(([, px]) => px > 1);
         if (b.empty && !seen.has(`${p}:empty`)) {
           seen.add(`${p}:empty`);
           issues.push({ level: 'warning', code: 'empty-layer', path: p, t: m.t, message: `Layer "${b.layer}" has no size at ${m.t.toFixed(2)} s, so it shows nothing.` });
+        } else if (roving.has(b.scene)) {
+          const visible = b.x < W && b.x + b.width > 0 && b.y < H && b.y + b.height > 0;
+          if (visible) inView.set(p, null);
+          else if (!inView.has(p)) inView.set(p, { b, t: m.t });
         } else if (sides.length && !seen.has(`${p}:off`)) {
           seen.add(`${p}:off`);
-          issues.push({ level: 'warning', code: 'off-stage', path: p, t: m.t, message: `Layer "${b.layer}" runs off the stage at ${m.t.toFixed(2)} s: ${sides.map(([side, px]) => `${px} px past the ${side}`).join(', ')}.`, hint: 'Shorten the text, pick a smaller style.size, or set style.width.' });
+          issues.push({ level: 'warning', code: 'off-stage', path: p, t: m.t, message: `Layer "${b.layer}" runs off the stage at ${m.t.toFixed(2)} s: ${sides.map(([side, px]) => `${px} px past the ${side}`).join(', ')}.`, hint: 'Shorten the text, pick a smaller style.size, or set style.width (in % of the stage). A placed layer is as wide as its text, up to style.width.' });
         }
       }
     }
+    for (const [p, first] of inView) {
+      if (!first) continue;
+      issues.push({ level: 'warning', code: 'never-in-view', path: p, t: first.t, message: `Layer "${first.b.layer}" is never on stage: the camera does not bring it into view while it is shown.`, hint: 'Move it where the camera passes, move the camera to it, or remove it.' });
+    }
+    // 3. A loop's last frame must lead into its first as a normal frame leads into the next.
+    if (args.flags.loop || readFilm(file).loop === true) loop = await seam(s, t);
     for (const e of s.errors) issues.push({ level: 'error', code: 'page-error', path: 'film', message: e });
   } finally { await s.close(); }
   const errors = issues.filter((i) => i.level === 'error').length;
-  if (json) print({ ok: errors === 0, file, duration: t.duration, frames: t.frames, issues });
+  if (loop && !loop.seamless) {
+    const still = loop.step < 0.05;
+    issues.push({ level: 'warning', code: 'loop-seam', path: 'film', t: t.duration, message: `The loop jumps: last frame to first changes ${loop.seam} (mean per channel, 0–255), ${still ? 'while the frames at both ends hold still' : `${loop.ratio}× a normal frame-to-frame step here (${loop.step})`}.`,
+      hint: 'End each move where the film began, or end footage on the frame before the opening shot (el/video "continues").' });
+  }
+  if (json) print({ ok: errors === 0, file, duration: t.duration, frames: t.frames, issues, ...(loop ? { loop } : {}) });
   else {
     issues.forEach((i) => console.log(line(i)));
+    if (loop) console.log(`Loop seam: last frame to first changes ${loop.seam}; a normal step changes ${loop.step} (median of ${loop.steps.length} steps at both ends)${loop.step >= 0.05 ? `, so the seam is ${loop.ratio}× a step` : ''}: ${loop.seamless ? 'seamless' : 'it shows'}.`);
     console.log(`${file}: ${errors ? `${errors} error(s)` : 'ok'}, ${issues.length - errors} warning(s). Frames repeat exactly: ${issues.some((i) => i.code === 'not-repeatable') ? 'NO' : 'yes'}.`);
   }
   if (errors) process.exit(1);
+}
+
+/** A scene whose camera moves: tracks that move or turn the whole scene, or a camera that follows a line. */
+function movesCamera(sc: Timeline['scenes'][number]): boolean {
+  const tr = sc.source.tracks ?? {};
+  return !!sc.source.follow || (['x', 'y', 'scale', 'rotate', 'rotateX', 'rotateY'] as const).some((k) => (tr[k]?.length ?? 0) > 1);
+}
+
+/** Key moments, plus every quarter second of scenes whose camera moves. */
+function auditMoments(t: Timeline, roving: Set<string>): { t: number; label: string }[] {
+  const out = keyMoments(t), have = new Set(out.map((m) => Math.round(m.t * t.fps)));
+  for (const sc of t.scenes) {
+    if (!roving.has(sc.id)) continue;
+    for (let x = sc.start; x < sc.end; x += 0.25) {
+      const f = Math.min(t.frames - 1, Math.round(x * t.fps));
+      if (!have.has(f)) { have.add(f); out.push({ t: f / t.fps, label: `${sc.id} camera` }); }
+    }
+  }
+  return out.sort((a, b) => a.t - b.t);
+}
+
+export interface Seam { seam: number; step: number; ratio: number; seamless: boolean; steps: number[] }
+
+/**
+ * How much the picture changes from the last frame to the first, next to how much
+ * it changes from one frame to the next at both ends of the film. A raw score
+ * misleads: handheld footage changes a lot every frame, a still title not at all.
+ */
+async function seam(s: Session, t: Timeline): Promise<Seam> {
+  const n = Math.min(6, Math.floor(t.frames / 2));
+  const shot = async (f: number) => { await s.seek(f / t.fps); return (await s.page.screenshot({ type: 'png' })).toString('base64'); };
+  const head: string[] = [], tail: string[] = [];
+  for (let f = 0; f < n; f++) head.push(await shot(f));
+  for (let f = t.frames - n; f < t.frames; f++) tail.push(await shot(f));
+  const pairs: [string, string][] = [...tail.slice(0, -1).map((a, i) => [a, tail[i + 1]!] as [string, string]), ...head.slice(0, -1).map((a, i) => [a, head[i + 1]!] as [string, string]), [tail[tail.length - 1]!, head[0]!]];
+  const page = await s.page.context().newPage();
+  try {
+    const diffs = await page.evaluate(async (list) => {
+      const pixels = async (b64: string) => {
+        const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob());
+        const w = 480, h = Math.max(1, Math.round((bmp.height / bmp.width) * w));
+        const c = new OffscreenCanvas(w, h), g = c.getContext('2d')!;
+        g.drawImage(bmp, 0, 0, w, h);
+        return g.getImageData(0, 0, w, h).data;
+      };
+      const out: number[] = [];
+      for (const [a, b] of list) {
+        const [pa, pb] = await Promise.all([pixels(a), pixels(b)]);
+        let sum = 0;
+        for (let i = 0; i < pa.length; i += 4) sum += Math.abs(pa[i]! - pb[i]!) + Math.abs(pa[i + 1]! - pb[i + 1]!) + Math.abs(pa[i + 2]! - pb[i + 2]!);
+        out.push(sum / ((pa.length / 4) * 3));
+      }
+      return out;
+    }, pairs);
+    const r2 = (x: number) => Number(x.toFixed(2));
+    const steps = diffs.slice(0, -1), sorted = [...steps].sort((a, b) => a - b);
+    const step = sorted.length ? sorted[Math.floor(sorted.length / 2)]! : 0, value = diffs[diffs.length - 1]!;
+    // Seamless when the seam is no bigger than a frame step and a half, or too small to see.
+    return { seam: r2(value), step: r2(step), ratio: r2(value / Math.max(step, 0.05)), seamless: value <= Math.max(1.5 * step, 0.5), steps: steps.map(r2) };
+  } finally { await page.close(); }
 }
 
 async function render(args: Args) {
@@ -264,7 +402,7 @@ async function render(args: Args) {
   const out = path.resolve(typeof args.flags.out === 'string' ? args.flags.out : path.join(dir, `${filmName(file)}-${t.size[0]}x${t.size[1]}-${t.fps}fps.mp4`));
   fs.mkdirSync(path.dirname(out), { recursive: true });
   const [w, h] = [t.size[0] - (t.size[0] % 2), t.size[1] - (t.size[1] % 2)]; // H.264 4:2:0 needs even sides
-  const s = await open(file, { css: args.css, size: t.size, scale });
+  const s = await open(file, { css: args.css, size: t.size, scale, timeline: t, ...browserOpt(args) });
   const ff = spawn('ffmpeg', ['-v', 'error', '-y', '-f', 'image2pipe', '-framerate', String(t.fps), '-vcodec', 'mjpeg', '-i', 'pipe:0',
     '-vf', `scale=${w}:${h}:flags=lanczos+accurate_rnd+full_chroma_int:in_color_matrix=bt601:in_range=pc:out_color_matrix=bt709:out_range=tv,format=yuv420p`,
     '-c:v', 'libx264', '-preset', 'slow', '-crf', crf, '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-movflags', '+faststart', '-an', out]);
@@ -356,6 +494,8 @@ export async function main(argv: string[]) {
   const cmd = args._[0];
   if (!cmd || args.flags.help) return console.log(HELP);
   if (cmd === 'catalog') return catalog(args);
+  if (cmd === 'make') return make(args);
+  if (cmd === 'capture') return captureCmd(args);
   if (cmd === 'validate') return validate(args);
   if (cmd === 'inspect') return inspect(args);
   if (cmd === 'notes') return notes(args);

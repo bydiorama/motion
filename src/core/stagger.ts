@@ -56,3 +56,20 @@ export function staggerDelays(n: number, stagger: number, from: StaggerFrom | st
 export function staggerSpan(n: number, from: StaggerFrom | string = 'start', seed = 1, grid?: [number, number]): number {
   return Math.max(0, ...staggerSteps(n, from, seed, grid));
 }
+
+/**
+ * Steps for units at known positions, nearest to `focus` first. Units at the
+ * same distance (within `tie` px) share a step, so a symmetric layout opens
+ * symmetrically. Works in any unit; positions and focus must share it.
+ */
+export function staggerByDistance(points: readonly (readonly [number, number])[], focus: readonly [number, number], tie = 0.5): number[] {
+  const d = points.map(([x, y]) => Math.hypot(x - focus[0], y - focus[1]));
+  const order = d.map((v, i) => [v, i] as const).sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const steps = new Array<number>(points.length);
+  let step = -1, last = -Infinity;
+  for (const [v, i] of order) {
+    if (v - last > tie) { step++; last = v; }
+    steps[i] = step;
+  }
+  return steps;
+}

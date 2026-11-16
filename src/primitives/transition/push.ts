@@ -8,6 +8,7 @@ export const push: TransitionPrimitive = {
   slug: 'transition/push',
   summary: 'The next scene pushes the current one out of frame, with parallax and motion blur.',
   duration: 0.7,
+  calm: { parallax: 0.15, blur: 0.25 },
   params: {
     duration: { type: 'number', default: 0.7, min: 0.3, max: 1.2, step: 0.05, unit: 's', label: 'Length of the hand-over' },
     direction: { type: 'choice', default: 'left', options: ['left', 'right', 'up', 'down'], label: 'Which way the frame travels' },

@@ -19,6 +19,7 @@ export const flyPast: TransitionPrimitive = {
   slug: 'transition/fly-past',
   summary: 'The layers of a scene fly out past the camera, front first, revealing the next beneath.',
   duration: 1.1,
+  calm: { spread: 0.15, tumble: 15, defocus: 2 },
   params: {
     duration: { type: 'number', default: 1.1, min: 0.6, max: 1.8, step: 0.05, unit: 's', label: 'Length of the hand-over' },
     spread: { type: 'number', default: 0.35, min: 0, max: 0.6, step: 0.01, unit: 'ratio', label: 'Share of the time between the first layer leaving and the last' },

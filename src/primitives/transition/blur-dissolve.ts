@@ -6,6 +6,7 @@ export const blurDissolve: TransitionPrimitive = {
   slug: 'transition/blur-dissolve',
   summary: 'One scene blurs out while the next blurs in.',
   duration: 0.4,
+  calm: { blur: 12 },
   params: {
     duration: { type: 'number', default: 0.4, min: 0.3, max: 0.6, step: 0.05, unit: 's', label: 'Length of the hand-over' },
     blur: { type: 'number', default: 20, min: 12, max: 30, step: 1, unit: 'px', label: 'Blur at the midpoint' },

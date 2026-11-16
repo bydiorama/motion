@@ -1,5 +1,5 @@
 // fx/path-draw. See library/primitives/fx/path-draw.md.
-import { progress } from '../../core/ease.ts';
+import { progress, type EaseSpec } from '../../core/ease.ts';
 import { staggerDelays } from '../../core/stagger.ts';
 import { list, num, str, type Primitive } from '../types.ts';
 
@@ -19,6 +19,7 @@ export const pathDraw: Primitive = {
     width: { type: 'number', default: 30, min: 4, max: 100, step: 1, unit: '% of stage width', label: 'Drawing width' },
     stroke: { type: 'number', default: 2, min: 0.5, max: 12, step: 0.25, unit: 'px', label: 'Stroke weight' },
     fill_time: { type: 'number', default: 0.4, min: 0.1, max: 1, step: 0.05, unit: 's', label: 'Time for the fill to arrive' },
+    ease: { type: 'ease', default: 'quart.inOut', label: 'Curve of each stroke; a camera that follows the tip moves with it' },
   },
   duration: (props, p) => {
     const n = list(props.paths).length, fill = str(props.fill, 'none') !== 'none';
@@ -53,8 +54,32 @@ export const pathDraw: Primitive = {
     el.appendChild(svg);
     const delays = staggerDelays(paths.length, num(p.stagger));
     const draw = num(p.draw), fillT = num(p.fill_time);
-    const ease = ctx.ease('quart.inOut'), soft = ctx.ease('cubic.out');
+    const ease = ctx.ease((p.ease as EaseSpec | undefined) ?? 'quart.inOut'), soft = ctx.ease('cubic.out');
+    // Points along each path, sampled once while the scene is laid out, in layer px.
+    // The dash runs on pathLength 1, so a share of the length is a share of the draw.
+    const k = w / vw, SAMPLES = 256;
+    const tables = paths.map((path) => {
+      let total = 0;
+      try { total = path.getTotalLength(); } catch { return []; }
+      return Array.from({ length: SAMPLES + 1 }, (_, i) => {
+        const pt = path.getPointAtLength((total * i) / SAMPLES);
+        return [(pt.x - (vb[0] ?? 0)) * k, (pt.y - (vb[1] ?? 0)) * k] as [number, number];
+      });
+    });
+    const along = (i: number, share: number): [number, number] | undefined => {
+      const table = tables[i];
+      if (!table?.length) return undefined;
+      const x = Math.min(1, Math.max(0, share)) * SAMPLES, a = Math.floor(x), b = Math.min(SAMPLES, a + 1), f = x - a;
+      const [ax, ay] = table[a]!, [bx, by] = table[b]!;
+      return [ax + (bx - ax) * f, ay + (by - ay) * f];
+    };
     return {
+      // The tip of the path being drawn: the last one to have started.
+      tip(t) {
+        let i = 0;
+        for (let j = 0; j < paths.length; j++) if (t >= delays[j]!) i = j;
+        return along(i, progress(t, delays[i]!, draw, ease));
+      },
       seek(t) {
         paths.forEach((path, i) => {
           const k = progress(t, delays[i]!, draw, ease);

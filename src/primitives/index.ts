@@ -4,11 +4,13 @@ import { html } from './el/html.ts';
 import { image } from './el/image.ts';
 import { slot } from './el/slot.ts';
 import { text } from './el/text.ts';
+import { video } from './el/video.ts';
 import { counterRoll } from './fx/counter-roll.ts';
 import { depthDrift } from './fx/depth-drift.ts';
 import { staggerFill } from './fx/stagger-fill.ts';
 import { orbitRing } from './rig/orbit-ring.ts';
 import { marqueeWall } from './scene/marquee-wall.ts';
+import { gridWall } from './scene/grid-wall.ts';
 import { halftoneField } from './texture/halftone-field.ts';
 import { beatCut } from './transition/beat-cut.ts';
 import { blurDissolve } from './transition/blur-dissolve.ts';
@@ -56,10 +58,10 @@ const byslug = <T extends { slug: string }>(items: T[]): Record<string, T> =>
   Object.fromEntries(items.map((p) => [p.slug, p]));
 
 export const PRIMITIVES: Record<string, Primitive> = byslug([
-  text, box, image, html, slot, wordBuild, typedTitle, scramble, counterRoll, staggerFill, depthDrift, marqueeWall, orbitRing, halftoneField,
+  text, box, image, video, html, slot, wordBuild, typedTitle, scramble, counterRoll, staggerFill, depthDrift, marqueeWall, orbitRing, halftoneField,
   maskReveal, charCascade, blockReveal, wordRoller, trackingIn, shimmer, echo, scribbleHighlight,
   odometer, pathDraw, shapeMorph, gridRipple, logoReveal, barChart, lineChart, gradientDrift, grain, cursorClick,
-  fillText, signalField, browserWindow, tabStack, pinDrop,
+  fillText, signalField, browserWindow, tabStack, pinDrop, gridWall,
 ]);
 
 export const TRANSITIONS: Record<string, TransitionPrimitive> = byslug([

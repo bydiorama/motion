@@ -13,7 +13,8 @@
     "motion": "./bin/motion.mjs"
   },
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./build": "./src/build/index.ts"
   },
   "scripts": {
     "motion": "node bin/motion.mjs",

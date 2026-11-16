@@ -6,6 +6,8 @@ export interface LibraryStyle {
   duration: { min: number; max: number };
   /** Seconds per beat, when the style sets its own rhythm. */
   beat?: number | undefined;
+  /** "calm" when the look wants quiet transitions. */
+  transitions?: 'standard' | 'calm' | undefined;
 }
 export interface LibraryBeat { name: string; share: number; content: string; primitives: string[] }
 /** What a video is for, as the wizard groups video types. */

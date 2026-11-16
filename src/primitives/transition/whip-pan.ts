@@ -13,6 +13,7 @@ export const whipPan: TransitionPrimitive = {
   slug: 'transition/whip-pan',
   summary: 'The camera whips to the next scene with a streak along the pan only, then brakes.',
   duration: 0.5,
+  calm: { anticipation: 0, shutter: 0.3 },
   params: {
     duration: { type: 'number', default: 0.5, min: 0.3, max: 0.9, step: 0.05, unit: 's', label: 'Length of the hand-over' },
     direction: { type: 'choice', default: 'left', options: ['left', 'right', 'up', 'down'], label: 'Which way the frame travels' },

@@ -25,6 +25,7 @@ export const cameraTravel: TransitionPrimitive = {
   slug: 'transition/camera-travel',
   summary: 'The camera pulls back and travels to the next scene, laid beside this one in one world.',
   duration: 1.4,
+  calm: { pull: 0.04, tilt: 5, gap: 0, shutter: 0.3 },
   params: {
     duration: { type: 'number', default: 1.4, min: 0.8, max: 2.4, step: 0.05, unit: 's', label: 'Length of the hand-over' },
     direction: { type: 'choice', default: 'down', options: ['down', 'up', 'right', 'left'], label: 'Where the next scene lies' },

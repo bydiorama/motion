@@ -14,6 +14,7 @@ export const signalWipe: TransitionPrimitive = {
   slug: 'transition/signal-wipe',
   summary: 'A glowing accent line sweeps across and leaves the next scene behind it.',
   duration: 0.55,
+  calm: { glow: 0.5, push: 0.01 },
   params: {
     duration: { type: 'number', default: 0.55, min: 0.35, max: 1.2, step: 0.05, unit: 's', label: 'Length of the hand-over' },
     direction: { type: 'choice', default: 'down', options: ['down', 'up', 'right', 'left'], label: 'Which way the line travels' },

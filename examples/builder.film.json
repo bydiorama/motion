@@ -1,0 +1,201 @@
+{
+  "motion": "0.4.0",
+  "title": "Builder demo",
+  "size": [
+    1920,
+    1080
+  ],
+  "fps": 30,
+  "scenes": [
+    {
+      "id": "cards",
+      "hold": 1,
+      "layers": [
+        {
+          "id": "title",
+          "use": "el/text",
+          "props": {
+            "text": "Twelve cards, one line each"
+          },
+          "style": {
+            "size": "headline"
+          },
+          "place": {
+            "x": 50,
+            "y": 12
+          },
+          "enter": "mask-up",
+          "at": 0
+        },
+        {
+          "id": "card-1",
+          "use": "el/box",
+          "params": {
+            "width": 300,
+            "height": 150
+          },
+          "place": {
+            "x": 21.5,
+            "y": 39.667
+          },
+          "enter": "rise",
+          "at": 0.4
+        },
+        {
+          "id": "card-2",
+          "use": "el/box",
+          "params": {
+            "width": 300,
+            "height": 150
+          },
+          "place": {
+            "x": 40.5,
+            "y": 39.667
+          },
+          "enter": "rise",
+          "at": 0.52
+        },
+        {
+          "id": "card-3",
+          "use": "el/box",
+          "params": {
+            "width": 300,
+            "height": 150
+          },
+          "place": {
+            "x": 59.5,
+            "y": 39.667
+          },
+          "enter": "rise",
+          "at": 0.76
+        },
+        {
+          "id": "card-4",
+          "use": "el/box",
+          "params": {
+            "width": 300,
+            "height": 150
+          },
+          "place": {
+            "x": 78.5,
+            "y": 39.667
+          },
+          "enter": "rise",
+          "at": 0.94
+        },
+        {
+          "id": "card-5",
+          "use": "el/box",
+          "params": {
+            "width": 300,
+            "height": 150
+          },
+          "place": {
+            "x": 21.5,
+            "y": 59
+          },
+          "enter": "rise",
+          "at": 0.46
+        },
+        {
+          "id": "card-6",
+          "use": "el/box",
+          "params": {
+            "width": 300,
+            "height": 150
+          },
+          "place": {
+            "x": 40.5,
+            "y": 59
+          },
+          "enter": "rise",
+          "at": 0.64
+        },
+        {
+          "id": "card-7",
+          "use": "el/box",
+          "params": {
+            "width": 300,
+            "height": 150
+          },
+          "place": {
+            "x": 59.5,
+            "y": 59
+          },
+          "enter": "rise",
+          "at": 0.82
+        },
+        {
+          "id": "card-8",
+          "use": "el/box",
+          "params": {
+            "width": 300,
+            "height": 150
+          },
+          "place": {
+            "x": 78.5,
+            "y": 59
+          },
+          "enter": "rise",
+          "at": 1
+        },
+        {
+          "id": "card-9",
+          "use": "el/box",
+          "params": {
+            "width": 300,
+            "height": 150
+          },
+          "place": {
+            "x": 21.5,
+            "y": 78.333
+          },
+          "enter": "rise",
+          "at": 0.58
+        },
+        {
+          "id": "card-10",
+          "use": "el/box",
+          "params": {
+            "width": 300,
+            "height": 150
+          },
+          "place": {
+            "x": 40.5,
+            "y": 78.333
+          },
+          "enter": "rise",
+          "at": 0.7
+        },
+        {
+          "id": "card-11",
+          "use": "el/box",
+          "params": {
+            "width": 300,
+            "height": 150
+          },
+          "place": {
+            "x": 59.5,
+            "y": 78.333
+          },
+          "enter": "rise",
+          "at": 0.88
+        },
+        {
+          "id": "card-12",
+          "use": "el/box",
+          "params": {
+            "width": 300,
+            "height": 150
+          },
+          "place": {
+            "x": 78.5,
+            "y": 78.333
+          },
+          "enter": "rise",
+          "at": 1.06
+        }
+      ]
+    }
+  ]
+}

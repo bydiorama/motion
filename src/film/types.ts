@@ -110,6 +110,21 @@ export interface Transition {
   params?: Record<string, unknown>;
 }
 
+/**
+ * The camera follows the tip of a line as it draws: the tip is held at `at`
+ * on stage while the scene's own camera tracks still set zoom and rotation.
+ */
+export interface Follow {
+  /** Id of a layer in this scene whose primitive has a tip, e.g. fx/path-draw. */
+  layer: string;
+  /** Where on stage the tip is held, in % of the stage. Default [50, 50]. */
+  at?: [number, number];
+  /** Seconds the camera trails the tip by, averaged so it moves smoothly. Default 0. */
+  lag?: number;
+  /** Seconds to hand over from the scene's own x and y tracks to following, from the layer's start. Default 0.6. */
+  blend?: number;
+}
+
 export interface Scene {
   id: string;
   /** Seconds. Left out, the scene lasts until its last layer ends, plus `hold`. */
@@ -123,6 +138,8 @@ export interface Scene {
   layers: Layer[];
   /** Camera: keyframes in seconds from the scene start, applied to the whole scene. */
   tracks?: Tracks;
+  /** Camera follows the tip of a line being drawn. Replaces the x and y tracks while it follows. */
+  follow?: Follow;
   /** How this scene hands over to the next. The two scenes overlap by the duration. */
   out?: Transition;
   /** Vocabulary slugs this scene is built from. Informational; checked against the library. */

@@ -13,6 +13,12 @@ export interface Tokens {
   ease_exit: EaseSpec;
   ease_move: EaseSpec;
   ease_loop: EaseSpec;
+  /**
+   * How far transitions travel, lean and blur. `calm` swaps every transition's
+   * defaults for its quiet preset (a camera that barely pulls back, no tumble);
+   * values a film sets itself still win.
+   */
+  transitions: 'standard' | 'calm';
   /** bydiorama/ui interface timings in seconds. Replaced by the theme on a page that loads one. */
   ui: { duration: { fast: number; base: number; slow: number; enter: number }; stagger: number };
 }
@@ -30,6 +36,7 @@ export const DEFAULT_TOKENS: Tokens = {
   ease_exit: 'cubic.in',
   ease_move: 'cubic.inOut',
   ease_loop: 'linear',
+  transitions: 'standard',
   ui: { duration: { fast: 0.12, base: 0.2, slow: 0.32, enter: 0.4 }, stagger: 0.1 },
 };
 

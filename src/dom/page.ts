@@ -3,7 +3,8 @@
 //   window.ready     a promise: fonts loaded, images decoded, frame 0 drawn
 //   window.duration  seconds; duration × fps is a whole number
 //   window.fps
-//   window.seek(t)   draws the exact frame at t, in any order
+//   window.seek(t)   draws the exact frame at t, in any order; returns a promise
+//                    that resolves once footage for that frame has loaded
 //   window.audit(t)  where every layer sits at t
 //
 // and, opened with #render, draws at the film's own pixel size with no controls.
@@ -17,13 +18,13 @@ declare global {
     ready: Promise<boolean>;
     duration: number;
     fps: number;
-    seek: (t: number) => void;
+    seek: (t: number) => Promise<void>;
     audit: (t: number) => LayerBox[];
     motion: Mounted;
   }
 }
 
-export interface PageOptions extends Pick<MountOptions, 'slots'> {
+export interface PageOptions extends Pick<MountOptions, 'slots' | 'frames'> {
   film: Film;
   tune?: Tune;
   host: HTMLElement;
@@ -40,15 +41,17 @@ export function startPage(options: PageOptions): Promise<Mounted> {
     // Fonts first: primitives measure text when they build.
     await document.fonts.ready;
     const mounted = mount(options.host, options.film, {
-      ...(options.tune ? { tune: options.tune } : {}), ...(options.slots ? { slots: options.slots } : {}), fixed: render,
+      ...(options.tune ? { tune: options.tune } : {}), ...(options.slots ? { slots: options.slots } : {}),
+      ...(options.frames ? { frames: options.frames } : {}), fixed: render,
     });
     window.motion = mounted;
     window.duration = mounted.duration;
     window.fps = mounted.fps;
-    window.seek = mounted.seek;
+    window.seek = (t: number) => { mounted.seek(t); return mounted.settled(); };
     window.audit = mounted.audit;
     await mounted.ready;
     mounted.seek(0);
+    await mounted.settled();
     if (!render) options.onInteractive?.(mounted);
     return mounted;
   })();
