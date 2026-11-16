@@ -148,12 +148,21 @@ export interface Scene {
   intent?: string;
 }
 
+/** The bydiorama/ui themes a stage can wear (`theme.ui`). */
+export const UI_THEME_NAMES = ['zero', 'graphite', 'hockney'] as const;
+
 export interface Theme {
   scheme?: 'light' | 'dark';
   /** The accent colour, as any CSS colour. Left out, it comes from the page theme. */
   accent?: string;
   /** Text colour on the accent. Defaults to white or near-black, whichever reads better. */
   onAccent?: string;
+  /**
+   * A bydiorama/ui theme on the stage: its fonts (Aspekta), colour roles and radii
+   * become the stage's --ui-* tokens, which the --m-* roles read. `accent` and
+   * `vars` still win over it.
+   */
+  ui?: (typeof UI_THEME_NAMES)[number];
   /** CSS custom properties set on the stage, e.g. `{"--ui-bg-accent": "#2440F0"}`. */
   vars?: Record<string, string>;
 }

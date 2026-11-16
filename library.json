@@ -16,7 +16,10 @@
         "fx/shape-morph",
         "fx/grid-ripple",
         "type/mask-reveal",
-        "transition/cover-reveal"
+        "transition/cover-reveal",
+        "rig/layer-stack",
+        "scene/bento-grid",
+        "scene/post-carousel"
       ],
       "avoids": [
         "texture/dither",
@@ -86,7 +89,9 @@
         "transition/whip-pan",
         "transition/signal-wipe",
         "transition/fly-past",
-        "fx/pin-drop"
+        "fx/pin-drop",
+        "rig/layer-stack",
+        "scene/bento-grid"
       ],
       "avoids": [
         "texture/halftone-field"
@@ -146,7 +151,8 @@
         "transition/curtain",
         "transition/step-wipe",
         "transition/torn-edge",
-        "texture/grain"
+        "texture/grain",
+        "scene/post-carousel"
       ],
       "avoids": [
         "transition/blur-dissolve",
@@ -1062,6 +1068,11 @@
       "status": "draft"
     },
     {
+      "slug": "rig/layer-stack",
+      "summary": "Named planes float one above the other, then close onto the lowest and become one layer.",
+      "status": "specified"
+    },
+    {
       "slug": "rig/orbit-ring",
       "summary": "Tiles on a tilted ring that rotates forever.",
       "status": "draft"
@@ -1085,6 +1096,11 @@
       "slug": "scene/bar-chart",
       "summary": "Bars grow from the baseline one after another, each value counting up with it.",
       "status": "specified"
+    },
+    {
+      "slug": "scene/bento-grid",
+      "summary": "Tiles of different sizes on one grid, each cycling its own content on its own clock.",
+      "status": "draft"
     },
     {
       "slug": "scene/end-card",
@@ -1124,6 +1140,11 @@
     {
       "slug": "scene/mosaic",
       "summary": "Thousands of tiny tiles filling the frame.",
+      "status": "draft"
+    },
+    {
+      "slug": "scene/post-carousel",
+      "summary": "Slides shown one at a time as a post or posters, turning past in depth.",
       "status": "draft"
     },
     {

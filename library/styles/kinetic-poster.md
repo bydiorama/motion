@@ -24,6 +24,7 @@ uses:
 - transition/step-wipe
 - transition/torn-edge
 - texture/grain
+- scene/post-carousel
 avoids:
 - transition/blur-dissolve
 - fx/depth-drift

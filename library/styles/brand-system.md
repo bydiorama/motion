@@ -24,6 +24,9 @@ uses:
 - fx/grid-ripple
 - type/mask-reveal
 - transition/cover-reveal
+- rig/layer-stack
+- scene/bento-grid
+- scene/post-carousel
 avoids:
 - texture/dither
 - transition/torn-edge

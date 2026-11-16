@@ -15,6 +15,8 @@ import { staggerByDistance } from '../core/stagger.ts';
 import type { Film, Layer, Place, Scene } from '../film/types.ts';
 import { VERSION } from '../version.ts';
 
+export { iso, type IsoFace, type Vec3 } from './iso.ts';
+
 type Without<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
 /** A film, with the library version filled in. */

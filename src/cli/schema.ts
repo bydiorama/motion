@@ -33,7 +33,7 @@ export function filmSchema(c: Catalog) {
       size: { type: 'array', items: { type: 'integer', minimum: 1 }, minItems: 2, maxItems: 2 },
       fps: { type: 'integer', minimum: 1 }, seed: { type: 'integer' }, poster: { type: 'number', minimum: 0 }, loop: { type: 'boolean' },
       narrative: { type: 'string' }, style: { type: 'string' }, tokens: { type: 'object' },
-      theme: { type: 'object', additionalProperties: false, properties: { scheme: { enum: ['light', 'dark'] }, accent: { type: 'string' }, onAccent: { type: 'string' }, vars: { type: 'object', additionalProperties: { type: 'string' } } } },
+      theme: { type: 'object', additionalProperties: false, properties: { scheme: { enum: ['light', 'dark'] }, accent: { type: 'string' }, onAccent: { type: 'string' }, ui: { enum: ['zero', 'graphite', 'hockney'] }, vars: { type: 'object', additionalProperties: { type: 'string' } } } },
       scenes: {
         type: 'array', minItems: 1,
         items: {

@@ -1,0 +1,86 @@
+{
+  "motion": "0.4.0",
+  "title": "Bento reel",
+  "size": [
+    1920,
+    1080
+  ],
+  "fps": 30,
+  "loop": true,
+  "poster": 0,
+  "theme": {
+    "ui": "zero",
+    "scheme": "light",
+    "vars": {
+      "--m-card-radius": "var(--ui-radius-xl)"
+    }
+  },
+  "scenes": [
+    {
+      "id": "bento",
+      "intent": "A brand shown as one living grid: each tile cycles its own content, a phase apart.",
+      "background": "base",
+      "layout": {
+        "padding": 0,
+        "justify": "center"
+      },
+      "hold": 0,
+      "layers": [
+        {
+          "id": "grid",
+          "use": "scene/bento-grid",
+          "props": {
+            "areas": "a b b c / d b b e / d f g e",
+            "counts": [
+              1,
+              3,
+              3,
+              3,
+              3,
+              3,
+              3
+            ],
+            "items": [
+              "<div style=\"width:100%;height:100%;box-sizing:border-box;padding:32px 36px;background:var(--m-bg-accent);color:var(--m-text-on-accent);display:flex;flex-direction:column;justify-content:space-between\"><span style=\"font:500 28px/1.3 var(--m-font-body);color:var(--m-text-on-accent)\">Spring set</span><span style=\"font:500 124px/1 var(--m-font-display);letter-spacing:-0.02em;color:var(--m-text-on-accent)\">ferro</span></div>",
+              "<svg viewBox=\"0 0 800 800\" preserveAspectRatio=\"xMidYMid slice\" style=\"position:absolute;inset:0;width:100%;height:100%;display:block\"><rect width=\"800\" height=\"800\" style=\"fill:var(--m-bg-accent)\"/><path d=\"M120 800V430a170 170 0 0 1 340 0v370Z\" style=\"fill:var(--m-bg-inverse)\"/><path d=\"M400 800V530a140 140 0 0 1 280 0v270Z\" style=\"fill:var(--m-bg-surface)\"/><circle cx=\"610\" cy=\"220\" r=\"78\" style=\"fill:var(--m-bg-base)\"/></svg>",
+              "<svg viewBox=\"0 0 800 800\" preserveAspectRatio=\"xMidYMid slice\" style=\"position:absolute;inset:0;width:100%;height:100%;display:block\"><rect width=\"800\" height=\"800\" style=\"fill:var(--ui-bg-accent-subtle)\"/><rect x=\"170\" y=\"480\" width=\"460\" height=\"180\" rx=\"32\" style=\"fill:var(--m-bg-inverse)\"/><rect x=\"250\" y=\"300\" width=\"300\" height=\"180\" rx=\"32\" style=\"fill:var(--m-bg-surface)\"/><circle cx=\"400\" cy=\"200\" r=\"90\" style=\"fill:var(--m-bg-accent)\"/></svg>",
+              "<svg viewBox=\"0 0 800 800\" preserveAspectRatio=\"xMidYMid slice\" style=\"position:absolute;inset:0;width:100%;height:100%;display:block\"><rect width=\"800\" height=\"800\" style=\"fill:var(--m-bg-inverse)\"/><circle cx=\"560\" cy=\"260\" r=\"110\" style=\"fill:var(--m-bg-accent)\"/><path d=\"M0 800V570c160-120 300-120 460 0s260 80 340 30v200Z\" style=\"fill:var(--m-bg-sunken)\"/></svg>",
+              "<div style=\"position:relative;width:100%;height:100%;background:var(--m-bg-surface)\"><svg viewBox=\"0 0 800 800\" preserveAspectRatio=\"xMidYMid slice\" style=\"position:absolute;left:20px;top:20px;width:calc(100% - 40px);height:58%;border-radius:var(--ui-radius-md);display:block\"><rect width=\"800\" height=\"800\" style=\"fill:var(--m-bg-inverse)\"/><circle cx=\"560\" cy=\"260\" r=\"110\" style=\"fill:var(--m-bg-accent)\"/><path d=\"M0 800V570c160-120 300-120 460 0s260 80 340 30v200Z\" style=\"fill:var(--m-bg-sunken)\"/></svg><div style=\"position:absolute;left:30px;right:30px;bottom:26px;display:flex;flex-direction:column;gap:10px\"><span style=\"font:500 28px/1.3 var(--m-font-body);color:var(--m-text-muted)\">No. 01</span><span style=\"font:500 44px/1 var(--m-font-display);letter-spacing:-0.02em;color:var(--m-text-primary)\">Made slowly</span></div></div>",
+              "<div style=\"position:relative;width:100%;height:100%;background:var(--m-bg-surface)\"><svg viewBox=\"0 0 800 800\" preserveAspectRatio=\"xMidYMid slice\" style=\"position:absolute;left:20px;top:20px;width:calc(100% - 40px);height:58%;border-radius:var(--ui-radius-md);display:block\"><rect width=\"800\" height=\"800\" style=\"fill:var(--m-bg-accent)\"/><path d=\"M120 800V430a170 170 0 0 1 340 0v370Z\" style=\"fill:var(--m-bg-inverse)\"/><path d=\"M400 800V530a140 140 0 0 1 280 0v270Z\" style=\"fill:var(--m-bg-surface)\"/><circle cx=\"610\" cy=\"220\" r=\"78\" style=\"fill:var(--m-bg-base)\"/></svg><div style=\"position:absolute;left:30px;right:30px;bottom:26px;display:flex;flex-direction:column;gap:10px\"><span style=\"font:500 28px/1.3 var(--m-font-body);color:var(--m-text-muted)\">No. 02</span><span style=\"font:500 44px/1 var(--m-font-display);letter-spacing:-0.02em;color:var(--m-text-primary)\">Fired twice</span></div></div>",
+              "<div style=\"position:relative;width:100%;height:100%;background:var(--m-bg-surface)\"><svg viewBox=\"0 0 800 800\" preserveAspectRatio=\"xMidYMid slice\" style=\"position:absolute;left:20px;top:20px;width:calc(100% - 40px);height:58%;border-radius:var(--ui-radius-md);display:block\"><rect width=\"800\" height=\"800\" style=\"fill:var(--ui-bg-accent-subtle)\"/><rect x=\"170\" y=\"480\" width=\"460\" height=\"180\" rx=\"32\" style=\"fill:var(--m-bg-inverse)\"/><rect x=\"250\" y=\"300\" width=\"300\" height=\"180\" rx=\"32\" style=\"fill:var(--m-bg-surface)\"/><circle cx=\"400\" cy=\"200\" r=\"90\" style=\"fill:var(--m-bg-accent)\"/></svg><div style=\"position:absolute;left:30px;right:30px;bottom:26px;display:flex;flex-direction:column;gap:10px\"><span style=\"font:500 28px/1.3 var(--m-font-body);color:var(--m-text-muted)\">No. 03</span><span style=\"font:500 44px/1 var(--m-font-display);letter-spacing:-0.02em;color:var(--m-text-primary)\">Kept for years</span></div></div>",
+              "<div style=\"width:100%;height:100%;box-sizing:border-box;padding:32px 36px;background:var(--m-bg-surface);color:var(--m-text-primary);display:flex;flex-direction:column;justify-content:space-between\"><span style=\"font:500 28px/1.3 var(--m-font-body);color:var(--m-text-muted)\">Pieces this season</span><span style=\"font:500 160px/1 var(--m-font-display);letter-spacing:-0.02em;color:var(--m-text-primary)\">48</span></div>",
+              "<div style=\"width:100%;height:100%;box-sizing:border-box;padding:32px 36px;background:var(--m-bg-inverse);color:var(--m-text-inverse);display:flex;flex-direction:column;justify-content:space-between\"><span style=\"font:500 28px/1.3 var(--m-font-body);color:var(--m-text-inverse)\">Glazes</span><span style=\"font:500 160px/1 var(--m-font-display);letter-spacing:-0.02em;color:var(--m-text-inverse)\">12</span></div>",
+              "<div style=\"width:100%;height:100%;box-sizing:border-box;padding:32px 36px;background:var(--ui-bg-accent-subtle);color:var(--m-text-primary);display:flex;flex-direction:column;justify-content:space-between\"><span style=\"font:500 28px/1.3 var(--m-font-body);color:var(--m-text-muted)\">Studios</span><span style=\"font:500 160px/1 var(--m-font-display);letter-spacing:-0.02em;color:var(--m-text-primary)\">3</span></div>",
+              "<div style=\"width:100%;height:100%;display:grid;place-items:center;background:var(--m-bg-sunken)\"><div style=\"width:86%;box-sizing:border-box;padding:24px 26px;border-radius:var(--ui-radius-lg);background:var(--m-bg-base);box-shadow:inset 0 0 0 1px var(--m-border);display:flex;gap:18px;align-items:center\"><i style=\"flex:none;width:52px;height:52px;border-radius:999px;background:var(--m-bg-accent)\"></i><div style=\"display:flex;flex-direction:column;gap:4px\"><span style=\"font:500 28px/1.3 var(--m-font-body);color:var(--m-text-muted)\">Studio</span><span style=\"font:500 30px/1.25 var(--m-font-body);color:var(--m-text-primary)\">The kiln is cooling.</span></div></div></div>",
+              "<div style=\"width:100%;height:100%;display:grid;place-items:center;background:var(--m-bg-sunken)\"><div style=\"width:86%;box-sizing:border-box;padding:24px 26px;border-radius:var(--ui-radius-lg);background:var(--m-bg-base);box-shadow:inset 0 0 0 1px var(--m-border);display:flex;gap:18px;align-items:center\"><i style=\"flex:none;width:52px;height:52px;border-radius:999px;background:var(--m-bg-accent)\"></i><div style=\"display:flex;flex-direction:column;gap:4px\"><span style=\"font:500 28px/1.3 var(--m-font-body);color:var(--m-text-muted)\">Orders</span><span style=\"font:500 30px/1.25 var(--m-font-body);color:var(--m-text-primary)\">Twelve new this morning.</span></div></div></div>",
+              "<div style=\"width:100%;height:100%;display:grid;place-items:center;background:var(--m-bg-sunken)\"><div style=\"width:86%;box-sizing:border-box;padding:24px 26px;border-radius:var(--ui-radius-lg);background:var(--m-bg-base);box-shadow:inset 0 0 0 1px var(--m-border);display:flex;gap:18px;align-items:center\"><i style=\"flex:none;width:52px;height:52px;border-radius:999px;background:var(--m-bg-accent)\"></i><div style=\"display:flex;flex-direction:column;gap:4px\"><span style=\"font:500 28px/1.3 var(--m-font-body);color:var(--m-text-muted)\">Ana</span><span style=\"font:500 30px/1.25 var(--m-font-body);color:var(--m-text-primary)\">The blue came out right.</span></div></div></div>",
+              "<div style=\"width:100%;height:100%;box-sizing:border-box;padding:32px 36px;background:var(--m-bg-sunken);color:var(--m-text-primary);display:flex;flex-direction:column;justify-content:space-between\"><span style=\"font:500 28px/1.3 var(--m-font-body);color:var(--m-text-muted)\">Material</span><span style=\"font:500 46px/1 var(--m-font-display);letter-spacing:-0.02em;color:var(--m-text-primary)\">Stoneware</span></div>",
+              "<div style=\"width:100%;height:100%;box-sizing:border-box;padding:32px 36px;background:var(--m-bg-sunken);color:var(--m-text-primary);display:flex;flex-direction:column;justify-content:space-between\"><span style=\"font:500 28px/1.3 var(--m-font-body);color:var(--m-text-muted)\">Finish</span><span style=\"font:500 46px/1 var(--m-font-display);letter-spacing:-0.02em;color:var(--m-text-primary)\">Satin</span></div>",
+              "<div style=\"width:100%;height:100%;box-sizing:border-box;padding:32px 36px;background:var(--m-bg-sunken);color:var(--m-text-primary);display:flex;flex-direction:column;justify-content:space-between\"><span style=\"font:500 28px/1.3 var(--m-font-body);color:var(--m-text-muted)\">Care</span><span style=\"font:500 46px/1 var(--m-font-display);letter-spacing:-0.02em;color:var(--m-text-primary)\">By hand</span></div>",
+              "<div style=\"width:100%;height:100%;box-sizing:border-box;padding:32px 36px;background:var(--m-bg-accent);color:var(--m-text-on-accent);display:flex;flex-direction:column;justify-content:space-between\"><span style=\"font:500 28px/1.3 var(--m-font-body);color:var(--m-text-on-accent)\">Accent</span><span style=\"font:500 40px/1 var(--m-font-display);letter-spacing:-0.02em;color:var(--m-text-on-accent)\">Brand blue</span></div>",
+              "<div style=\"width:100%;height:100%;box-sizing:border-box;padding:32px 36px;background:var(--m-bg-inverse);color:var(--m-text-inverse);display:flex;flex-direction:column;justify-content:space-between\"><span style=\"font:500 28px/1.3 var(--m-font-body);color:var(--m-text-inverse)\">Inverse</span><span style=\"font:500 40px/1 var(--m-font-display);letter-spacing:-0.02em;color:var(--m-text-inverse)\">Warm ink</span></div>",
+              "<div style=\"width:100%;height:100%;box-sizing:border-box;padding:32px 36px;background:var(--m-bg-surface);color:var(--m-text-primary);display:flex;flex-direction:column;justify-content:space-between\"><span style=\"font:500 28px/1.3 var(--m-font-body);color:var(--m-text-muted)\">Surface</span><span style=\"font:500 40px/1 var(--m-font-display);letter-spacing:-0.02em;color:var(--m-text-primary)\">Stone</span></div>"
+            ],
+            "swaps": [
+              "fade",
+              "flip",
+              "slide-left",
+              "fade",
+              "stack",
+              "slide-up",
+              "slide-up"
+            ]
+          },
+          "params": {
+            "width": 94,
+            "gap": 16,
+            "hold": 1.6,
+            "swap_time": 0.7,
+            "offset": 0.3,
+            "stagger": 0
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -20,7 +20,7 @@ export const STAGE_CSS = `
   --m-border: var(--ui-border-default, light-dark(#C3C8D0, #3A3F49));
   --m-font-display: var(--ui-font-display, "Helvetica Neue", Helvetica, Arial, sans-serif);
   --m-font-body: var(--ui-font-body, "Helvetica Neue", Helvetica, Arial, sans-serif);
-  --m-font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --m-font-mono: var(--ui-font-mono, ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace);
   background: var(--m-bg-base); color: var(--m-text-primary);
   font-family: var(--m-font-display); font-kerning: normal; text-rendering: geometricPrecision;
   -webkit-font-smoothing: antialiased;

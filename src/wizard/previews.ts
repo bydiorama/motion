@@ -2,41 +2,20 @@
 // real runtime, so a thumbnail shows exactly what a move or a look does, and
 // `previews.test.ts` checks every one of them like any other film.
 //
-// They are drawn in a quiet monochrome that matches the page.
+// They wear the page's own theme, bydiorama/ui's Graphite: Aspekta, no chroma.
 import { FEELS } from '../brief/brief.ts';
 import type { Feel, LibraryNarrative } from '../brief/types.ts';
 import type { Film, Layer, Scene } from '../film/types.ts';
 import { TRANSITIONS } from '../primitives/index.ts';
 
 const SIZE: [number, number] = [1920, 1080];
-const SANS = 'Aspekta, "Helvetica Neue", Helvetica, Arial, sans-serif';
 
 export type Tone = 'light' | 'dark';
 
-/** The page's own greys, so thumbnails sit quietly in the wizard. */
-export function mono(tone: Tone): Record<string, string> {
-  const dark = tone === 'dark';
-  return {
-    '--m-bg-base': dark ? '#2B2B2B' : '#FBFBFA',
-    '--m-bg-surface': dark ? '#383838' : '#ECECEB',
-    '--m-bg-sunken': dark ? '#232323' : '#E6E6E5',
-    '--m-bg-accent': dark ? '#D4D4D3' : '#3B3B3A',
-    '--m-bg-inverse': dark ? '#F3F3F2' : '#1E1E1E',
-    '--m-text-primary': dark ? '#EDEDEC' : '#1E1E1E',
-    '--m-text-secondary': dark ? '#C9C9C8' : '#3B3B3A',
-    '--m-text-muted': dark ? '#9A9A99' : '#7A7A79',
-    '--m-text-inverse': dark ? '#1E1E1E' : '#F3F3F2',
-    '--m-text-on-accent': dark ? '#1E1E1E' : '#FFFFFF',
-    '--m-accent': dark ? '#8C8C8B' : '#9C9C9B',
-    '--m-border': dark ? '#4A4A4A' : '#D3D3D2',
-    '--m-font-display': SANS,
-    '--m-font-body': SANS,
-  };
-}
-
 const film = (title: string, scenes: Scene[], tone: Tone, extra: Partial<Film> = {}): Film => ({
   motion: '0.4', title, size: SIZE, fps: 30, loop: true, ...extra,
-  theme: { ...extra.theme, vars: { ...mono(tone), ...extra.theme?.vars } },
+  // The wizard page wears bydiorama/ui's Graphite; so do its thumbnails, in the page's scheme.
+  theme: { ui: 'graphite', scheme: tone, ...extra.theme },
   scenes,
 });
 const scene = (id: string, layers: Layer[], more: Partial<Scene> = {}): Scene => ({ id, layers, ...more });
@@ -100,16 +79,25 @@ export function moveLayer(slug: string, id = 'move', text?: string): Layer | und
     case 'type/fill-text': return { id, use: slug, props: { text: text ?? 'Noise into signal', accent: text ? [] : ['signal'] }, style: { size: 'headline', width: 86, css: BIG } };
     case 'texture/signal-field': return { id, use: slug, params: { cols: 24, settle_at: 0.4 } };
     case 'rig/tab-stack': return { id, use: slug, props: { items: ['Monitor', 'Detect', 'Respond', 'Report'], details: ['', '', '', 'Every signal, in one place.'] }, params: { width: 80, slide_at: 0.5, slide: 1.2 } };
+    case 'rig/layer-stack': return { id, use: slug, props: { items: ['Base', 'Rules', 'Parts', 'Uses'], name: 'One layer' }, params: { width: 46, gap: 150, start: 0.5, travel: 0.7 } };
     case 'rig/browser-window': return { id, use: slug, props: { lift: [36, 54, 28, 38] }, params: { width: 90, move: 0.9 } };
     case 'fx/slow-push': return { id, use: slug, props: { src: PICTURE }, params: { width: 1040, height: 780, radius: 24, from: 1, to: 1.16, pan_x: -6, duration: 3 } };
     case 'ui/page-scroll': return { id, use: slug, props: { srcs: PAGE, stops: [45] }, params: { width: 1000, height: 820, radius: 24, duration: 2.6, rest: 0.5, delay: 0.3 } };
+    case 'scene/bento-grid': {
+      const word = (s: string) => `<b style="font:700 calc(var(--m-u) * 6)/1 var(--m-font-display);color:var(--m-text-primary)">${s}</b>`;
+      return { id, use: slug, props: {
+        areas: 'a b c / d b e', counts: [1, 2, 2, 2, 2],
+        items: [word('Atlas'), PICTURE, PAGE[1]!, word('01'), word('02'), PAGE[0]!, PICTURE, word('Go'), word('On')],
+      }, params: { width: 84, hold: 1.25, swap_time: 0.5, offset: 0.2, stagger: 0 } };
+    }
+    case 'scene/post-carousel': return { id, use: slug, props: { slides: [PICTURE, PAGE[1]!, PAGE[0]!], handle: 'atlas' }, params: { width: 30, hold: 0.8, turn: 0.6, loop: true } };
     case 'fx/pin-drop': return { id, use: slug, props: { points: [28, 70, 70, 55], labels: ['Found', 'Here'] }, params: { size: 28, stem: 220 } };
     default: return undefined;
   }
 }
 
 /** Moves that fill the stage and loop, so their thumbnails get a set length and no padding. */
-const FULL_STAGE = new Set(['scene/marquee-wall', 'texture/halftone-field', 'texture/gradient-drift', 'texture/grain', 'fx/grid-ripple', 'ui/cursor-click', 'texture/signal-field', 'fx/pin-drop']);
+const FULL_STAGE = new Set(['scene/marquee-wall', 'scene/bento-grid', 'texture/halftone-field', 'texture/gradient-drift', 'texture/grain', 'fx/grid-ripple', 'ui/cursor-click', 'texture/signal-field', 'fx/pin-drop']);
 
 const handover = (slug: string): number => { const d = TRANSITIONS[slug]?.duration; return typeof d === 'number' ? d : 0.8; };
 

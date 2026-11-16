@@ -79,7 +79,7 @@ The studio is one screen: scenes on the left, each with a still and its intent, 
 
 Agents write the film and never the tune. People direct in the studio: every dial is generated from the film and the catalog, dragging a scene clip sets its length, and notes pinned to a moment are stored for the agent. Overrides address scenes and layers by id, so they survive the agent rewriting the film; an override whose target is gone is reported, not dropped.
 
-The studio is drawn in bydiorama/ui's Graphite theme (Aspekta, no chroma). Films read `--ui-*` tokens too: pass a ui theme with `--css` and the stage uses its colours, fonts and easing curves (`ui.default`, `ui.spring`, …). `node scripts/ui-theme.ts` regenerates the studio theme from the ui token resolver.
+The studio is drawn in bydiorama/ui's Graphite theme (Aspekta, no chroma). Films read `--ui-*` tokens too: pass a ui theme with `--css` and the stage uses its colours, fonts and easing curves (`ui.default`, `ui.spring`, …). A film can also set `"theme": { "ui": "zero" }` (or `graphite`, `hockney`): the stage then carries that bundled ui theme and Aspekta itself, in the studio, in stills and in renders. The demo films and the wizard's thumbnails are drawn this way. `node scripts/ui-theme.ts` regenerates the studio theme and the bundled stage themes from the ui token resolver.
 
 ## The one rule
 
