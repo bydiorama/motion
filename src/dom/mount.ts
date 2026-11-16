@@ -63,7 +63,9 @@ export interface Mounted {
 }
 
 interface LiveLayer { spec: ResolvedLayer; el: HTMLElement; instance: Instance; tracks: Sampler; ease: { enter?: (x: number) => number; exit?: (x: number) => number }; shutter: number }
-interface LiveScene { spec: ResolvedScene; el: HTMLElement; cam: HTMLElement; layers: LiveLayer[]; tracks: Sampler; handover: boolean }
+interface LiveScene { spec: ResolvedScene; el: HTMLElement; cam: HTMLElement; layers: LiveLayer[]; tracks: Sampler; handover: boolean; follow?: LiveFollow }
+/** A camera following a layer's tip: the layer, where its box sits in the camera's world, and the settings. */
+interface LiveFollow { layer: LiveLayer; origin: [number, number]; at: [number, number]; lag: number; blend: number }
 type Sampler = Partial<Record<keyof Tracks, (t: number) => number>>;
 
 const SURFACE = new Set(['base', 'surface', 'sunken', 'accent', 'inverse']);
@@ -302,7 +304,18 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
         shutter: shutterOf(layer.source.motionBlur),
       };
     });
-    return { spec, el, cam, layers, tracks: samplers(s.tracks, tokens.ease_move, ui.ease), handover: false };
+    const live: LiveScene = { spec, el, cam, layers, tracks: samplers(s.tracks, tokens.ease_move, ui.ease), handover: false };
+    const f = s.follow, target = f ? layers.find((l) => l.spec.id === f.layer) : undefined;
+    if (f && target?.instance.tip) {
+      // Where the layer's box sits in the camera's world, measured once while nothing is moved.
+      const k = stage.getBoundingClientRect().width / W || 1;
+      const a = target.el.getBoundingClientRect(), c = cam.getBoundingClientRect();
+      live.follow = {
+        layer: target, origin: [(a.left - c.left) / k, (a.top - c.top) / k],
+        at: [((f.at?.[0] ?? 50) / 100) * W, ((f.at?.[1] ?? 50) / 100) * H], lag: f.lag ?? 0, blend: f.blend ?? 0.6,
+      };
+    }
+    return live;
   });
 
   const last = scenes[scenes.length - 1]!;
@@ -334,6 +347,7 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
 
       const cam = rest();
       sample(cam, scene.tracks, local);
+      if (scene.follow) follow(cam, scene.follow, local);
       writePose(scene.cam, cam, W * 1.2);
 
       for (const layer of scene.layers) {
@@ -367,6 +381,39 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
         }
       }
     });
+  }
+
+  /**
+   * Moves the camera so the followed tip sits at its mark. The camera turns and
+   * scales about the stage centre, so the translation that puts a world point P
+   * at A is A − C − R·S·(P − C). Lag averages the tip over the last `lag`
+   * seconds, which trails it smoothly; blend eases over from the scene's own
+   * x and y tracks, starting when the layer does.
+   */
+  function follow(cam: Pose, f: LiveFollow, local: number) {
+    const l = f.layer, lt = local - l.spec.start;
+    const tipAt = (t: number) => l.instance.tip!(Math.max(0, t));
+    let p = tipAt(lt);
+    if (!p) return;
+    if (f.lag > 0) {
+      const n = 12;
+      let sx = 0, sy = 0, m = 0;
+      for (let i = 0; i <= n; i++) {
+        const q = tipAt(lt - (f.lag * i) / n);
+        if (q) { sx += q[0]; sy += q[1]; m++; }
+      }
+      if (m) p = [sx / m, sy / m];
+    }
+    // The layer's own travel (its enter move, its tracks) carries the tip with it.
+    const own = poseAt(l, local);
+    const P: [number, number] = [f.origin[0] + p[0] + own.x, f.origin[1] + p[1] + own.y];
+    const C: [number, number] = [W / 2, H / 2], r = (cam.rotate * Math.PI) / 180, s = cam.scale;
+    const dx = P[0] - C[0], dy = P[1] - C[1];
+    const tx = f.at[0] - C[0] - s * (Math.cos(r) * dx - Math.sin(r) * dy);
+    const ty = f.at[1] - C[1] - s * (Math.sin(r) * dx + Math.cos(r) * dy);
+    const w = f.blend > 0 ? ctx.ease('smooth')(clamp(lt / f.blend, 0, 1)) : lt >= 0 ? 1 : 0;
+    cam.x += (tx - cam.x) * w;
+    cam.y += (ty - cam.y) * w;
   }
 
   /** Where a layer's enter, exit and tracks put it at `local` seconds into its scene. */

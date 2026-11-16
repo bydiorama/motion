@@ -42,7 +42,9 @@ const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v =
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
 const FILM_KEYS = ['$schema', 'motion', 'title', 'size', 'fps', 'seed', 'poster', 'loop', 'narrative', 'style', 'tokens', 'theme', 'scenes'];
-const SCENE_KEYS = ['id', 'length', 'hold', 'background', 'scheme', 'layout', 'layers', 'tracks', 'out', 'uses', 'intent'];
+const SCENE_KEYS = ['id', 'length', 'hold', 'background', 'scheme', 'layout', 'layers', 'tracks', 'follow', 'out', 'uses', 'intent'];
+/** Primitives whose instance has a tip a camera can follow. */
+export const FOLLOWABLE = ['fx/path-draw'];
 const LAYER_KEYS = ['id', 'use', 'props', 'params', 'at', 'style', 'place', 'enter', 'exit', 'tracks', 'motionBlur'];
 const STYLE_KEYS = ['size', 'color', 'font', 'weight', 'align', 'width', 'css'];
 
@@ -441,6 +443,28 @@ export function resolveFilm(input: unknown): Resolution {
         id, use: d.layer.use, start: d.start, duration: d.duration, end, props: d.props, params: d.params,
         ...(enter ? { enter: { ...enter, start: d.start } } : {}), ...(exit ? { exit } : {}), source: d.layer,
       });
+    }
+
+    // ---- camera follow -----------------------------------------------------------
+    if (scene.follow !== undefined) {
+      const fp = `${sp}.follow`, f = scene.follow;
+      if (!isObject(f)) err(fp, 'bad-follow', 'follow is { layer, at, lag, blend }.');
+      else {
+        unknownKeys(f as unknown as Record<string, unknown>, ['layer', 'at', 'lag', 'blend'], fp);
+        const target = typeof f.layer === 'string' ? layers.find((l) => l.id === f.layer) : undefined;
+        if (!target) {
+          const ids = layers.filter((l) => FOLLOWABLE.includes(l.use)).map((l) => l.id), near = typeof f.layer === 'string' ? nearest(f.layer, ids) : undefined;
+          err(`${fp}.layer`, 'unknown-layer', `Scene "${sid}" has no layer "${String(f.layer)}" to follow.`, near ? `Did you mean "${near}"?` : ids.length ? `Lines here: ${oneOf(ids)}.` : `Add a line to follow: ${oneOf(FOLLOWABLE)}.`);
+        } else if (!FOLLOWABLE.includes(target.use)) {
+          err(`${fp}.layer`, 'bad-follow', `${target.use} has no tip to follow.`, `The camera can follow: ${oneOf(FOLLOWABLE)}.`);
+        }
+        if (f.at !== undefined && !(Array.isArray(f.at) && f.at.length === 2 && f.at.every((v) => isNum(v) && v >= 0 && v <= 100))) {
+          err(`${fp}.at`, 'bad-value', 'at is [x, y] in % of the stage, 0 to 100.', 'The middle is [50, 50].');
+        }
+        for (const k of ['lag', 'blend'] as const) {
+          if (f[k] !== undefined && !(isNum(f[k]) && f[k]! >= 0)) err(`${fp}.${k}`, 'bad-time', `${k} is seconds, zero or more.`);
+        }
+      }
     }
 
     // ---- hand-over to the next scene ------------------------------------------

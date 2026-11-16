@@ -133,3 +133,10 @@ test('a layer snapped onto the end of its scene is explained, with the last fram
   assert.match(issue.message, /the moment scene "a" ends/);
   assert.match(issue.hint!, /30 fps.*7\.567 s/);
 });
+
+test('a scene camera can follow a line, and says what it can follow', () => {
+  const route = { id: 'route', use: 'fx/path-draw', props: { paths: ['M0 0 L100 100'] } };
+  assert.deepEqual(codes(film([{ id: 'a', follow: { layer: 'route', at: [50, 40], lag: 0.1, blend: 0.5 }, layers: [route] }])), []);
+  assert.deepEqual(codes(film([{ id: 'a', follow: { layer: 'rout' }, layers: [route] }])), ['error:unknown-layer']);
+  assert.deepEqual(codes(film([{ id: 'a', follow: { layer: 't', at: [120, 0] }, layers: [text('t')] }])), ['error:bad-follow', 'error:bad-value']);
+});

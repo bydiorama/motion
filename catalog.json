@@ -1302,6 +1302,11 @@
           "step": 0.05,
           "unit": "s",
           "label": "Time for the fill to arrive"
+        },
+        "ease": {
+          "type": "ease",
+          "default": "quart.inOut",
+          "label": "Curve of each stroke; a camera that follows the tip moves with it"
         }
       }
     },

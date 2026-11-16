@@ -84,6 +84,11 @@ export interface Instance {
    * it before a frame is captured.
    */
   pending?(): Promise<void>;
+  /**
+   * Where the primitive's moving point is at t, in px from the layer's top-left:
+   * the tip of a line being drawn. A scene's camera can follow it.
+   */
+  tip?(t: number): [number, number] | undefined;
 }
 
 /** A problem a primitive finds in its own props and params, beyond their types and ranges. */
