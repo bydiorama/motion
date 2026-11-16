@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { once } from 'node:events';
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { buildCatalog } from '../catalog.ts';
 import { describeTimeline, resolveFilm, type Resolution } from '../film/resolve.ts';
 import { applyTune, bake } from '../film/tune.ts';
@@ -25,6 +26,7 @@ Start
 
 Write and check
   catalog [--json|--write|--check]  What a film may use: primitives, params, tokens, eases
+  make <script.mjs> [--out f.json]  Run a script that returns a film; check it and write the JSON
   validate <film...> [--json]       Check films without a browser
   inspect <film> [--json]           The resolved timeline: where every scene and layer lands
   notes <film> [--json]             The person's open notes, with where each one points
@@ -136,6 +138,27 @@ function catalog(args: Args) {
     for (const p of data.transitions) console.log(`  ${p.slug.padEnd(26)} ${p.summary}\n    params: ${params(p.params)}`);
     console.log(`\nMoves   ${data.moves.join(', ')}\nTracks  ${data.tracks.join(', ')}\nEases   ${data.eases.join(', ')}\nSizes   ${data.sizes.join(', ')}\nColors  ${data.colors.join(', ')}\n\nFull detail: motion catalog --json`);
   }
+}
+
+/** Where `make` writes: beside the script, as <name>.film.json. */
+export const madePath = (script: string): string => script.replace(/(\.film)?\.(m?js|m?ts)$/, '') + '.film.json';
+
+async function make(args: Args) {
+  const script = need(args), json = !!args.flags.json;
+  const mod = await import(pathToFileURL(path.resolve(script)).href) as { default?: unknown };
+  let value = mod.default;
+  if (typeof value === 'function') value = await (value as () => unknown)();
+  if (value === undefined) throw new Error(`${script} has no default export. End it with: export default film({ ... })`);
+  const out = path.resolve(typeof args.flags.out === 'string' ? args.flags.out : madePath(script));
+  const res = resolveFilm(value);
+  if (json) print({ ok: res.ok, file: out, written: res.ok, issues: res.issues, ...(res.timeline ? { duration: res.timeline.duration } : {}) });
+  else res.issues.forEach((i) => console.log(line(i)));
+  if (!res.ok) {
+    if (!json) console.error(`Nothing written: the film has ${res.issues.filter((i) => i.level === 'error').length} error(s).`);
+    process.exit(1);
+  }
+  writeJson(out, value);
+  if (!json) console.log(`${path.relative(process.cwd(), out)} written: ${res.timeline!.duration.toFixed(2)} s, ${res.issues.length} warning(s).`);
 }
 
 function validate(args: Args) {
@@ -358,6 +381,7 @@ export async function main(argv: string[]) {
   const cmd = args._[0];
   if (!cmd || args.flags.help) return console.log(HELP);
   if (cmd === 'catalog') return catalog(args);
+  if (cmd === 'make') return make(args);
   if (cmd === 'validate') return validate(args);
   if (cmd === 'inspect') return inspect(args);
   if (cmd === 'notes') return notes(args);
