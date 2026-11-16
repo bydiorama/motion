@@ -2388,6 +2388,95 @@
           "label": "Strength of the glow under each marker"
         }
       }
+    },
+    {
+      "slug": "scene/grid-wall",
+      "summary": "A masonry or regular grid of media.",
+      "props": {
+        "images": {
+          "type": "string[]",
+          "required": true,
+          "label": "Pictures, in order: each goes under the shortest column"
+        },
+        "ratios": {
+          "type": "number[]",
+          "default": [],
+          "label": "Width ÷ height of each picture. Left out, read from the files once they load"
+        }
+      },
+      "params": {
+        "columns": {
+          "type": "number",
+          "default": 4,
+          "min": 2,
+          "max": 8,
+          "step": 1,
+          "unit": "cols",
+          "label": "Columns"
+        },
+        "width": {
+          "type": "number",
+          "default": 90,
+          "min": 20,
+          "max": 200,
+          "step": 1,
+          "unit": "% of stage width",
+          "label": "Width of the wall"
+        },
+        "gap": {
+          "type": "number",
+          "default": 16,
+          "min": 0,
+          "max": 80,
+          "step": 1,
+          "unit": "px",
+          "label": "Space between pictures (corners are ¾ of it, or --m-card-radius)"
+        },
+        "stagger": {
+          "type": "number",
+          "default": 0.05,
+          "min": 0.01,
+          "max": 0.15,
+          "step": 0.005,
+          "unit": "s",
+          "label": "Delay between pictures"
+        },
+        "focus_x": {
+          "type": "number",
+          "default": 50,
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "unit": "% of the wall",
+          "label": "Where the opening starts, across",
+          "pad": {
+            "name": "focus",
+            "axis": "x"
+          }
+        },
+        "focus_y": {
+          "type": "number",
+          "default": 50,
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "unit": "% of the wall",
+          "label": "Where the opening starts, down",
+          "pad": {
+            "name": "focus",
+            "axis": "y"
+          }
+        },
+        "drift_speed": {
+          "type": "number",
+          "default": 20,
+          "min": 0,
+          "max": 40,
+          "step": 1,
+          "unit": "px/s",
+          "label": "Upward drift of the whole wall; 0 holds it still"
+        }
+      }
     }
   ],
   "transitions": [

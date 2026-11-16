@@ -367,7 +367,8 @@
                     "texture/signal-field",
                     "rig/browser-window",
                     "rig/tab-stack",
-                    "fx/pin-drop"
+                    "fx/pin-drop",
+                    "scene/grid-wall"
                   ]
                 },
                 "props": {

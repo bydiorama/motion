@@ -1086,7 +1086,7 @@
     {
       "slug": "scene/grid-wall",
       "summary": "A masonry or regular grid of media.",
-      "status": "draft"
+      "status": "specified"
     },
     {
       "slug": "scene/hero-object",
