@@ -22,7 +22,8 @@ export async function open(film: string, opts: { css?: string[]; scale?: number;
   const preview = await serve({ film, ...(opts.css ? { css: opts.css } : {}) });
   let browser: Browser | undefined;
   try {
-    browser = await chromium.launch();
+    // MOTION_CHROMIUM points at a Chromium binary when Playwright's own download is not there.
+    browser = await chromium.launch(process.env.MOTION_CHROMIUM ? { executablePath: process.env.MOTION_CHROMIUM } : {});
     const context = await browser.newContext({ viewport: { width: opts.size[0], height: opts.size[1] }, deviceScaleFactor: opts.scale ?? 1 });
     const page = await context.newPage();
     const errors: string[] = [];

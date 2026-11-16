@@ -23,6 +23,8 @@ A film uses **at most four curves plus one signature curve**. More than that and
 - **Opacity never overshoots.** Only position, scale and rotation do.
 - **Two clocks.** An eased move for the element, and a slow linear drift on its container that keeps going through the hold. The eye reads the first as action and the second as life.
 - **Polynomials, not lookalikes.** When a curve has a name in the catalog, use the name: it is solved exactly.
+- **Many equal steps, one sine.** When one move passes through several equal steps (an accordion sliding card to card, a list scrolling item to item), ease it with `sine.inOut`. A cubic in-out's top speed is 3× its average, so the middle steps flash by; a sine's is 1.57×.
+- **A push that lands on the next scene eases in and out.** Accelerating into the cut (`dive-in` at its default pace) is a hit; when the point you dive into continues as the next scene, use `pace: glide`, which arrives at rest.
 
 ### Springs
 
@@ -73,6 +75,7 @@ The video scale is longer than an interface's, because nobody is waiting on it.
 - **Opacity leads, transform follows.** When something fades and moves, the fade is complete by half the move.
 - **A blur that sharpens** reads as focus; keep it under 24 px and gone by the end of the move.
 - **Velocity-only trails.** Motion blur and echoes appear while something is moving fast and are gone when it stops: blur ≈ velocity × half a frame.
+- **The first frame is a thumbnail.** Feeds show it as the cover. A headline that is already there, dim, and fills word by word (`type/fill-text`) reads at frame 0 and still has a reveal.
 - **Mark after landing.** Underlines, circles and highlights draw after the line has settled (`type/scribble-highlight`).
 
 ## 5. Composition
@@ -82,7 +85,20 @@ The video scale is longer than an interface's, because nobody is waiting on it.
 - **Safe areas.** In 16:9, keep text 5% inside every edge. In 9:16 (1080 × 1920), keep text within x 60–940 and y 250–1500: interface chrome covers the rest.
 - **Nothing is dead still.** Under every hold, a slow drift: scale 1.03 → 1 over the scene, or a few degrees of rotation, on a linear curve.
 
-## 6. Transitions
+## 6. Depth and camera
+
+What makes 3D look shot rather than assembled.
+
+- **One world per hand-over.** When one scene hands to the next by a camera move, both live in one world and only the camera moves (`transition/camera-travel`). Two layers animated separately for one transition read as two unrelated moves.
+- **Motion blur follows the path.** Blur only along the direction of travel, sized by on-screen speed: deviation = speed (px per frame) × shutter ÷ √12, with a half-frame shutter (0.5) as the film standard. A round blur reads as out of focus, not as speed. Set `"motionBlur": true` on any layer that travels far and fast; transitions that move whole scenes do this themselves.
+- **Blur only while moving.** A camera move's blur rises and falls with its speed: peak in the middle, none at either end.
+- **Lifts stack.** A part lifted off a page rides on the plane below it, so the order never inverts however far the lower one moves. Its shadow scales with its height: a part lying flush casts nothing.
+- **Never change state in one frame.** When something switches look (closed to open, one picture to the next), cross-fade the two over 0.2–0.4 s. Dissolve straight from one to the other; never dip through an empty state.
+- **Same size means same size on screen.** Markers on a tilted plane are scaled against their depth, or turned to face the camera, so near ones are not drawn bigger. Use a long lens for things standing on a plane: stems stay vertical and parallel.
+- **Shared rhythm.** A family of pulses (ripples, glows) shares one phase, so they are the same size at every instant.
+- **Open from black.** A dark film fades in its first texture over 0.6–0.8 s before anything settles; the type starts with it.
+
+## 7. Transitions
 
 | Transition | Length | When |
 | --- | --- | --- |
@@ -95,13 +111,17 @@ The video scale is longer than an interface's, because nobody is waiting on it.
 | `transition/iris` | 0.4–1.4 s | From a point the eye is already on. |
 | `transition/dive-in` | 0.4–0.9 s | Into a detail: a letter, a button, a dot. |
 | `transition/blur-dissolve` | 0.4–0.8 s | Quiet changes of subject; at most once a film. |
+| `transition/camera-travel` | 1.2–1.8 s | To what lies beside or below: the next page, the next section. |
+| `transition/whip-pan` | 0.4–0.6 s | Between siblings of equal weight; at most twice a film. |
+| `transition/signal-wipe` | 0.4–0.7 s | A cut drawn by accent light; for dark films. |
+| `transition/fly-past` | 0.8–1.4 s | Out of a scene made of panels or tiles, to what lies beneath. |
 
 - **Content stays still while the edge moves** in a wipe, so it reads as a cut, not a slide.
 - **Swap only while covered.** A cover or curtain changes the scene while the frame is fully covered.
 - **Anticipation before speed.** A whip or a throw pulls back 3–5° for about 0.15 s first.
 - **Changes between logo states are hard cuts**, not crossfades.
 
-## 7. Logo reveals
+## 8. Logo reveals
 
 Pick one pattern for a film and repeat it, short, at the end.
 
@@ -118,14 +138,14 @@ Pick one pattern for a film and repeat it, short, at the end.
 - **Beat pulse.** The mark scales on the beat, once.
 - **Glint.** A band of light passes over the finished mark (`type/shimmer` on the name).
 
-## 8. End cards
+## 9. End cards
 
 - The logo is settled by 1.0–1.5 s into the card and holds for at least 1.5 s.
 - In 16:9 the lockup is 25–35% of the frame width.
 - Three elements at most: mark, name, one line (a call to action, a date or a URL).
 - The poster frame is the end card at rest.
 
-## 9. Data
+## 10. Data
 
 - **Stage it:** axes, then data, then labels, then the one annotation that carries the point. Each stage 0.6–1.0 s.
 - **A counter uses the same curve as its bars**, so they land together.
@@ -133,7 +153,7 @@ Pick one pattern for a film and repeat it, short, at the end.
 - **One highlight.** One bar or point in the accent; the rest muted.
 - Never more than one number moving at a time.
 
-## 10. Loops
+## 11. Loops
 
 - The last frame equals the first. Rotate roles or slots so the state after one period matches the start.
 - Duplicate lists and wrap them, rather than resetting.

@@ -40,6 +40,8 @@ export interface Ctx {
   tokens: Tokens;
   seed: number;
   size: [number, number];
+  /** Frames per second of the film being drawn: speeds in px per frame need it. */
+  fps: number;
   /** Resolves an ease with the page theme's curves applied. */
   ease(spec: EaseSpec | undefined): (x: number) => number;
   easeOverrides: Record<string, Bezier>;

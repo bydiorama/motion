@@ -41,6 +41,14 @@ import { shimmer } from './type/shimmer.ts';
 import { trackingIn } from './type/tracking-in.ts';
 import { wordRoller } from './type/word-roller.ts';
 import { cursorClick } from './ui/cursor-click.ts';
+import { pinDrop } from './fx/pin-drop.ts';
+import { browserWindow } from './rig/browser-window.ts';
+import { signalField } from './texture/signal-field.ts';
+import { cameraTravel } from './transition/camera-travel.ts';
+import { flyPast } from './transition/fly-past.ts';
+import { signalWipe } from './transition/signal-wipe.ts';
+import { whipPan } from './transition/whip-pan.ts';
+import { fillText } from './type/fill-text.ts';
 import type { Primitive, TransitionPrimitive } from './types.ts';
 
 const byslug = <T extends { slug: string }>(items: T[]): Record<string, T> =>
@@ -50,10 +58,12 @@ export const PRIMITIVES: Record<string, Primitive> = byslug([
   text, box, image, html, slot, wordBuild, typedTitle, scramble, counterRoll, staggerFill, depthDrift, marqueeWall, orbitRing, halftoneField,
   maskReveal, charCascade, blockReveal, wordRoller, trackingIn, shimmer, echo, scribbleHighlight,
   odometer, pathDraw, shapeMorph, gridRipple, logoReveal, barChart, lineChart, gradientDrift, grain, cursorClick,
+  fillText, signalField, browserWindow, pinDrop,
 ]);
 
 export const TRANSITIONS: Record<string, TransitionPrimitive> = byslug([
   beatCut, blurDissolve, stepWipe, push, iris, coverReveal, diveIn, curtain, stackOver, slantWipe,
+  cameraTravel, whipPan, signalWipe, flyPast,
 ]);
 
 export type { Ctx, ParamSpec, Primitive, PropSpec, TransitionPrimitive } from './types.ts';

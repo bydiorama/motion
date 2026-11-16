@@ -259,7 +259,11 @@
                   "transition/dive-in",
                   "transition/curtain",
                   "transition/stack-over",
-                  "transition/slant-wipe"
+                  "transition/slant-wipe",
+                  "transition/camera-travel",
+                  "transition/whip-pan",
+                  "transition/signal-wipe",
+                  "transition/fly-past"
                 ]
               },
               "duration": {
@@ -326,7 +330,11 @@
                     "scene/line-chart",
                     "texture/gradient-drift",
                     "texture/grain",
-                    "ui/cursor-click"
+                    "ui/cursor-click",
+                    "type/fill-text",
+                    "texture/signal-field",
+                    "rig/browser-window",
+                    "fx/pin-drop"
                   ]
                 },
                 "props": {
@@ -814,6 +822,18 @@
                       }
                     }
                   }
+                },
+                "motionBlur": {
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    }
+                  ]
                 }
               }
             }

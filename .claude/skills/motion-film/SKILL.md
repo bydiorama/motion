@@ -42,6 +42,7 @@ Render only when asked: `node bin/motion.mjs render films/<name>.film.json` (nee
 - **Masks over fades.** Reveal text with `type/mask-reveal`, `type/block-reveal` or the `mask-up` and `wipe-*` moves; keep `fade` for supporting text.
 - **One hero move per scene.** Everything else in the frame enters quietly or holds.
 - **Exits are quicker than entrances** (60–75% of the time) and use an ease-in, never the entrance played backwards.
+- **One world per camera move.** When a scene hands to the next by moving the camera, use `transition/camera-travel` (or `whip-pan`), not two layers sliding separately. Give layers that travel far and fast `"motionBlur": true`.
 - **Nothing is dead still.** A scene's `tracks` can carry a slow linear drift (`scale` 1.03 → 1 over the scene) under the holds.
 
 ## Never
@@ -58,4 +59,4 @@ Return the whole film as one JSON code block, then a short list of beats you cou
 ## Reference
 
 - `reference/film.md`: the film shape, with every field, and common errors with their fixes.
-- `docs/CRAFT.md`: the craft rules, with numbers: easing, springs, durations, staggers, text reveals, transitions, logo reveals, data scenes, end cards and safe areas.
+- `docs/CRAFT.md`: the craft rules, with numbers: easing, springs, durations, staggers, text reveals, depth and camera, transitions, logo reveals, data scenes, end cards and safe areas.

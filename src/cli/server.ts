@@ -22,6 +22,7 @@ export const shell = (head: string, body = ''): string => `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Motion</title>
+<link rel="icon" href="data:,">
 <style>html, body { margin: 0; }</style>
 ${head}
 </head>

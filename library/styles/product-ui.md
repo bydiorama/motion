@@ -22,6 +22,8 @@ uses:
 - transition/stack-over
 - transition/push
 - fx/odometer
+- rig/browser-window
+- transition/camera-travel
 avoids:
 - texture/ascii
 - transition/torn-edge

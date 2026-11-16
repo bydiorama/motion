@@ -59,6 +59,7 @@ export function filmSchema(c: Catalog) {
                   },
                   place: { type: 'object', required: ['x', 'y'], additionalProperties: false, properties: { x: { type: 'number' }, y: { type: 'number' }, anchor: { enum: c.anchors } } },
                   enter: move(false), exit: move(true), tracks,
+                  motionBlur: { anyOf: [{ type: 'boolean' }, { type: 'number', minimum: 0, maximum: 1 }] },
                 },
               },
             },
