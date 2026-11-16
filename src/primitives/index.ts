@@ -46,6 +46,7 @@ import { wordRoller } from './type/word-roller.ts';
 import { cursorClick } from './ui/cursor-click.ts';
 import { pinDrop } from './fx/pin-drop.ts';
 import { browserWindow } from './rig/browser-window.ts';
+import { layerStack } from './rig/layer-stack.ts';
 import { tabStack } from './rig/tab-stack.ts';
 import { signalField } from './texture/signal-field.ts';
 import { cameraTravel } from './transition/camera-travel.ts';
@@ -64,7 +65,7 @@ export const PRIMITIVES: Record<string, Primitive> = byslug([
   text, box, image, frames, video, html, slot, wordBuild, typedTitle, scramble, counterRoll, staggerFill, depthDrift, marqueeWall, orbitRing, halftoneField,
   maskReveal, charCascade, blockReveal, wordRoller, trackingIn, shimmer, echo, scribbleHighlight,
   odometer, pathDraw, shapeMorph, gridRipple, logoReveal, barChart, lineChart, gradientDrift, grain, cursorClick,
-  fillText, signalField, browserWindow, tabStack, pinDrop, gridWall, slowPush, pageScroll,
+  fillText, signalField, browserWindow, tabStack, layerStack, pinDrop, gridWall, slowPush, pageScroll,
 ]);
 
 export const TRANSITIONS: Record<string, TransitionPrimitive> = byslug([

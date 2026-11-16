@@ -368,6 +368,7 @@
                     "texture/signal-field",
                     "rig/browser-window",
                     "rig/tab-stack",
+                    "rig/layer-stack",
                     "fx/pin-drop",
                     "scene/grid-wall",
                     "fx/slow-push",

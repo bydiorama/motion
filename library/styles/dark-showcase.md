@@ -27,6 +27,7 @@ uses:
 - transition/signal-wipe
 - transition/fly-past
 - fx/pin-drop
+- rig/layer-stack
 avoids:
 - texture/halftone-field
 formats:

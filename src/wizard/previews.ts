@@ -100,6 +100,7 @@ export function moveLayer(slug: string, id = 'move', text?: string): Layer | und
     case 'type/fill-text': return { id, use: slug, props: { text: text ?? 'Noise into signal', accent: text ? [] : ['signal'] }, style: { size: 'headline', width: 86, css: BIG } };
     case 'texture/signal-field': return { id, use: slug, params: { cols: 24, settle_at: 0.4 } };
     case 'rig/tab-stack': return { id, use: slug, props: { items: ['Monitor', 'Detect', 'Respond', 'Report'], details: ['', '', '', 'Every signal, in one place.'] }, params: { width: 80, slide_at: 0.5, slide: 1.2 } };
+    case 'rig/layer-stack': return { id, use: slug, props: { items: ['Base', 'Rules', 'Parts', 'Uses'], name: 'One layer' }, params: { width: 46, gap: 150, start: 0.5, travel: 0.7 } };
     case 'rig/browser-window': return { id, use: slug, props: { lift: [36, 54, 28, 38] }, params: { width: 90, move: 0.9 } };
     case 'fx/slow-push': return { id, use: slug, props: { src: PICTURE }, params: { width: 1040, height: 780, radius: 24, from: 1, to: 1.16, pan_x: -6, duration: 3 } };
     case 'ui/page-scroll': return { id, use: slug, props: { srcs: PAGE, stops: [45] }, params: { width: 1000, height: 820, radius: 24, duration: 2.6, rest: 0.5, delay: 0.3 } };

@@ -24,6 +24,7 @@ uses:
 - fx/grid-ripple
 - type/mask-reveal
 - transition/cover-reveal
+- rig/layer-stack
 avoids:
 - texture/dither
 - transition/torn-edge

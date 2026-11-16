@@ -16,7 +16,8 @@
         "fx/shape-morph",
         "fx/grid-ripple",
         "type/mask-reveal",
-        "transition/cover-reveal"
+        "transition/cover-reveal",
+        "rig/layer-stack"
       ],
       "avoids": [
         "texture/dither",
@@ -86,7 +87,8 @@
         "transition/whip-pan",
         "transition/signal-wipe",
         "transition/fly-past",
-        "fx/pin-drop"
+        "fx/pin-drop",
+        "rig/layer-stack"
       ],
       "avoids": [
         "texture/halftone-field"
@@ -1060,6 +1062,11 @@
       "slug": "rig/flip-ticker",
       "summary": "A row of cards where a rotation wave travels along the row.",
       "status": "draft"
+    },
+    {
+      "slug": "rig/layer-stack",
+      "summary": "Named planes float one above the other, then close onto the lowest and become one layer.",
+      "status": "specified"
     },
     {
       "slug": "rig/orbit-ring",

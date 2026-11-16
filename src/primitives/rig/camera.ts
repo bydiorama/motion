@@ -1,4 +1,4 @@
-// The camera shared by the 3D rigs (rig/browser-window, rig/tab-stack).
+// The camera shared by the 3D rigs (rig/browser-window, rig/tab-stack, rig/layer-stack).
 //
 // An orbit camera around the rig: it looks at a point (pan), stands further back
 // or closer (zoom, as perspective-correct distance), and turns (tilt about the

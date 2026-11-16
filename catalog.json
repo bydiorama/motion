@@ -2409,6 +2409,269 @@
       }
     },
     {
+      "slug": "rig/layer-stack",
+      "summary": "Named planes float one above the other, then close onto the lowest and become one layer.",
+      "props": {
+        "items": {
+          "type": "string[]",
+          "required": true,
+          "label": "Plane names, from the base up"
+        },
+        "faces": {
+          "type": "string[]",
+          "default": [],
+          "label": "A picture for each plane, in the same order (paths relative to the film)"
+        },
+        "name": {
+          "type": "string",
+          "default": "",
+          "label": "What the closed stack is called"
+        }
+      },
+      "params": {
+        "width": {
+          "type": "number",
+          "default": 42,
+          "min": 15,
+          "max": 90,
+          "step": 1,
+          "unit": "% of stage width",
+          "label": "Width of a plane"
+        },
+        "aspect": {
+          "type": "number",
+          "default": 1,
+          "min": 0.4,
+          "max": 1.6,
+          "step": 0.01,
+          "unit": "depth ÷ width",
+          "label": "Proportions of a plane"
+        },
+        "gap": {
+          "type": "number",
+          "default": 120,
+          "min": 20,
+          "max": 320,
+          "step": 1,
+          "unit": "px",
+          "label": "Space between planes when apart"
+        },
+        "lay": {
+          "type": "number",
+          "default": 60,
+          "min": 0,
+          "max": 80,
+          "step": 1,
+          "unit": "deg",
+          "label": "How far the planes lie back (0 faces the camera)"
+        },
+        "turn": {
+          "type": "number",
+          "default": -45,
+          "min": -90,
+          "max": 90,
+          "step": 1,
+          "unit": "deg",
+          "label": "Turn of the planes about their own axis"
+        },
+        "spin": {
+          "type": "number",
+          "default": 1.2,
+          "min": -8,
+          "max": 8,
+          "step": 0.1,
+          "unit": "deg/s",
+          "label": "Slow turn that never stops"
+        },
+        "order": {
+          "type": "choice",
+          "default": "close",
+          "options": [
+            "close",
+            "open",
+            "open-close"
+          ],
+          "label": "Close starts apart and ends as one, open the reverse, open-close does both"
+        },
+        "start": {
+          "type": "number",
+          "default": 1.4,
+          "min": 0,
+          "max": 10,
+          "step": 0.05,
+          "unit": "s",
+          "label": "When the planes start to move"
+        },
+        "travel": {
+          "type": "number",
+          "default": 0.9,
+          "min": 0.3,
+          "max": 3,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time one plane takes to land or lift"
+        },
+        "stagger": {
+          "type": "number",
+          "default": 0.14,
+          "min": 0,
+          "max": 0.6,
+          "step": 0.01,
+          "unit": "s",
+          "label": "Delay between one plane and the next"
+        },
+        "apart": {
+          "type": "number",
+          "default": 1.2,
+          "min": 0,
+          "max": 6,
+          "step": 0.05,
+          "unit": "s",
+          "label": "For open-close: time held apart"
+        },
+        "radius": {
+          "type": "number",
+          "default": 28,
+          "min": 0,
+          "max": 120,
+          "step": 1,
+          "unit": "px",
+          "label": "Corner radius of a plane"
+        },
+        "lens": {
+          "type": "number",
+          "default": 4,
+          "min": 0,
+          "max": 12,
+          "step": 0.5,
+          "unit": "× the rig",
+          "label": "Length of the lens; 0 is parallel, as in an isometric drawing"
+        },
+        "look": {
+          "type": "choice",
+          "default": "solid",
+          "options": [
+            "solid",
+            "wire"
+          ],
+          "label": "Solid surfaces with shadows, or a wire drawing with guides and numbered labels"
+        },
+        "path": {
+          "type": "choice",
+          "default": "hold",
+          "options": [
+            "in",
+            "out",
+            "in-out",
+            "hold"
+          ],
+          "label": "Camera path: in turns from square-on to the pose, out from the pose to square-on, in-out goes and comes back, hold stays in the pose"
+        },
+        "tilt": {
+          "type": "number",
+          "default": 0,
+          "min": -40,
+          "max": 40,
+          "step": 1,
+          "unit": "deg, negative faces left",
+          "label": "Turn",
+          "pad": {
+            "name": "angle",
+            "axis": "x"
+          }
+        },
+        "pitch": {
+          "type": "number",
+          "default": 0,
+          "min": -15,
+          "max": 30,
+          "step": 1,
+          "unit": "deg",
+          "label": "Lean",
+          "pad": {
+            "name": "angle",
+            "axis": "y"
+          }
+        },
+        "roll": {
+          "type": "number",
+          "default": 0,
+          "min": -12,
+          "max": 12,
+          "step": 0.5,
+          "unit": "deg",
+          "label": "Camera roll"
+        },
+        "zoom": {
+          "type": "number",
+          "default": 1,
+          "min": 0.5,
+          "max": 1.8,
+          "step": 0.01,
+          "unit": "x",
+          "label": "Camera zoom in the pose (below 1 stands back)"
+        },
+        "pan_x": {
+          "type": "number",
+          "default": 0,
+          "min": -50,
+          "max": 50,
+          "step": 0.5,
+          "unit": "% of the rig",
+          "label": "Across",
+          "pad": {
+            "name": "look",
+            "axis": "x"
+          }
+        },
+        "pan_y": {
+          "type": "number",
+          "default": 0,
+          "min": -50,
+          "max": 50,
+          "step": 0.5,
+          "unit": "% of the rig",
+          "label": "Down",
+          "pad": {
+            "name": "look",
+            "axis": "y"
+          }
+        },
+        "move": {
+          "type": "number",
+          "default": 1.6,
+          "min": 0.4,
+          "max": 3,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time the camera takes for each move"
+        },
+        "hold": {
+          "type": "number",
+          "default": 1,
+          "min": 0,
+          "max": 6,
+          "step": 0.05,
+          "unit": "s",
+          "label": "For in-out: time in the pose before it comes back"
+        },
+        "ease": {
+          "type": "ease",
+          "default": "cubic.inOut",
+          "label": "Curve of each camera move"
+        },
+        "drift": {
+          "type": "number",
+          "default": 1.2,
+          "min": 0,
+          "max": 4,
+          "step": 0.1,
+          "unit": "deg/s",
+          "label": "Slow drift once the camera has arrived"
+        }
+      }
+    },
+    {
       "slug": "fx/pin-drop",
       "summary": "Markers land on places one by one, ripple together, and raise their labels on stems.",
       "props": {
