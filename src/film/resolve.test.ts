@@ -165,3 +165,16 @@ test('every calm preset sits inside its params\' ranges', async () => {
     }
   }
 });
+
+test('theme.ui names one of the bundled bydiorama/ui themes', async () => {
+  const { UI_THEMES } = await import('../dom/ui-themes.css.ts');
+  const { UI_THEME_NAMES } = await import('./types.ts');
+  const one = [{ id: 'a', length: 1, layers: [] }];
+  for (const ui of UI_THEME_NAMES) {
+    assert.deepEqual(codes(film(one, { theme: { ui } })), [], ui);
+    assert.match(UI_THEMES[ui], new RegExp(`\\.m-stage\\[data-ui-theme="${ui}"\\]`), `${ui} is scoped to its stage`);
+    assert.match(UI_THEMES[ui], /--ui-font-display/, `${ui} sets the type`);
+  }
+  const bad = resolveFilm(film(one, { theme: { ui: 'neon' } })).issues;
+  assert.deepEqual(bad.map((i) => `${i.code}:${i.path}`), ['bad-value:theme.ui']);
+});

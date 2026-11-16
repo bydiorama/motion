@@ -10,6 +10,7 @@ import { PRIMITIVES, TRANSITIONS } from '../primitives/index.ts';
 import type { Ctx, FrameSequence, Instance } from '../primitives/types.ts';
 import { merge, type Tokens } from '../tokens.ts';
 import { STAGE_CSS } from './stage.css.ts';
+import { ASPEKTA_URL, UI_THEMES, type UiThemeName } from './ui-themes.css.ts';
 import { readUiTokens } from './tokens.ts';
 
 export class FilmError extends Error {
@@ -88,6 +89,26 @@ function ensureCss(doc: Document) {
   const style = doc.createElement('style');
   style.id = 'm-stage-css';
   style.textContent = STAGE_CSS;
+  doc.head.appendChild(style);
+}
+
+/**
+ * A bydiorama/ui theme for the stage (`theme.ui`), once per page: its --ui-*
+ * tokens scoped to stages that ask for it, and Aspekta, embedded so stills and
+ * renders never fall back to another face.
+ */
+function ensureUiTheme(doc: Document, name: UiThemeName) {
+  const id = `m-ui-theme-${name}`;
+  if (doc.getElementById(id)) return;
+  const style = doc.createElement('style');
+  style.id = id;
+  const face = doc.getElementById('m-ui-font') ? '' : `@font-face { font-family: "Aspekta"; font-weight: 100 900; font-style: normal; font-display: block; src: url("${ASPEKTA_URL}") format("woff2"); }\n`;
+  style.textContent = face + UI_THEMES[name];
+  if (face) {
+    const mark = doc.createElement('meta');
+    mark.id = 'm-ui-font';
+    doc.head.appendChild(mark);
+  }
   doc.head.appendChild(style);
 }
 
@@ -221,6 +242,12 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
   stage.style.width = `${W}px`;
   stage.style.height = `${H}px`;
   stage.style.setProperty('--m-u', `${W / 100}px`);
+  if (film.theme?.ui) {
+    ensureUiTheme(doc, film.theme.ui);
+    stage.dataset.uiTheme = film.theme.ui;
+    // The theme's tokens follow the colour scheme; pin it, so a render never follows the machine's.
+    stage.style.colorScheme = film.theme.scheme ?? 'light';
+  }
   if (film.theme?.scheme) stage.style.colorScheme = film.theme.scheme;
   if (film.theme?.accent) {
     const accent = film.theme.accent;

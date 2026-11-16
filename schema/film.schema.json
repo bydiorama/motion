@@ -66,6 +66,13 @@
         "onAccent": {
           "type": "string"
         },
+        "ui": {
+          "enum": [
+            "zero",
+            "graphite",
+            "hockney"
+          ]
+        },
         "vars": {
           "type": "object",
           "additionalProperties": {

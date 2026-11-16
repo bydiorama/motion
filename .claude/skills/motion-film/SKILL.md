@@ -46,6 +46,7 @@ Render only when asked: `node bin/motion.mjs render films/<name>.film.json` (nee
 - **Footage is one layer.** Use `el/video` with `from`/`to`, never an image layer per frame. Loops through footage use `continues`.
 - **Repeating films are scripts.** When layers repeat, write a `.film.mjs` with the builder and run `motion make`; see `reference/film.md`.
 - **A camera that travels a route follows it.** Give the scene `follow` on the `fx/path-draw` layer instead of copying the line's ease into camera keys.
+- **Placeholders wear bydiorama/ui.** Demo and placeholder content (sample films, thumbnails, stand-in posters, cards and slides) sets `theme.ui` (`zero` unless the person names another theme) and takes every colour from the role variables (`--m-bg-*`, `--m-text-*`, `--m-accent`, `--m-border`, or `--ui-*` for roles the stage does not map). Type is Aspekta through `var(--m-font-display)` / `var(--m-font-body)`, weight 500, tracking −0.02em on display sizes. Radii come from `--ui-radius-*`, cards get a hairline instead of a shadow, and inline SVG fills through `style="fill:var(…)"`, never `fill="#…"`. No hex colours, no other faces, no monospace. A different `theme.ui` or `accent` must restyle the whole film. A person's own brand content keeps its own colours and fonts.
 - **Nothing is dead still.** A scene's `tracks` can carry a slow linear drift (`scale` 1.03 → 1 over the scene) under the holds.
 
 ## Never

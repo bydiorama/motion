@@ -15,7 +15,7 @@
 | `seed` | Integer for anything random. Same seed, same film. |
 | `narrative`, `style` | Library slugs the film follows. Informational. |
 | `tokens` | Overrides of the timing tokens: `duration.{instant,fast,base,slow}`, `stagger.{tight,base,loose}`, `hold`, `hold_end`, `beat`, `ease_enter`, `ease_exit`, `ease_move`, `ease_loop`, and `transitions` (`standard` or `calm`: calm gives every transition quiet defaults, for editorial films). Refer to them as `"$duration.base"`. |
-| `theme` | `scheme` (`light`/`dark`), `accent` (CSS colour), `onAccent`, `vars` (raw CSS variables). |
+| `theme` | `ui` (`zero`, `graphite` or `hockney`: a bundled bydiorama/ui theme with Aspekta and its colour roles; `zero` is Diorama's own), `scheme` (`light`/`dark`), `accent` (CSS colour), `onAccent`, `vars` (raw CSS variables). |
 | `scenes` | In order. Each runs after the previous, overlapping by its `out` transition. |
 
 ## Scene

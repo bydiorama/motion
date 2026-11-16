@@ -2,41 +2,20 @@
 // real runtime, so a thumbnail shows exactly what a move or a look does, and
 // `previews.test.ts` checks every one of them like any other film.
 //
-// They are drawn in a quiet monochrome that matches the page.
+// They wear the page's own theme, bydiorama/ui's Graphite: Aspekta, no chroma.
 import { FEELS } from '../brief/brief.ts';
 import type { Feel, LibraryNarrative } from '../brief/types.ts';
 import type { Film, Layer, Scene } from '../film/types.ts';
 import { TRANSITIONS } from '../primitives/index.ts';
 
 const SIZE: [number, number] = [1920, 1080];
-const SANS = 'Aspekta, "Helvetica Neue", Helvetica, Arial, sans-serif';
 
 export type Tone = 'light' | 'dark';
 
-/** The page's own greys, so thumbnails sit quietly in the wizard. */
-export function mono(tone: Tone): Record<string, string> {
-  const dark = tone === 'dark';
-  return {
-    '--m-bg-base': dark ? '#2B2B2B' : '#FBFBFA',
-    '--m-bg-surface': dark ? '#383838' : '#ECECEB',
-    '--m-bg-sunken': dark ? '#232323' : '#E6E6E5',
-    '--m-bg-accent': dark ? '#D4D4D3' : '#3B3B3A',
-    '--m-bg-inverse': dark ? '#F3F3F2' : '#1E1E1E',
-    '--m-text-primary': dark ? '#EDEDEC' : '#1E1E1E',
-    '--m-text-secondary': dark ? '#C9C9C8' : '#3B3B3A',
-    '--m-text-muted': dark ? '#9A9A99' : '#7A7A79',
-    '--m-text-inverse': dark ? '#1E1E1E' : '#F3F3F2',
-    '--m-text-on-accent': dark ? '#1E1E1E' : '#FFFFFF',
-    '--m-accent': dark ? '#8C8C8B' : '#9C9C9B',
-    '--m-border': dark ? '#4A4A4A' : '#D3D3D2',
-    '--m-font-display': SANS,
-    '--m-font-body': SANS,
-  };
-}
-
 const film = (title: string, scenes: Scene[], tone: Tone, extra: Partial<Film> = {}): Film => ({
   motion: '0.4', title, size: SIZE, fps: 30, loop: true, ...extra,
-  theme: { ...extra.theme, vars: { ...mono(tone), ...extra.theme?.vars } },
+  // The wizard page wears bydiorama/ui's Graphite; so do its thumbnails, in the page's scheme.
+  theme: { ui: 'graphite', scheme: tone, ...extra.theme },
   scenes,
 });
 const scene = (id: string, layers: Layer[], more: Partial<Scene> = {}): Scene => ({ id, layers, ...more });

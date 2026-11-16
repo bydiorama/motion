@@ -1,25 +1,37 @@
 // A bento loop: seven tiles on one grid, each cycling its own content a phase
 // apart. The wordmark holds; every other tile swaps with its own move.
-// `node bin/motion.mjs make films/bento-reel.film.mjs` writes bento-reel.film.json.
+//
+// Placeholders wear bydiorama/ui (theme zero): Aspekta, the ui colour roles and
+// radii, and no colour of their own, so a different `theme.ui` or `accent`
+// restyles every tile. `node bin/motion.mjs make films/bento-reel.film.mjs`
+// writes bento-reel.film.json.
 import { film, layer, scene } from '@bydiorama/motion/build';
 
-const C = { ink: '#231F1B', cream: '#EFE8DC', clay: '#C8553D', sage: '#8AA38B', ochre: '#D9A441', sky: '#A9C6D9', plum: '#5B3A4A' };
+// ui colour roles. Inline SVG reads them through style, never through fill="".
+const R = {
+  page: 'var(--m-bg-base)', card: 'var(--m-bg-surface)', well: 'var(--m-bg-sunken)',
+  accent: 'var(--m-bg-accent)', subtle: 'var(--ui-bg-accent-subtle)', ink: 'var(--m-bg-inverse)',
+  text: 'var(--m-text-primary)', muted: 'var(--m-text-muted)', onInk: 'var(--m-text-inverse)', onAccent: 'var(--m-text-on-accent)', line: 'var(--m-border)',
+};
 
-/** An abstract picture as a data URI, so the film ships no image files. */
-const svg = (w, h, body) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${body}</svg>`)}`;
-const arches = (bg, a, b) => svg(800, 800, `<rect width="800" height="800" fill="${bg}"/><path d="M120 800V420a170 170 0 0 1 340 0v380Z" fill="${a}"/><path d="M400 800V520a140 140 0 0 1 280 0v280Z" fill="${b}"/><circle cx="600" cy="220" r="80" fill="${C.cream}"/>`);
-const stack = (bg, a, b) => svg(800, 800, `<rect width="800" height="800" fill="${bg}"/><rect x="180" y="470" width="440" height="180" rx="24" fill="${a}"/><rect x="250" y="300" width="300" height="170" rx="24" fill="${b}"/><circle cx="400" cy="210" r="90" fill="${a}"/>`);
-const hills = (bg, a, b) => svg(800, 800, `<rect width="800" height="800" fill="${bg}"/><circle cx="560" cy="250" r="110" fill="${b}"/><path d="M0 800V560c160-120 300-120 460 0s260 80 340 30v210Z" fill="${a}"/>`);
+/** An abstract picture drawn in ui roles, covering its tile. */
+const art = (ground, body) => `<svg viewBox="0 0 800 800" preserveAspectRatio="xMidYMid slice" style="position:absolute;inset:0;width:100%;height:100%;display:block"><rect width="800" height="800" style="fill:${ground}"/>${body}</svg>`;
+const f = (c) => `style="fill:${c}"`;
+const ARCHES = art(R.accent, `<path d="M120 800V430a170 170 0 0 1 340 0v370Z" ${f(R.ink)}/><path d="M400 800V530a140 140 0 0 1 280 0v270Z" ${f(R.card)}/><circle cx="610" cy="220" r="78" ${f(R.page)}/>`);
+const BLOCKS = art(R.subtle, `<rect x="170" y="480" width="460" height="180" rx="32" ${f(R.ink)}/><rect x="250" y="300" width="300" height="180" rx="32" ${f(R.card)}/><circle cx="400" cy="200" r="90" ${f(R.accent)}/>`);
+const HILLS = art(R.ink, `<circle cx="560" cy="260" r="110" ${f(R.accent)}/><path d="M0 800V570c160-120 300-120 460 0s260 80 340 30v200Z" ${f(R.well)}/>`);
 
-const box = (bg, fg, inner, extra = '') => `<div style="width:100%;height:100%;box-sizing:border-box;padding:28px 32px;background:${bg};color:${fg};display:flex;flex-direction:column;justify-content:space-between;${extra}">${inner}</div>`;
-const label = (s) => `<span style="font:500 26px/1.2 var(--m-font-body);opacity:.85">${s}</span>`;
-const big = (s, size = 64) => `<span style="font:600 ${size}px/0.95 var(--m-font-display);letter-spacing:-0.02em">${s}</span>`;
-const poster = (bg, fg, kicker, title, pic) => `<div style="position:relative;width:100%;height:100%;background:${bg};color:${fg}"><img src="${pic}" style="position:absolute;left:24px;right:24px;top:24px;height:58%;width:calc(100% - 48px);object-fit:cover;border-radius:10px"><div style="position:absolute;left:30px;right:30px;bottom:28px">${label(kicker)}<div style="margin-top:10px">${big(title, 46)}</div></div></div>`;
-const note = (bg, who, text) => `<div style="width:100%;height:100%;display:grid;place-items:center;background:${C.ink}"><div style="width:88%;box-sizing:border-box;padding:26px 28px;border-radius:16px;background:${bg};color:${C.ink};display:flex;gap:16px;align-items:center"><i style="flex:none;width:52px;height:52px;border-radius:12px;background:${C.ink};opacity:.85"></i><div><div style="font:600 22px/1.2 var(--m-font-body);opacity:.6">${who}</div><div style="font:500 30px/1.25 var(--m-font-body)">${text}</div></div></div></div>`;
+const type = (size, color = 'inherit') => `font:500 ${size}px/1 var(--m-font-display);letter-spacing:-0.02em;color:${color}`;
+const label = (s, color = R.muted) => `<span style="font:500 28px/1.3 var(--m-font-body);color:${color}">${s}</span>`;
+/** A tile of text: a label above, a figure or a word below. */
+const panel = (ground, fg, top, bottom, size) => `<div style="width:100%;height:100%;box-sizing:border-box;padding:32px 36px;background:${ground};color:${fg};display:flex;flex-direction:column;justify-content:space-between">${top}<span style="${type(size, fg)}">${bottom}</span></div>`;
+const poster = (kicker, title, pic) => `<div style="position:relative;width:100%;height:100%;background:${R.card}">${pic.replace('position:absolute;inset:0;width:100%;height:100%', 'position:absolute;left:20px;top:20px;width:calc(100% - 40px);height:58%;border-radius:var(--ui-radius-md)')}<div style="position:absolute;left:30px;right:30px;bottom:26px;display:flex;flex-direction:column;gap:10px">${label(kicker)}<span style="${type(44, R.text)}">${title}</span></div></div>`;
+/** A notification card in ui's own manner: a hairline, no shadow. */
+const toast = (who, text) => `<div style="width:100%;height:100%;display:grid;place-items:center;background:${R.well}"><div style="width:86%;box-sizing:border-box;padding:24px 26px;border-radius:var(--ui-radius-lg);background:${R.page};box-shadow:inset 0 0 0 1px ${R.line};display:flex;gap:18px;align-items:center"><i style="flex:none;width:52px;height:52px;border-radius:999px;background:${R.accent}"></i><div style="display:flex;flex-direction:column;gap:4px">${label(who)}<span style="font:500 30px/1.25 var(--m-font-body);color:${R.text}">${text}</span></div></div></div>`;
 
 export default film({
   title: 'Bento reel', size: [1920, 1080], fps: 30, loop: true, poster: 0,
-  theme: { scheme: 'dark', accent: C.clay, vars: { '--m-bg-sunken': '#15120F', '--m-bg-surface': C.cream } },
+  theme: { ui: 'zero', scheme: 'light', vars: { '--m-card-radius': 'var(--ui-radius-xl)' } },
   scenes: [
     scene('bento', [
       layer('grid', 'scene/bento-grid', {
@@ -28,28 +40,26 @@ export default film({
           counts: [1, 3, 3, 3, 3, 3, 3],
           items: [
             // a: the wordmark holds.
-            box(C.sky, C.cream, `${label('Spring set')}${big('ferro', 120)}`, 'justify-content:space-between'),
+            panel(R.accent, R.onAccent, label('Spring set', R.onAccent), 'ferro', 124),
             // b: the hero, three pictures.
-            arches(C.clay, C.cream, C.ochre), stack(C.sage, C.ink, C.cream), hills(C.plum, C.ochre, C.sky),
+            ARCHES, BLOCKS, HILLS,
             // c: posters.
-            poster(C.ochre, C.ink, 'No. 01', 'Made slowly', arches(C.ink, C.clay, C.cream)),
-            poster(C.cream, C.ink, 'No. 02', 'Fired twice', hills(C.sage, C.ink, C.ochre)),
-            poster(C.ink, C.cream, 'No. 03', 'Kept for years', stack(C.clay, C.cream, C.ochre)),
+            poster('No. 01', 'Made slowly', HILLS), poster('No. 02', 'Fired twice', ARCHES), poster('No. 03', 'Kept for years', BLOCKS),
             // d: numbers.
-            box(C.cream, C.ink, `${label('Pieces this season')}${big('48', 150)}`),
-            box(C.sage, C.ink, `${label('Glazes')}${big('12', 150)}`),
-            box(C.ochre, C.ink, `${label('Studios')}${big('3', 150)}`),
+            panel(R.card, R.text, label('Pieces this season'), '48', 160),
+            panel(R.ink, R.onInk, label('Glazes', R.onInk), '12', 160),
+            panel(R.subtle, R.text, label('Studios'), '3', 160),
             // e: a stack of messages.
-            note(C.cream, 'Studio', 'The kiln is cooling.'), note(C.sky, 'Orders', 'Twelve new this morning.'), note(C.ochre, 'Ana', 'The blue came out right.'),
+            toast('Studio', 'The kiln is cooling.'), toast('Orders', 'Twelve new this morning.'), toast('Ana', 'The blue came out right.'),
             // f: words.
-            box(C.plum, C.cream, `${label('Material')}${big('Stoneware', 44)}`), box(C.plum, C.cream, `${label('Finish')}${big('Satin', 44)}`), box(C.plum, C.cream, `${label('Care')}${big('By hand', 44)}`),
-            // g: colour.
-            box(C.clay, C.cream, `${label('Clay')}${big('#C8553D', 36)}`), box(C.sage, C.ink, `${label('Sage')}${big('#8AA38B', 36)}`), box(C.ochre, C.ink, `${label('Ochre')}${big('#D9A441', 36)}`),
+            panel(R.well, R.text, label('Material'), 'Stoneware', 46), panel(R.well, R.text, label('Finish'), 'Satin', 46), panel(R.well, R.text, label('Care'), 'By hand', 46),
+            // g: the palette, named by role.
+            panel(R.accent, R.onAccent, label('Accent', R.onAccent), 'Brand blue', 40), panel(R.ink, R.onInk, label('Inverse', R.onInk), 'Warm ink', 40), panel(R.card, R.text, label('Surface'), 'Stone', 40),
           ],
           swaps: ['fade', 'flip', 'slide-left', 'fade', 'stack', 'slide-up', 'slide-up'],
         },
-        params: { width: 94, gap: 14, hold: 1.6, swap_time: 0.7, offset: 0.3, stagger: 0 },
+        params: { width: 94, gap: 16, hold: 1.6, swap_time: 0.7, offset: 0.3, stagger: 0 },
       }),
-    ], { intent: 'A brand shown as one living grid: each tile cycles its own content, a phase apart.', background: '#15120F', layout: { padding: 0, justify: 'center' }, hold: 0 }),
+    ], { intent: 'A brand shown as one living grid: each tile cycles its own content, a phase apart.', background: 'base', layout: { padding: 0, justify: 'center' }, hold: 0 }),
   ],
 });
