@@ -43,6 +43,18 @@ const scene = (id: string, layers: Layer[], more: Partial<Scene> = {}): Scene =>
 
 const WORDS = ['Comments', 'Cursors', 'History', 'Branches', 'Review', 'Share', 'Export', 'Search'];
 
+/** A drawn stand-in for a picture, as a data URI: thumbnails ship no image files. */
+const svg = (w: number, h: number, body: string): string =>
+  `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}">${body}</svg>`)}`;
+/** A photograph: sky, two ridges and a sun. */
+const PICTURE = svg(800, 600, '<rect width="800" height="600" fill="#B9B9B8"/><circle cx="590" cy="170" r="54" fill="#E4E4E3"/><path d="M0 600 L0 420 L210 230 L380 400 L520 300 L800 520 L800 600Z" fill="#8A8A89"/><path d="M0 600 L0 520 L300 380 L560 520 L800 440 L800 600Z" fill="#5E5E5D"/>');
+/** Three sections of a page: a dark hero, a headline with cards, a block of text. */
+const PAGE = [
+  svg(800, 520, '<rect width="800" height="520" fill="#3B3B3A"/><rect x="200" y="200" width="400" height="44" rx="8" fill="#E4E4E3"/><rect x="290" y="270" width="220" height="24" rx="6" fill="#9C9C9B"/>'),
+  svg(800, 620, '<rect width="800" height="620" fill="#F3F3F2"/><rect x="60" y="70" width="360" height="40" rx="8" fill="#3B3B3A"/><rect x="60" y="170" width="210" height="360" rx="12" fill="#C9C9C8"/><rect x="295" y="170" width="210" height="360" rx="12" fill="#B0B0AF"/><rect x="530" y="170" width="210" height="360" rx="12" fill="#C9C9C8"/>'),
+  svg(800, 560, '<rect width="800" height="560" fill="#E0E0DF"/><rect x="60" y="80" width="300" height="40" rx="8" fill="#3B3B3A"/><rect x="60" y="170" width="680" height="18" rx="6" fill="#9C9C9B"/><rect x="60" y="215" width="640" height="18" rx="6" fill="#9C9C9B"/><rect x="60" y="260" width="560" height="18" rx="6" fill="#9C9C9B"/><rect x="60" y="360" width="180" height="56" rx="10" fill="#5E5E5D"/>'),
+];
+
 /** Text big enough to read in a thumbnail a few hundred pixels wide. */
 const BIG = { 'font-size': 'calc(var(--m-u) * 7.4)', 'line-height': '1.05' };
 
@@ -89,6 +101,8 @@ export function moveLayer(slug: string, id = 'move', text?: string): Layer | und
     case 'texture/signal-field': return { id, use: slug, params: { cols: 24, settle_at: 0.4 } };
     case 'rig/tab-stack': return { id, use: slug, props: { items: ['Monitor', 'Detect', 'Respond', 'Report'], details: ['', '', '', 'Every signal, in one place.'] }, params: { width: 80, slide_at: 0.5, slide: 1.2 } };
     case 'rig/browser-window': return { id, use: slug, props: { lift: [36, 54, 28, 38] }, params: { width: 90, move: 0.9 } };
+    case 'fx/slow-push': return { id, use: slug, props: { src: PICTURE }, params: { width: 1040, height: 780, radius: 24, from: 1, to: 1.16, pan_x: -6, duration: 3 } };
+    case 'ui/page-scroll': return { id, use: slug, props: { srcs: PAGE, stops: [45] }, params: { width: 1000, height: 820, radius: 24, duration: 2.6, rest: 0.5, delay: 0.3 } };
     case 'fx/pin-drop': return { id, use: slug, props: { points: [28, 70, 70, 55], labels: ['Found', 'Here'] }, params: { size: 28, stem: 220 } };
     default: return undefined;
   }

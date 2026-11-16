@@ -13,7 +13,7 @@ import { clamp } from '../../core/ease.ts';
 import { num, type TransitionPrimitive } from '../types.ts';
 
 /** What the hand-over changes on the outgoing scene, to put back afterwards. */
-const saved = new WeakMap<HTMLElement, { zIndex: string; background: string }>();
+const saved = new WeakMap<HTMLElement, { zIndex: string; background: string; ground: string }>();
 
 export const flyPast: TransitionPrimitive = {
   slug: 'transition/fly-past',
@@ -58,17 +58,17 @@ export const flyPast: TransitionPrimitive = {
     const s = ctx.ease('expo.out')(clamp(k / 0.85));
     to.style.transformOrigin = '50% 50%';
     to.style.transform = `scale(${(1 + num(p.settle) * (1 - s)).toFixed(4)})`;
-    to.style.opacity = String(ctx.ease('smooth')(clamp(k / 0.45)));
-    // The outgoing scene is lifted over the next one, and its own ground goes, so
-    // its layers fly over the next scene while it shows through between them.
-    if (!saved.has(from)) saved.set(from, { zIndex: from.style.zIndex, background: from.style.background });
+    // The outgoing scene is lifted over the next one and its own ground dissolves, so its layers fly
+    // over the next scene while it shows through between them. The next scene is whole beneath from
+    // the first frame: the gaps go straight from one ground to the other, never through the stage's.
+    if (!saved.has(from)) saved.set(from, { zIndex: from.style.zIndex, background: from.style.background, ground: getComputedStyle(from).backgroundColor });
     from.style.zIndex = String((Number(to.style.zIndex) || 0) + 1);
-    from.style.background = 'transparent';
+    const left = 1 - ctx.ease('smooth')(clamp(k / 0.45));
+    from.style.background = left > 0.001 ? `color-mix(in srgb, ${saved.get(from)!.ground} ${(left * 100).toFixed(2)}%, transparent)` : 'transparent';
   },
   clear(el) {
     el.style.transform = '';
     el.style.transformOrigin = '';
-    el.style.opacity = '';
     const was = saved.get(el);
     if (was) {
       el.style.zIndex = was.zIndex;

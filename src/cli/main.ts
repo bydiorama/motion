@@ -273,6 +273,13 @@ async function stills(args: Args) {
   } finally { await s.close(); }
 }
 
+/** Two draws of one frame count as the same when no pixel is more than this many levels (of 255) apart … */
+const REPEAT_LEVELS = 2;
+/** … and no more than this share of the pixels differ at all. */
+const REPEAT_SHARE = 0.001;
+/** Above this difference in the mean of any 16 px block (levels of 255), whole areas differ: that is state, not rasterising. */
+const REPEAT_AREA = 24;
+
 async function check(args: Args) {
   const file = need(args), json = !!args.flags.json, l = load(file, args), t = timelineOrExit(l, json);
   const issues: (Issue & { t?: number })[] = [...l.res.issues];
@@ -281,12 +288,52 @@ async function check(args: Args) {
   try {
     // 1. A frame must depend on its time alone: draw the same moments in two orders and compare.
     const times = Array.from({ length: 6 }, (_, k) => Math.round((t.duration * k / 5) * t.fps) / t.fps);
-    const shot = async (time: number) => { await s.seek(time); return createHash('sha1').update(await s.page.screenshot({ type: 'png' })).digest('hex'); };
-    const forward = new Map<number, string>();
+    // Two things are compared. The page's state: every element's box, opacity, visibility, filter and
+    // transform, which must match exactly. And the pixels, with room: a browser does not always rasterise
+    // the same state the same way (a card that has just become its own layer can land a pixel aside, a blur
+    // a level off), which no one can see and no primitive caused. So pixels only fail the film when whole
+    // areas differ, as they do when a canvas or a picture holds state the page's boxes do not show.
+    const state = () => s.page.evaluate(() => [...document.querySelectorAll<HTMLElement>('.m-scene, .m-cam, .m-layer, .m-layer *')].map((e) => {
+      // What is not shown may keep whatever it was last drawn with: only its being hidden is state.
+      if (!e.checkVisibility({ visibilityProperty: true })) return 'hidden';
+      const r = e.getBoundingClientRect(), c = getComputedStyle(e);
+      return [r.x.toFixed(2), r.y.toFixed(2), r.width.toFixed(2), r.height.toFixed(2), c.opacity, c.visibility, c.display, c.filter, c.clipPath, e.style.transform, e.getAttribute('stroke-dashoffset') ?? ''].join('|');
+    }).join('\n'));
+    const shot = async (time: number) => { await s.seek(time); return { state: await state(), png: (await s.page.screenshot({ type: 'png' })).toString('base64') }; };
+    const probe = await s.page.context().newPage();
+    const differ = (a: string, b: string) => a === b ? Promise.resolve({ share: 0, max: 0, area: 0 }) : probe.evaluate(async ([x, y]) => {
+      const read = async (data: string) => {
+        const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${data}`)).blob());
+        const c = new OffscreenCanvas(bmp.width, bmp.height).getContext('2d')!;
+        c.drawImage(bmp, 0, 0);
+        return { data: c.getImageData(0, 0, bmp.width, bmp.height).data, w: bmp.width, h: bmp.height };
+      };
+      const [p, q] = [await read(x!), await read(y!)];
+      if (p.data.length !== q.data.length) return { share: 1, max: 255, area: 255 };
+      // `area` is the largest difference between the two frames' means over 16 px blocks.
+      const B = 16, bw = Math.ceil(p.w / B), sums = new Float64Array(bw * Math.ceil(p.h / B)), counts = new Uint32Array(sums.length);
+      let count = 0, max = 0;
+      for (let i = 0, n = 0; i < p.data.length; i += 4, n++) {
+        const d = Math.max(Math.abs(p.data[i]! - q.data[i]!), Math.abs(p.data[i + 1]! - q.data[i + 1]!), Math.abs(p.data[i + 2]! - q.data[i + 2]!));
+        if (d > 0) { count++; if (d > max) max = d; }
+        const k = Math.floor(Math.floor(n / p.w) / B) * bw + Math.floor((n % p.w) / B);
+        sums[k]! += (p.data[i]! + p.data[i + 1]! + p.data[i + 2]!) - (q.data[i]! + q.data[i + 1]! + q.data[i + 2]!);
+        counts[k]!++;
+      }
+      let area = 0;
+      for (let k = 0; k < sums.length; k++) if (counts[k]) area = Math.max(area, Math.abs(sums[k]!) / (3 * counts[k]!));
+      return { share: count / (p.data.length / 4), max, area };
+    }, [a, b]);
+    const forward = new Map<number, { state: string; png: string }>();
     for (const time of times) forward.set(time, await shot(time));
     for (const time of [...times].reverse()) {
-      if ((await shot(time)) !== forward.get(time)) issues.push({ level: 'error', code: 'not-repeatable', path: 'film', t: time, message: `The frame at ${time.toFixed(2)} s differs depending on what was drawn before it.`, hint: 'A primitive keeps state between seeks, or uses a clock or unseeded randomness.' });
+      const now = await shot(time), was = forward.get(time)!;
+      const d = await differ(now.png, was.png);
+      const how = `${(d.share * 100).toFixed(2)}% of its pixels, by up to ${d.max} of 255 levels`;
+      if (now.state !== was.state || d.area > REPEAT_AREA) issues.push({ level: 'error', code: 'not-repeatable', path: 'film', t: time, message: `The frame at ${time.toFixed(2)} s differs depending on what was drawn before it${now.state !== was.state ? ': elements sit or look different' : ''} (${how}).`, hint: 'A primitive keeps state between seeks, or uses a clock or unseeded randomness.' });
+      else if (d.max > REPEAT_LEVELS || d.share > REPEAT_SHARE) issues.push({ level: 'warning', code: 'raster-differs', path: 'film', t: time, message: `The frame at ${time.toFixed(2)} s is rasterised a little differently depending on what was drawn before it (${how}); every element sits and looks the same.`, hint: 'This is the browser, not the film: usually a layer that has just started to fade or scale landing a pixel aside. Look at the two frames if it matters.' });
     }
+    await probe.close();
     // 2. Layers must be on the stage and have a size once they have settled. In a
     // scene whose camera moves, a layer is expected to be off stage for part of the
     // time (a canvas the camera travels over), so it is reported only if the camera
@@ -323,13 +370,13 @@ async function check(args: Args) {
   const errors = issues.filter((i) => i.level === 'error').length;
   if (loop && !loop.seamless) {
     const still = loop.step < 0.05;
-    issues.push({ level: 'warning', code: 'loop-seam', path: 'film', t: t.duration, message: `The loop jumps: last frame to first changes ${loop.seam} (mean per channel, 0–255), ${still ? 'while the frames at both ends hold still' : `${loop.ratio}× a normal frame-to-frame step here (${loop.step})`}.`,
+    issues.push({ level: 'warning', code: 'loop-seam', path: 'film', t: t.duration, message: `The loop jumps: last frame to first changes ${loop.seam} (mean per channel, 0–255), ${still ? 'while the frames at both ends hold still' : `${loop.ratio}× the largest frame-to-frame step around it (${loop.step})`}.`,
       hint: 'End each move where the film began, or end footage on the frame before the opening shot (el/video "continues").' });
   }
   if (json) print({ ok: errors === 0, file, duration: t.duration, frames: t.frames, issues, ...(loop ? { loop } : {}) });
   else {
     issues.forEach((i) => console.log(line(i)));
-    if (loop) console.log(`Loop seam: last frame to first changes ${loop.seam}; a normal step changes ${loop.step} (median of ${loop.steps.length} steps at both ends)${loop.step >= 0.05 ? `, so the seam is ${loop.ratio}× a step` : ''}: ${loop.seamless ? 'seamless' : 'it shows'}.`);
+    if (loop) console.log(`Loop seam: last frame to first changes ${loop.seam}; the largest step nearby changes ${loop.step} (of ${loop.steps.length} steps at both ends)${loop.step >= 0.05 ? `, so the seam is ${loop.ratio}× a step` : ''}: ${loop.seamless ? 'seamless' : 'it shows'}.`);
     console.log(`${file}: ${errors ? `${errors} error(s)` : 'ok'}, ${issues.length - errors} warning(s). Frames repeat exactly: ${issues.some((i) => i.code === 'not-repeatable') ? 'NO' : 'yes'}.`);
   }
   if (errors) process.exit(1);
@@ -360,9 +407,12 @@ export interface Seam { seam: number; step: number; ratio: number; seamless: boo
  * How much the picture changes from the last frame to the first, next to how much
  * it changes from one frame to the next at both ends of the film. A raw score
  * misleads: handheld footage changes a lot every frame, a still title not at all.
+ * The seam is held against the largest step nearby, not the usual one: footage shot at
+ * 24 fps in a 60 fps film changes on two frames in five and holds on the rest, so its
+ * usual step is nearly nothing while a sound seam is one of its real steps.
  */
 async function seam(s: Session, t: Timeline): Promise<Seam> {
-  const n = Math.min(6, Math.floor(t.frames / 2));
+  const n = Math.min(Math.max(6, Math.ceil(t.fps / 5) + 1), Math.floor(t.frames / 2));
   const shot = async (f: number) => { await s.seek(f / t.fps); return (await s.page.screenshot({ type: 'png' })).toString('base64'); };
   const head: string[] = [], tail: string[] = [];
   for (let f = 0; f < n; f++) head.push(await shot(f));
@@ -370,27 +420,27 @@ async function seam(s: Session, t: Timeline): Promise<Seam> {
   const pairs: [string, string][] = [...tail.slice(0, -1).map((a, i) => [a, tail[i + 1]!] as [string, string]), ...head.slice(0, -1).map((a, i) => [a, head[i + 1]!] as [string, string]), [tail[tail.length - 1]!, head[0]!]];
   const page = await s.page.context().newPage();
   try {
-    const diffs = await page.evaluate(async (list) => {
-      const pixels = async (b64: string) => {
-        const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob());
-        const w = 480, h = Math.max(1, Math.round((bmp.height / bmp.width) * w));
-        const c = new OffscreenCanvas(w, h), g = c.getContext('2d')!;
-        g.drawImage(bmp, 0, 0, w, h);
-        return g.getImageData(0, 0, w, h).data;
-      };
-      const out: number[] = [];
-      for (const [a, b] of list) {
-        const [pa, pb] = await Promise.all([pixels(a), pixels(b)]);
+    // One pair at a time: every frame is a PNG of several megabytes, and all of them in one call is more than a page takes.
+    const diffs: number[] = [];
+    for (const pair of pairs) {
+      diffs.push(await page.evaluate(async ([a, b]) => {
+        const pixels = async (b64: string) => {
+          const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob());
+          const w = 480, h = Math.max(1, Math.round((bmp.height / bmp.width) * w));
+          const c = new OffscreenCanvas(w, h), g = c.getContext('2d')!;
+          g.drawImage(bmp, 0, 0, w, h);
+          return g.getImageData(0, 0, w, h).data;
+        };
+        const [pa, pb] = await Promise.all([pixels(a!), pixels(b!)]);
         let sum = 0;
         for (let i = 0; i < pa.length; i += 4) sum += Math.abs(pa[i]! - pb[i]!) + Math.abs(pa[i + 1]! - pb[i + 1]!) + Math.abs(pa[i + 2]! - pb[i + 2]!);
-        out.push(sum / ((pa.length / 4) * 3));
-      }
-      return out;
-    }, pairs);
+        return sum / ((pa.length / 4) * 3);
+      }, pair));
+    }
     const r2 = (x: number) => Number(x.toFixed(2));
     const steps = diffs.slice(0, -1), sorted = [...steps].sort((a, b) => a - b);
-    const step = sorted.length ? sorted[Math.floor(sorted.length / 2)]! : 0, value = diffs[diffs.length - 1]!;
-    // Seamless when the seam is no bigger than a frame step and a half, or too small to see.
+    const step = sorted.length ? sorted[sorted.length - 1]! : 0, value = diffs[diffs.length - 1]!;
+    // Seamless when the seam is no bigger than one and a half of the largest steps around it, or too small to see.
     return { seam: r2(value), step: r2(step), ratio: r2(value / Math.max(step, 0.05)), seamless: value <= Math.max(1.5 * step, 0.5), steps: steps.map(r2) };
   } finally { await page.close(); }
 }

@@ -333,6 +333,7 @@
                     "el/text",
                     "el/box",
                     "el/image",
+                    "el/frames",
                     "el/video",
                     "el/html",
                     "el/slot",
@@ -368,7 +369,9 @@
                     "rig/browser-window",
                     "rig/tab-stack",
                     "fx/pin-drop",
-                    "scene/grid-wall"
+                    "scene/grid-wall",
+                    "fx/slow-push",
+                    "ui/page-scroll"
                   ]
                 },
                 "props": {

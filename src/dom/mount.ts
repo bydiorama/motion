@@ -271,6 +271,8 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
     el.appendChild(cam);
     stage.appendChild(el);
 
+    // A scene whose camera moves is a canvas the camera travels over.
+    const canvas = !!s.follow || (['x', 'y', 'scale', 'rotate', 'rotateX', 'rotateY'] as const).some((k) => (s.tracks?.[k]?.length ?? 0) > 1);
     const layers: LiveLayer[] = spec.layers.map((layer) => {
       const le = doc.createElement('div');
       le.className = 'm-layer';
@@ -291,8 +293,10 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
         // An absolute box shrinks to the room right of its `left`, so a centred
         // headline would wrap at half the stage. Size it to its content instead,
         // up to style.width, or else up to the room its anchor leaves on stage.
+        // Not on a canvas, though: where the scene's camera moves, layers lie beyond the
+        // stage on purpose, and the stage's edge is no limit on how wide they are.
         le.style.width = 'max-content';
-        if (st.width === undefined) le.style.maxWidth = `${(placedRoom(place) / 100) * W}px`;
+        if (st.width === undefined && !canvas) le.style.maxWidth = `${(placedRoom(place) / 100) * W}px`;
       }
       for (const [k, v] of Object.entries(st.css ?? {})) le.style.setProperty(k, v);
       cam.appendChild(le);
