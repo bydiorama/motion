@@ -20,6 +20,24 @@ export interface Resolution {
 }
 
 const ID = /^[a-z][a-z0-9-]*$/;
+/** What is wrong with an id, in words: the pattern alone does not say which rule broke. */
+function idProblem(id: unknown, what: 'scene' | 'layer'): string {
+  const name = `Give the ${what} an id: lower-case letters, digits and dashes, starting with a letter.`;
+  if (typeof id !== 'string' || id === '') return `${name} It has none.`;
+  if (what === 'layer' && id === 'scene') return `"scene" cannot be a layer id: times use "scene.end" for the scene itself.`;
+  if (/^[0-9]/.test(id)) return `The ${what} id "${id}" starts with a digit. ${name}`;
+  if (/[A-Z]/.test(id)) return `The ${what} id "${id}" has capital letters. ${name}`;
+  const bad = [...new Set(id.replace(/[a-z0-9-]/g, ''))].map((c) => (c === ' ' ? 'a space' : `"${c}"`));
+  return `The ${what} id "${id}" contains ${bad.join(', ')}. ${name}`;
+}
+/** A corrected id to offer, when one is easy to make. */
+function idHint(id: unknown, what: 'scene' | 'layer', fallback: string): string {
+  if (typeof id !== 'string' || id === '' || id === 'scene') return fallback;
+  let fixed = id.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
+  if (/^[0-9]/.test(fixed)) fixed = `${what}-${fixed}`;
+  return fixed && fixed !== id ? `For example "${fixed}".` : fallback;
+}
+
 const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
@@ -219,7 +237,7 @@ export function resolveFilm(input: unknown): Resolution {
     const sp = `scenes.${sid}`;
     if (!isObject(scene)) { err(sp, 'bad-scene', 'A scene is an object.'); return; }
     unknownKeys(scene as unknown as Record<string, unknown>, SCENE_KEYS, sp);
-    if (typeof scene.id !== 'string' || !ID.test(scene.id)) err(`${sp}.id`, 'bad-id', 'Give the scene an id: lower-case letters, digits and dashes.', 'For example "title" or "stat-2".');
+    if (typeof scene.id !== 'string' || !ID.test(scene.id)) err(`${sp}.id`, 'bad-id', idProblem(scene.id, 'scene'), idHint(scene.id, 'scene', 'For example "title" or "stat-2".'));
     else if (sceneIds.has(scene.id)) err(`${sp}.id`, 'duplicate-id', `Two scenes are called "${scene.id}".`);
     sceneIds.add(sid);
     if (scene.scheme !== undefined && scene.scheme !== 'light' && scene.scheme !== 'dark') err(`${sp}.scheme`, 'bad-value', 'scheme is "light" or "dark".');
@@ -239,7 +257,7 @@ export function resolveFilm(input: unknown): Resolution {
       if (!isObject(layer)) { err(lp, 'bad-layer', 'A layer is an object.'); return; }
       unknownKeys(layer as unknown as Record<string, unknown>, LAYER_KEYS, lp);
       if (typeof layer.id !== 'string' || !ID.test(layer.id) || layer.id === 'scene') {
-        err(`${lp}.id`, 'bad-id', 'Give the layer an id: lower-case letters, digits and dashes. "scene" is reserved.'); return;
+        err(`${lp}.id`, 'bad-id', idProblem(layer.id, 'layer'), idHint(layer.id, 'layer', 'For example "headline" or "photo-2".')); return;
       }
       if (drafts.has(layer.id)) { err(`${lp}.id`, 'duplicate-id', `Two layers in scene "${sid}" are called "${layer.id}".`); return; }
       const prim = typeof layer.use === 'string' ? PRIMITIVES[layer.use] : undefined;
@@ -392,7 +410,11 @@ export function resolveFilm(input: unknown): Resolution {
       if (d.start === undefined) continue;
       const end = d.start + lengthOf(id);
       if (d.start >= length) {
-        err(`${d.path}.at`, 'never-seen', `Layer "${id}" starts at ${d.start.toFixed(2)} s but scene "${sid}" is ${length.toFixed(2)} s long.`, 'Start it earlier or make the scene longer.');
+        const last = Math.max(0, length - frame);
+        err(`${d.path}.at`, 'never-seen', d.start - length < frame / 2
+          ? `Layer "${id}" starts at ${d.start.toFixed(3)} s, the moment scene "${sid}" ends, so it is never on screen.`
+          : `Layer "${id}" starts at ${d.start.toFixed(3)} s, after scene "${sid}" ends at ${length.toFixed(3)} s.`,
+        `Times snap to whole frames at ${fps} fps, so the last frame a layer can start on is ${last.toFixed(3)} s. Start it earlier or make the scene longer.`);
         continue;
       }
       if (end > length + 1e-6) {

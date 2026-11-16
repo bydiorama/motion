@@ -116,3 +116,20 @@ test('bake writes overrides into the film and keeps orphans and notes', () => {
   assert.equal(r.film.scenes[0]?.length, 4);
   assert.deepEqual(r.tune, { set: { 'scenes.x.length': 1 }, notes: [note] });
 });
+
+test('an id that starts with a digit says so, and offers a fix', () => {
+  const r = resolveFilm(film([{ id: '1953-043', layers: [text('1953-043')] }]));
+  const ids = r.issues.filter((i) => i.code === 'bad-id');
+  assert.equal(ids.length, 2);
+  assert.match(ids[0]!.message, /starts with a digit/);
+  assert.equal(ids[0]!.hint, 'For example "scene-1953-043".');
+  assert.equal(ids[1]!.hint, 'For example "layer-1953-043".');
+  assert.doesNotMatch(ids[1]!.message, /reserved/);
+});
+
+test('a layer snapped onto the end of its scene is explained, with the last frame it can start on', () => {
+  const r = resolveFilm(film([{ id: 'a', length: 7.6, layers: [text('late', { at: 7.595 })] }], { fps: 30 }));
+  const issue = r.issues.find((i) => i.code === 'never-seen')!;
+  assert.match(issue.message, /the moment scene "a" ends/);
+  assert.match(issue.hint!, /30 fps.*7\.567 s/);
+});

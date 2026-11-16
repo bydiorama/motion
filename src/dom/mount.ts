@@ -69,6 +69,14 @@ const ANCHOR: Record<string, string> = {
 };
 const FLEX: Record<string, string> = { start: 'flex-start', center: 'center', end: 'flex-end', between: 'space-between' };
 
+/** How wide a placed layer can be, in % of the stage, before its anchor pushes it off stage. */
+export function placedRoom(place: { x: number; anchor?: string }): number {
+  const a = place.anchor ?? 'center', x = Math.min(100, Math.max(0, place.x));
+  const room = a.endsWith('left') ? 100 - x : a.endsWith('right') ? x : 2 * Math.min(x, 100 - x);
+  // Never narrower than a fifth of the stage: a layer anchored at the edge still needs a line.
+  return Math.max(20, room);
+}
+
 function ensureCss(doc: Document) {
   if (doc.getElementById('m-stage-css')) return;
   const style = doc.createElement('style');
@@ -129,7 +137,9 @@ function writePose(el: HTMLElement, p: Pose, depth: number, smear = '') {
   const still = p.x === 0 && p.y === 0 && p.scale === 1 && p.rotate === 0 && p.skew === 0 && p.yShare === 0 && flat;
   const parts: string[] = [];
   if (!flat) parts.push(`perspective(${depth}px)`);
-  if (p.yShare !== 0) parts.push(`translateY(${p.yShare * 100}%)`);
+  // A mask travels its own height plus the room above and below it, so the
+  // line is fully out of the window before the move starts.
+  if (p.yShare !== 0) parts.push(`translateY(calc(${p.yShare * 100}% + ${p.yShare * 2} * ${MASK_PAD}))`);
   parts.push(`translate(${p.x}px, ${p.y}px)`);
   if (!flat) parts.push(`rotateX(${p.rotateX}deg) rotateY(${p.rotateY}deg)`);
   parts.push(`rotate(${p.rotate}deg)`);
@@ -138,14 +148,35 @@ function writePose(el: HTMLElement, p: Pose, depth: number, smear = '') {
   el.style.transform = still ? '' : parts.join(' ');
   el.style.opacity = p.opacity >= 1 ? '' : String(Math.max(0, p.opacity));
   el.style.filter = [smear, p.blur > 0.01 ? `blur(${p.blur}px)` : ''].filter(Boolean).join(' ');
-  // A mask hides what has left the layer's own box; it travels with the layer,
-  // so the clip is moved back by the same share.
+  el.style.clipPath = clipFor(p);
+}
+
+/**
+ * Room a mask leaves above and below the layer's box, for ascenders, accents,
+ * descenders and old-style figures that reach past the line. A stylesheet can
+ * change it with `--m-mask-pad` on the layer.
+ */
+const MASK_PAD = 'var(--m-mask-pad, 0.3em)';
+
+/** The clip-path for a pose's wipes and masks, or '' when nothing is clipped. */
+export function clipFor(p: Pick<Pose, 'clip' | 'yShare'>): string {
   const [t, r, b, l] = p.clip;
-  const mt = p.yShare < 0 ? -p.yShare : 0, mb = p.yShare > 0 ? p.yShare : 0;
-  const top = Math.max(t, mt), bottom = Math.max(b, mb);
-  el.style.clipPath = top + r + bottom + l > 0.0001
-    ? `inset(${(top * 100).toFixed(3)}% ${(r * 100).toFixed(3)}% ${(bottom * 100).toFixed(3)}% ${(l * 100).toFixed(3)}%)`
-    : '';
+  const pct = (v: number) => `${(v * 100).toFixed(3)}%`;
+  if (Math.abs(p.yShare) < 1e-6) {
+    // Wipes clip at the box itself: their edge is the move.
+    return t + r + b + l > 0.0001 ? `inset(${pct(t)} ${pct(r)} ${pct(b)} ${pct(l)})` : '';
+  }
+  // A mask is a window from MASK_PAD above the box to MASK_PAD below it, fixed
+  // on stage. The layer travels through it, so in the layer's own space the
+  // window moves back by the travel. Sides are left open, so italics and
+  // overhangs are not cut. When the move ends the clip is removed: everything
+  // inside the padding was already showing, so nothing jumps.
+  const y = Math.abs(p.yShare), travel = `(${(y * 100).toFixed(3)}% + ${(y * 2).toFixed(4)} * ${MASK_PAD})`;
+  const near = `calc(${travel} - ${MASK_PAD})`, far = `calc(-1 * ${MASK_PAD})`;
+  const [mTop, mBottom] = p.yShare > 0 ? [far, near] : [near, far];
+  const edge = (wipe: number, mask: string) => (wipe > 0.0001 ? `max(${pct(wipe)}, ${mask})` : mask);
+  const side = (wipe: number) => (wipe > 0.0001 ? pct(wipe) : '-100%');
+  return `inset(${edge(t, mTop)} ${side(r)} ${edge(b, mBottom)} ${side(l)})`;
 }
 
 /** A layer's shutter: `true` is the film-standard half frame, a number is the share of a frame. */
@@ -251,6 +282,11 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
         le.style.left = `${place.x}%`;
         le.style.top = `${place.y}%`;
         le.style.translate = ANCHOR[place.anchor ?? 'center']!;
+        // An absolute box shrinks to the room right of its `left`, so a centred
+        // headline would wrap at half the stage. Size it to its content instead,
+        // up to style.width, or else up to the room its anchor leaves on stage.
+        le.style.width = 'max-content';
+        if (st.width === undefined) le.style.maxWidth = `${(placedRoom(place) / 100) * W}px`;
       }
       for (const [k, v] of Object.entries(st.css ?? {})) le.style.setProperty(k, v);
       cam.appendChild(le);
