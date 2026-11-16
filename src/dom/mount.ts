@@ -38,6 +38,8 @@ export interface LayerBox {
   /** How far the layer reaches past each stage edge, in px. Zero when inside. */
   off: { left: number; top: number; right: number; bottom: number };
   empty: boolean;
+  /** The scene has a camera (scene tracks): its layers form a world larger than the frame, and may lie outside it. */
+  world: boolean;
 }
 
 export interface Mounted {
@@ -371,6 +373,7 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
           x: round(x), y: round(y), width: round(width), height: round(height),
           off: bleed ? { left: 0, top: 0, right: 0, bottom: 0 } : { left: round(Math.max(0, -x)), top: round(Math.max(0, -y)), right: round(Math.max(0, x + width - W)), bottom: round(Math.max(0, y + height - H)) },
           empty: width < 1 || height < 1,
+          world: Object.keys(scene.spec.source.tracks ?? {}).length > 0,
         });
       }
     }

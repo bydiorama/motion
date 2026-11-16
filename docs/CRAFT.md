@@ -76,6 +76,7 @@ The video scale is longer than an interface's, because nobody is waiting on it.
 - **A blur that sharpens** reads as focus; keep it under 24 px and gone by the end of the move.
 - **Velocity-only trails.** Motion blur and echoes appear while something is moving fast and are gone when it stops: blur ≈ velocity × half a frame.
 - **The first frame is a thumbnail.** Feeds show it as the cover. A headline that is already there, dim, and fills word by word (`type/fill-text`) reads at frame 0 and still has a reveal.
+- **A headline over a montage arrives whole.** Reveal all its lines in one move, then let the pictures cut on beneath it. Landing one line per cut makes the sentence wait for the edit and reads as slow; the cuts are the rhythm, the headline is what holds still.
 - **Mark after landing.** Underlines, circles and highlights draw after the line has settled (`type/scribble-highlight`).
 
 ## 5. Composition
@@ -84,6 +85,9 @@ The video scale is longer than an interface's, because nobody is waiting on it.
 - **One accent per scene.** The accent colour marks the one thing that matters.
 - **Safe areas.** In 16:9, keep text 5% inside every edge. In 9:16 (1080 × 1920), keep text within x 60–940 and y 250–1500: interface chrome covers the rest.
 - **Nothing is dead still.** Under every hold, a slow drift: scale 1.03 → 1 over the scene, or a few degrees of rotation, on a linear curve.
+- **A still photograph drifts inside its frame** (`fx/slow-push`): 4–14% of scale over the time it can be seen, linear, the frame's edge fixed. In a row of pictures, one direction.
+- **Show a page whole before it becomes an object.** A site reads as a site when it nearly fills the frame and scrolls (`ui/page-scroll`): one or two rests on whole sections, 0.6–0.9 s each, a hold on the last one, and long legs slower than you think: a scroll that covers several screens wants about 2 s. Only then pull back to the wall, the device or the perspective.
+- **A wall keeps moving.** Once a grid of cards is open, neighbouring columns drift in opposite directions, 60–90 px over the hold, and the wall stays on screen for at least 1.5 s after the last card has landed.
 
 ## 6. Depth and camera
 
@@ -96,6 +100,8 @@ What makes 3D look shot rather than assembled.
 - **Lifts stack.** A part lifted off a page rides on the plane below it, so the order never inverts however far the lower one moves. Its shadow scales with its height: a part lying flush casts nothing.
 - **Never change state in one frame.** When something switches look (closed to open, one picture to the next), cross-fade the two over 0.2–0.4 s. Dissolve straight from one to the other; never dip through an empty state.
 - **Same size means same size on screen.** Markers on a tilted plane are scaled against their depth, or turned to face the camera, so near ones are not drawn bigger. Use a long lens for things standing on a plane: stems stay vertical and parallel.
+- **A route of stations keeps an even, unhurried pace.** When the camera visits a row of like stations, every leg takes the same time (about 1.1–1.3 s for a frame's height of travel) on `cubic.inOut`, with a rest of about 0.5 s at each. Shortening the legs to build pace, or a steeper curve such as `quart.inOut`, reads as hectic by the third station. A station never shows in the frame of the one before it.
+- **Or the route flows.** The same route as one flowing move: every leg takes the same time (about 1.4 s for a frame's height) on a curve that leaves and arrives with no jolt (velocity as sin²), and the camera rests at each station for only a fraction of a second, 0.25–0.3 s. Passing the stations without stopping (slowing to about 0.4 of the mean speed) also works, but a brief rest lets each one register. Sideways sway turns round at the stations, so it eases through them on a cosine. Labels start 0.4–0.5 s before the station is centred, so they have landed by the time it is.
 - **Shared rhythm.** A family of pulses (ripples, glows) shares one phase, so they are the same size at every instant.
 - **Open from black.** A dark film fades in its first texture over 0.6–0.8 s before anything settles; the type starts with it.
 

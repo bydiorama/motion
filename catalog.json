@@ -221,6 +221,87 @@
       }
     },
     {
+      "slug": "el/frames",
+      "summary": "Footage as a numbered run of stills, played at its own frame rate. Holds its first and last frame.",
+      "props": {
+        "src": {
+          "type": "string",
+          "required": true,
+          "label": "Path pattern with the frame number, e.g. footage/shot/f%03d.jpg"
+        },
+        "alt": {
+          "type": "string",
+          "default": "",
+          "label": "Description of the footage"
+        }
+      },
+      "params": {
+        "first": {
+          "type": "number",
+          "default": 0,
+          "min": 0,
+          "max": 100000,
+          "step": 1,
+          "unit": "frame",
+          "label": "First frame played"
+        },
+        "last": {
+          "type": "number",
+          "default": 23,
+          "min": 0,
+          "max": 100000,
+          "step": 1,
+          "unit": "frame",
+          "label": "Last frame played, then held"
+        },
+        "fps": {
+          "type": "number",
+          "default": 24,
+          "min": 1,
+          "max": 120,
+          "step": 1,
+          "unit": "fps",
+          "label": "Frame rate the footage was shot at"
+        },
+        "rate": {
+          "type": "number",
+          "default": 1,
+          "min": 0.1,
+          "max": 4,
+          "step": 0.01,
+          "unit": "×",
+          "label": "Playback speed"
+        },
+        "delay": {
+          "type": "number",
+          "default": 0,
+          "min": 0,
+          "max": 30,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time held on the first frame before it plays"
+        },
+        "width": {
+          "type": "number",
+          "default": 640,
+          "min": 1,
+          "max": 4000,
+          "step": 1,
+          "unit": "px",
+          "label": "Width"
+        },
+        "radius": {
+          "type": "number",
+          "default": 0,
+          "min": 0,
+          "max": 400,
+          "step": 1,
+          "unit": "px",
+          "label": "Corner radius"
+        }
+      }
+    },
+    {
       "slug": "el/html",
       "summary": "Static markup, for content no primitive covers. Style it with --ui-* tokens.",
       "props": {
@@ -2280,6 +2361,218 @@
           "step": 0.05,
           "unit": "ratio",
           "label": "Strength of the glow under each marker"
+        }
+      }
+    },
+    {
+      "slug": "fx/slow-push",
+      "summary": "A still picture in a fixed frame slowly pushes in, pulls out or pans while it is held.",
+      "props": {
+        "src": {
+          "type": "string",
+          "required": true,
+          "label": "Image path or URL"
+        },
+        "alt": {
+          "type": "string",
+          "default": "",
+          "label": "Description of the picture"
+        }
+      },
+      "params": {
+        "width": {
+          "type": "number",
+          "default": 640,
+          "min": 1,
+          "max": 4000,
+          "step": 1,
+          "unit": "px",
+          "label": "Frame width"
+        },
+        "height": {
+          "type": "number",
+          "default": 800,
+          "min": 1,
+          "max": 4000,
+          "step": 1,
+          "unit": "px",
+          "label": "Frame height"
+        },
+        "radius": {
+          "type": "number",
+          "default": 16,
+          "min": 0,
+          "max": 400,
+          "step": 1,
+          "unit": "px",
+          "label": "Corner radius"
+        },
+        "from": {
+          "type": "number",
+          "default": 1.08,
+          "min": 1,
+          "max": 1.6,
+          "step": 0.01,
+          "unit": "×",
+          "label": "Scale at the start"
+        },
+        "to": {
+          "type": "number",
+          "default": 1,
+          "min": 1,
+          "max": 1.6,
+          "step": 0.01,
+          "unit": "×",
+          "label": "Scale at the end"
+        },
+        "pan_x": {
+          "type": "number",
+          "default": 0,
+          "min": -30,
+          "max": 30,
+          "step": 0.5,
+          "unit": "% of frame",
+          "label": "Sideways travel over the move",
+          "pad": {
+            "name": "pan",
+            "axis": "x"
+          }
+        },
+        "pan_y": {
+          "type": "number",
+          "default": 0,
+          "min": -30,
+          "max": 30,
+          "step": 0.5,
+          "unit": "% of frame",
+          "label": "Vertical travel over the move",
+          "pad": {
+            "name": "pan",
+            "axis": "y"
+          }
+        },
+        "duration": {
+          "type": "number",
+          "default": 4,
+          "min": 0.5,
+          "max": 30,
+          "step": 0.1,
+          "unit": "s",
+          "label": "Length of the move"
+        },
+        "ease": {
+          "type": "ease",
+          "default": "linear",
+          "label": "Curve of the move; linear reads as drift"
+        }
+      }
+    },
+    {
+      "slug": "ui/page-scroll",
+      "summary": "A page scrolls inside a window, resting on its sections, blurred only by its own speed.",
+      "props": {
+        "srcs": {
+          "type": "string[]",
+          "required": true,
+          "label": "The page: one tall capture, or its sections from top to bottom"
+        },
+        "alt": {
+          "type": "string",
+          "default": "",
+          "label": "Description of the page"
+        },
+        "stops": {
+          "type": "number[]",
+          "default": [],
+          "label": "Where the scroll rests on the way, in % of the scrollable height"
+        }
+      },
+      "params": {
+        "width": {
+          "type": "number",
+          "default": 640,
+          "min": 1,
+          "max": 4000,
+          "step": 1,
+          "unit": "px",
+          "label": "Window width"
+        },
+        "height": {
+          "type": "number",
+          "default": 800,
+          "min": 1,
+          "max": 4000,
+          "step": 1,
+          "unit": "px",
+          "label": "Window height"
+        },
+        "radius": {
+          "type": "number",
+          "default": 16,
+          "min": 0,
+          "max": 400,
+          "step": 1,
+          "unit": "px",
+          "label": "Corner radius"
+        },
+        "from": {
+          "type": "number",
+          "default": 0,
+          "min": 0,
+          "max": 100,
+          "step": 0.5,
+          "unit": "% of scroll",
+          "label": "Where the scroll starts"
+        },
+        "to": {
+          "type": "number",
+          "default": 100,
+          "min": 0,
+          "max": 100,
+          "step": 0.5,
+          "unit": "% of scroll",
+          "label": "Where the scroll ends"
+        },
+        "duration": {
+          "type": "number",
+          "default": 3,
+          "min": 0.4,
+          "max": 30,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Length of the scroll, rests included"
+        },
+        "rest": {
+          "type": "number",
+          "default": 0.4,
+          "min": 0,
+          "max": 3,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time resting at each stop"
+        },
+        "delay": {
+          "type": "number",
+          "default": 0,
+          "min": 0,
+          "max": 30,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time held at the start before it scrolls"
+        },
+        "ease": {
+          "type": "ease",
+          "default": "sine.inOut",
+          "label": "Curve of each leg"
+        },
+        "shutter": {
+          "type": "number",
+          "default": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.05,
+          "unit": "ratio",
+          "label": "Motion blur: share of a frame the scroll smears over"
         }
       }
     }

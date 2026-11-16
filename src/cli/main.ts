@@ -218,6 +218,13 @@ async function stills(args: Args) {
   } finally { await s.close(); }
 }
 
+/** Two draws of one frame count as the same when no pixel is more than this many levels (of 255) apart … */
+const REPEAT_LEVELS = 2;
+/** … and no more than this share of the pixels differ at all. */
+const REPEAT_SHARE = 0.001;
+/** Above this difference in the mean of any 16 px block (levels of 255), whole areas differ: that is state, not rasterising. */
+const REPEAT_AREA = 24;
+
 async function check(args: Args) {
   const file = need(args), json = !!args.flags.json, l = load(file, args), t = timelineOrExit(l, json);
   const issues: (Issue & { t?: number })[] = [...l.res.issues];
@@ -225,12 +232,52 @@ async function check(args: Args) {
   try {
     // 1. A frame must depend on its time alone: draw the same moments in two orders and compare.
     const times = Array.from({ length: 6 }, (_, k) => Math.round((t.duration * k / 5) * t.fps) / t.fps);
-    const shot = async (time: number) => { await s.seek(time); return createHash('sha1').update(await s.page.screenshot({ type: 'png' })).digest('hex'); };
-    const forward = new Map<number, string>();
+    // Two things are compared. The page's state: every element's box, opacity, visibility, filter and
+    // transform, which must match exactly. And the pixels, with room: a browser does not always rasterise
+    // the same state the same way (a card that has just become its own layer can land a pixel aside, a blur
+    // a level off), which no one can see and no primitive caused. So pixels only fail the film when whole
+    // areas differ, as they do when a canvas or a picture holds state the page's boxes do not show.
+    const state = () => s.page.evaluate(() => [...document.querySelectorAll<HTMLElement>('.m-scene, .m-cam, .m-layer, .m-layer *')].map((e) => {
+      // What is not shown may keep whatever it was last drawn with: only its being hidden is state.
+      if (!e.checkVisibility({ visibilityProperty: true })) return 'hidden';
+      const r = e.getBoundingClientRect(), c = getComputedStyle(e);
+      return [r.x.toFixed(2), r.y.toFixed(2), r.width.toFixed(2), r.height.toFixed(2), c.opacity, c.visibility, c.display, c.filter, c.clipPath, e.style.transform, e.getAttribute('stroke-dashoffset') ?? ''].join('|');
+    }).join('\n'));
+    const shot = async (time: number) => { await s.seek(time); return { state: await state(), png: (await s.page.screenshot({ type: 'png' })).toString('base64') }; };
+    const probe = await s.page.context().newPage();
+    const differ = (a: string, b: string) => a === b ? Promise.resolve({ share: 0, max: 0, area: 0 }) : probe.evaluate(async ([x, y]) => {
+      const read = async (data: string) => {
+        const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${data}`)).blob());
+        const c = new OffscreenCanvas(bmp.width, bmp.height).getContext('2d')!;
+        c.drawImage(bmp, 0, 0);
+        return { data: c.getImageData(0, 0, bmp.width, bmp.height).data, w: bmp.width, h: bmp.height };
+      };
+      const [p, q] = [await read(x!), await read(y!)];
+      if (p.data.length !== q.data.length) return { share: 1, max: 255, area: 255 };
+      // `area` is the largest difference between the two frames' means over 16 px blocks.
+      const B = 16, bw = Math.ceil(p.w / B), sums = new Float64Array(bw * Math.ceil(p.h / B)), counts = new Uint32Array(sums.length);
+      let count = 0, max = 0;
+      for (let i = 0, n = 0; i < p.data.length; i += 4, n++) {
+        const d = Math.max(Math.abs(p.data[i]! - q.data[i]!), Math.abs(p.data[i + 1]! - q.data[i + 1]!), Math.abs(p.data[i + 2]! - q.data[i + 2]!));
+        if (d > 0) { count++; if (d > max) max = d; }
+        const k = Math.floor(Math.floor(n / p.w) / B) * bw + Math.floor((n % p.w) / B);
+        sums[k]! += (p.data[i]! + p.data[i + 1]! + p.data[i + 2]!) - (q.data[i]! + q.data[i + 1]! + q.data[i + 2]!);
+        counts[k]!++;
+      }
+      let area = 0;
+      for (let k = 0; k < sums.length; k++) if (counts[k]) area = Math.max(area, Math.abs(sums[k]!) / (3 * counts[k]!));
+      return { share: count / (p.data.length / 4), max, area };
+    }, [a, b]);
+    const forward = new Map<number, { state: string; png: string }>();
     for (const time of times) forward.set(time, await shot(time));
     for (const time of [...times].reverse()) {
-      if ((await shot(time)) !== forward.get(time)) issues.push({ level: 'error', code: 'not-repeatable', path: 'film', t: time, message: `The frame at ${time.toFixed(2)} s differs depending on what was drawn before it.`, hint: 'A primitive keeps state between seeks, or uses a clock or unseeded randomness.' });
+      const now = await shot(time), was = forward.get(time)!;
+      const d = await differ(now.png, was.png);
+      const how = `${(d.share * 100).toFixed(2)}% of its pixels, by up to ${d.max} of 255 levels`;
+      if (now.state !== was.state || d.area > REPEAT_AREA) issues.push({ level: 'error', code: 'not-repeatable', path: 'film', t: time, message: `The frame at ${time.toFixed(2)} s differs depending on what was drawn before it${now.state !== was.state ? ': elements sit or look different' : ''} (${how}).`, hint: 'A primitive keeps state between seeks, or uses a clock or unseeded randomness.' });
+      else if (d.max > REPEAT_LEVELS || d.share > REPEAT_SHARE) issues.push({ level: 'warning', code: 'raster-differs', path: 'film', t: time, message: `The frame at ${time.toFixed(2)} s is rasterised a little differently depending on what was drawn before it (${how}); every element sits and looks the same.`, hint: 'This is the browser, not the film: usually a layer that has just started to fade or scale landing a pixel aside. Look at the two frames if it matters.' });
     }
+    await probe.close();
     // 2. Layers must be on the stage and have a size once they have settled.
     const seen = new Set<string>();
     for (const m of keyMoments(t)) {
@@ -240,7 +287,8 @@ async function check(args: Args) {
         if (b.empty && !seen.has(`${p}:empty`)) {
           seen.add(`${p}:empty`);
           issues.push({ level: 'warning', code: 'empty-layer', path: p, t: m.t, message: `Layer "${b.layer}" has no size at ${m.t.toFixed(2)} s, so it shows nothing.` });
-        } else if (sides.length && !seen.has(`${p}:off`)) {
+        // A scene with a camera is a world the camera travels over: what lies outside the frame is the next thing it shows.
+        } else if (sides.length && !b.world && !seen.has(`${p}:off`)) {
           seen.add(`${p}:off`);
           issues.push({ level: 'warning', code: 'off-stage', path: p, t: m.t, message: `Layer "${b.layer}" runs off the stage at ${m.t.toFixed(2)} s: ${sides.map(([side, px]) => `${px} px past the ${side}`).join(', ')}.`, hint: 'Shorten the text, pick a smaller style.size, or set style.width.' });
         }

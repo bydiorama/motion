@@ -302,6 +302,7 @@
                     "el/text",
                     "el/box",
                     "el/image",
+                    "el/frames",
                     "el/html",
                     "el/slot",
                     "type/word-build",
@@ -335,7 +336,9 @@
                     "texture/signal-field",
                     "rig/browser-window",
                     "rig/tab-stack",
-                    "fx/pin-drop"
+                    "fx/pin-drop",
+                    "fx/slow-push",
+                    "ui/page-scroll"
                   ]
                 },
                 "props": {

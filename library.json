@@ -933,6 +933,7 @@
           "content": "The homepage pulls back into perspective; its key card lifts off the page",
           "primitives": [
             "rig/browser-window",
+            "ui/page-scroll",
             "transition/dive-in"
           ]
         },
@@ -953,7 +954,8 @@
             "transition/camera-travel",
             "rig/tab-stack",
             "transition/whip-pan",
-            "type/fill-text"
+            "type/fill-text",
+            "fx/slow-push"
           ]
         },
         {
@@ -1036,6 +1038,11 @@
     {
       "slug": "fx/shape-morph",
       "summary": "One shape grows in, then turns into the next, and the next.",
+      "status": "specified"
+    },
+    {
+      "slug": "fx/slow-push",
+      "summary": "A still picture in a fixed frame slowly pushes in, pulls out or pans while it is held.",
       "status": "specified"
     },
     {
@@ -1371,6 +1378,11 @@
     {
       "slug": "ui/cursor-click",
       "summary": "A drawn cursor moves to a target and clicks.",
+      "status": "specified"
+    },
+    {
+      "slug": "ui/page-scroll",
+      "summary": "A page scrolls inside a window, resting on its sections, blurred only by its own speed.",
       "status": "specified"
     },
     {

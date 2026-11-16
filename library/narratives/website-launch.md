@@ -24,6 +24,7 @@ beats:
   content: The homepage pulls back into perspective; its key card lifts off the page
   primitives:
   - rig/browser-window
+  - ui/page-scroll
   - transition/dive-in
 - name: product
   share: 13
@@ -39,6 +40,7 @@ beats:
   - rig/tab-stack
   - transition/whip-pan
   - type/fill-text
+  - fx/slow-push
 - name: proof
   share: 16
   content: Where it works, as places that light up

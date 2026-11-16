@@ -30,7 +30,7 @@
 | `background` | `base`, `surface`, `sunken`, `accent`, `inverse`, or any CSS colour. |
 | `scheme` | Flip one scene to `dark` or `light`. |
 | `layout` | `align`, `justify` (`start`/`center`/`end`/`between`), `gap` and `padding` in px. |
-| `tracks` | Camera keyframes for the whole scene (see Tracks). |
+| `tracks` | Camera keyframes for the whole scene (see Tracks). A scene with a camera is a world: layers may lie outside the frame, and `check` does not report them. |
 | `out` | `{ "use": "transition/blur-dissolve", "duration": 0.4, "params": {} }`. |
 | `uses` | Library slugs the scene is built from. Informational. |
 
@@ -39,7 +39,7 @@
 | Field | Meaning |
 |---|---|
 | `id` | Unique in its scene. Other layers refer to it: `"title.end + 0.2"`. |
-| `use` | A slug from `catalog.json`. `el/text`, `el/box`, `el/image`, `el/html`, `el/slot` for plain elements. |
+| `use` | A slug from `catalog.json`. `el/text`, `el/box`, `el/image`, `el/frames` (footage as numbered stills: one layer per shot), `el/html`, `el/slot` for plain elements. |
 | `props` | Content. Required props are marked in the catalog. |
 | `params` | Motion values, each inside its catalog range. |
 | `at` | Start, in seconds from the scene start, or relative: `"other.start"`, `"other.end - 0.1"`, `"scene.end - 1"`. |

@@ -93,3 +93,46 @@ test('tab-stack: one tab of openness is shared between neighbours', async () => 
   assert.deepEqual(openRange({ items: ['a', 'b', 'c'] }), [0, 2]);
   assert.deepEqual(openRange({ items: ['a', 'b', 'c'], from: 3, to: 1 }), [2, 0]);
 });
+
+test('el/frames: the frame on screen is a pure function of time, held at both ends', async () => {
+  const { frameAt, frameSrc, frames } = await import('./el/frames.ts');
+  assert.equal(frameSrc('shot/f%03d.jpg', 7), 'shot/f007.jpg');
+  assert.equal(frameSrc('shot/%d.png', 12), 'shot/12.png');
+  const p = { first: 10, last: 33, fps: 24, rate: 1, delay: 0.5 };
+  assert.equal(frameAt(0, p), 10);
+  assert.equal(frameAt(0.49, p), 10, 'holds the first frame through the delay');
+  assert.equal(frameAt(0.5 + 1 / 24, p), 11);
+  assert.equal(frameAt(0.5 + 0.5, p), 22);
+  assert.equal(frameAt(99, p), 33, 'holds the last frame');
+  assert.equal(frameAt(1, { ...p, delay: 0, rate: 0.5 }), 22, 'half speed shows half as many frames');
+  // 24 frames at 24 fps after half a second: the run is over at 1.5 s.
+  assert.equal(frames.duration({}, p, { tokens: {} as never, seed: 1, size: [100, 100] }), 1.5);
+});
+
+test('ui/page-scroll: travels leg by leg, rests at each stop, longer legs take longer', async () => {
+  const { scrollAt, legTimes } = await import('./ui/page-scroll.ts');
+  const lin = (x: number) => x;
+  // Legs of 20 and 80: the second is four times as long and takes twice the time.
+  assert.deepEqual(legTimes([0, 20, 100], 3).map((v) => Number(v.toFixed(6))), [1, 2]);
+  assert.deepEqual(legTimes([0, 50, 100], 3), [1.5, 1.5]);
+  const p = { from: 0, to: 100, stops: [20], duration: 3.4, rest: 0.4, delay: 1 };
+  assert.equal(scrollAt(0.5, p, lin), 0, 'waits through the delay');
+  assert.equal(Number(scrollAt(1.5, p, lin).toFixed(6)), 10, 'half of the first leg');
+  assert.equal(scrollAt(2.2, p, lin), 20, 'rests at the stop');
+  assert.equal(Number(scrollAt(3.4, p, lin).toFixed(6)), 60, 'half of the second leg');
+  assert.equal(scrollAt(9, p, lin), 100);
+  for (let t = 0; t < 5; t += 0.05) assert.ok(scrollAt(t + 0.05, p, lin) >= scrollAt(t, p, lin), 'never scrolls back');
+  // No stops: one leg over the whole duration.
+  assert.equal(scrollAt(1, { from: 10, to: 30, stops: [], duration: 2, rest: 0.4, delay: 0 }, lin), 20);
+});
+
+test('fx/slow-push: the picture always covers its frame', async () => {
+  const { pushAt } = await import('./fx/slow-push.ts');
+  const p = { from: 1.02, to: 1.14, pan_x: 0, pan_y: -30 };
+  for (let k = 0; k <= 1; k += 0.1) {
+    const s = pushAt(k, p);
+    assert.ok(s.scale >= 1);
+    assert.ok(Math.abs(s.y) <= (s.scale - 1) / 2 + 1e-9, `no edge shows at ${k}`);
+  }
+  assert.deepEqual(pushAt(0.5, { from: 1.1, to: 1.1, pan_x: 10, pan_y: 10 }), { scale: 1.1, x: 0, y: 0 });
+});
