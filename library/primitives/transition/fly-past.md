@@ -48,3 +48,4 @@ The outgoing scene comes apart: each of its layers flies towards the camera and 
 - Front first, 0.06–0.1 s apart; each layer accelerates (no ease-out on a thing leaving past the lens).
 - Each layer leaves along the line from the frame centre through its own centre, so they part like a crowd.
 - Defocus grows with nearness: blur only in the last half of a layer's flight.
+- The outgoing ground dissolves over the first half while the next scene is already whole beneath it: the gaps between the layers go from one ground straight to the other.

@@ -105,6 +105,10 @@ test('el/frames: the frame on screen is a pure function of time, held at both en
   assert.equal(frameAt(0.5 + 0.5, p), 22);
   assert.equal(frameAt(99, p), 33, 'holds the last frame');
   assert.equal(frameAt(1, { ...p, delay: 0, rate: 0.5 }), 22, 'half speed shows half as many frames');
+  // Backwards: from frame 33 down to 10, held at 10.
+  const back = { first: 33, last: 10, fps: 24, rate: 2, delay: 0 };
+  assert.deepEqual([frameAt(0, back), frameAt(0.25, back), frameAt(9, back)], [33, 21, 10]);
+  assert.equal(frames.duration({}, back, { tokens: {} as never, seed: 1, size: [100, 100] }), 0.5);
   // 24 frames at 24 fps after half a second: the run is over at 1.5 s.
   assert.equal(frames.duration({}, p, { tokens: {} as never, seed: 1, size: [100, 100] }), 1.5);
 });

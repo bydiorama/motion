@@ -1,6 +1,8 @@
 # Changelog
 
 ## Unreleased
+- `el/frames` plays a run backwards when `last` is before `first`.
+- `transition/fly-past`: the outgoing scene's ground now dissolves over the next scene, which is whole beneath it from the first frame. Before, the ground went in one frame while the next scene faded in, so the gaps between the layers dipped through the stage's own colour.
 - Footage, pages and stills, from the craft of a website loop built on film footage. `el/frames` plays a numbered run of stills as footage: the frame on screen is a pure function of time (first frame, last frame, source fps, rate, a delay held on the first frame), so footage scrubs, repeats and renders exactly, and a shot is one layer instead of one image layer per frame. `ui/page-scroll` scrolls a page (one capture, or its sections stacked) inside a window, leg by leg with rests at chosen stops, blurred along the scroll by its speed. `fx/slow-push` holds a picture in a fixed frame and drifts it: push in, pull out or pan, never showing an edge.
 - `motion check` no longer reports layers off stage in a scene that has a camera (scene `tracks`): such a scene is a world the camera travels over. `audit` marks those boxes `world`.
 - `ui/page-scroll` shares its travelling time between legs by the square root of their length, so a long leg is not a flash beside a short one.

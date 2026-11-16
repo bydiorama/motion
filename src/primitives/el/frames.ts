@@ -9,10 +9,14 @@ import { num, str, type Primitive } from '../types.ts';
 export const frameSrc = (pattern: string, n: number): string =>
   pattern.replace(/%(?:0(\d+))?d/, (_, pad?: string) => String(n).padStart(pad ? Number(pad) : 0, '0'));
 
-/** Index of the frame on screen t seconds into the layer. Holds the first frame through `delay` and the last after the run. */
+/**
+ * Index of the frame on screen t seconds into the layer. Holds the first frame through `delay` and the
+ * last after the run. With `last` before `first` the run plays backwards.
+ */
 export function frameAt(t: number, p: { first: number; last: number; fps: number; rate: number; delay: number }): number {
   const played = Math.floor(Math.max(0, t - p.delay) * p.rate * p.fps + 1e-6);
-  return clamp(p.first + played, p.first, Math.max(p.first, p.last));
+  const count = Math.abs(p.last - p.first);
+  return p.first + Math.sign(p.last - p.first) * clamp(played, 0, count);
 }
 
 const read = (p: Record<string, unknown>) => ({
@@ -28,7 +32,7 @@ export const frames: Primitive = {
   },
   params: {
     first: { type: 'number', default: 0, min: 0, max: 100000, step: 1, unit: 'frame', label: 'First frame played' },
-    last: { type: 'number', default: 23, min: 0, max: 100000, step: 1, unit: 'frame', label: 'Last frame played, then held' },
+    last: { type: 'number', default: 23, min: 0, max: 100000, step: 1, unit: 'frame', label: 'Last frame played, then held. Before the first frame, the run plays backwards' },
     fps: { type: 'number', default: 24, min: 1, max: 120, step: 1, unit: 'fps', label: 'Frame rate the footage was shot at' },
     rate: { type: 'number', default: 1, min: 0.1, max: 4, step: 0.01, unit: '×', label: 'Playback speed' },
     delay: { type: 'number', default: 0, min: 0, max: 30, step: 0.05, unit: 's', label: 'Time held on the first frame before it plays' },
@@ -37,14 +41,15 @@ export const frames: Primitive = {
   },
   duration: (_props, params) => {
     const p = read(params);
-    return p.delay + (Math.max(p.first, p.last) - p.first + 1) / p.fps / p.rate;
+    return p.delay + (Math.abs(p.last - p.first) + 1) / p.fps / p.rate;
   },
   build(el, props, params) {
     const doc = el.ownerDocument, p = read(params), pattern = str(props.src);
     // Every frame sits in the same grid cell; only the current one is shown.
     el.style.cssText += `;display:grid;width:${num(params.width)}px;border-radius:${num(params.radius)}px;overflow:hidden`;
     const imgs: HTMLImageElement[] = [];
-    for (let n = p.first; n <= Math.max(p.first, p.last); n++) {
+    const lo = Math.min(p.first, p.last), hi = Math.max(p.first, p.last);
+    for (let n = lo; n <= hi; n++) {
       const img = doc.createElement('img');
       img.src = frameSrc(pattern, n);
       img.alt = n === p.first ? str(props.alt) : '';
@@ -56,7 +61,7 @@ export const frames: Primitive = {
     let shown = -1;
     return {
       seek(t) {
-        const i = frameAt(t, p) - p.first;
+        const i = frameAt(t, p) - lo;
         if (i === shown) return;
         if (shown >= 0) imgs[shown]!.style.visibility = 'hidden';
         imgs[i]!.style.visibility = 'inherit';

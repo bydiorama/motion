@@ -252,7 +252,7 @@
           "max": 100000,
           "step": 1,
           "unit": "frame",
-          "label": "Last frame played, then held"
+          "label": "Last frame played, then held. Before the first frame, the run plays backwards"
         },
         "fps": {
           "type": "number",
