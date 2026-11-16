@@ -5,6 +5,7 @@ export const iris: TransitionPrimitive = {
   slug: 'transition/iris',
   summary: 'The next scene opens from a point in a growing circle.',
   duration: 0.8,
+  calm: { push_in: 0.02 },
   params: {
     duration: { type: 'number', default: 0.8, min: 0.4, max: 1.4, step: 0.05, unit: 's', label: 'Length of the hand-over' },
     x: { type: 'number', default: 50, min: 0, max: 100, step: 1, unit: '% of width', label: 'Centre, across', pad: { name: 'centre', axis: 'x' } },

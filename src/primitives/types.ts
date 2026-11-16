@@ -116,6 +116,8 @@ export interface TransitionPrimitive {
   params: Record<string, ParamSpec>;
   /** Default overlap in seconds. */
   duration: number | string;
+  /** Quieter defaults, used when the film's `transitions` token is `calm`. Each must sit inside its param's range. */
+  calm?: Record<string, number | string | boolean>;
   /** Draws the hand-over at progress k (0 = only the outgoing scene, 1 = only the incoming). */
   apply(from: HTMLElement, to: HTMLElement, k: number, params: Record<string, unknown>, ctx: Ctx): void;
   /** Removes whatever `apply` set, once the hand-over is not on screen. */

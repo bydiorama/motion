@@ -9,6 +9,7 @@ export const coverReveal: TransitionPrimitive = {
   slug: 'transition/cover-reveal',
   summary: 'Colour panels sweep across and cover the cut, then sweep on to uncover the next scene.',
   duration: 1,
+  calm: { lag: 0.06 },
   params: {
     duration: { type: 'number', default: 1, min: 0.6, max: 1.6, step: 0.05, unit: 's', label: 'Length of the hand-over' },
     direction: { type: 'choice', default: 'up', options: ['up', 'down', 'left', 'right'], label: 'Which way the panels travel' },

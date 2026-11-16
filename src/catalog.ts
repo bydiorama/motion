@@ -19,7 +19,7 @@ export function buildCatalog() {
     surfaces: SURFACES,
     anchors: ANCHORS,
     primitives: Object.values(PRIMITIVES).map(({ slug, summary, props, params }) => ({ slug, summary, props, params })),
-    transitions: Object.values(TRANSITIONS).map(({ slug, summary, params }) => ({ slug, summary, params })),
+    transitions: Object.values(TRANSITIONS).map(({ slug, summary, params, calm }) => ({ slug, summary, params, ...(calm ? { calm } : {}) })),
   };
 }
 

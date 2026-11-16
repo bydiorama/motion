@@ -5,6 +5,7 @@ export const slantWipe: TransitionPrimitive = {
   slug: 'transition/slant-wipe',
   summary: 'A slanted edge cuts across the frame, uncovering the next scene; the old one drifts back.',
   duration: 0.6,
+  calm: { slant: 10, drift: 3 },
   params: {
     duration: { type: 'number', default: 0.6, min: 0.4, max: 0.9, step: 0.05, unit: 's', label: 'Length of the hand-over' },
     slant: { type: 'number', default: 20, min: 0, max: 40, step: 1, unit: '% of width', label: 'Slant of the edge' },

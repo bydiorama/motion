@@ -127,7 +127,8 @@
         "min": 30,
         "max": 45
       },
-      "beat": 1
+      "beat": 1,
+      "transitions": "calm"
     },
     {
       "slug": "style/kinetic-poster",

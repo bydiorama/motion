@@ -6,6 +6,7 @@ export const diveIn: TransitionPrimitive = {
   slug: 'transition/dive-in',
   summary: 'The camera pushes into a point until it fills the frame.',
   duration: 0.5,
+  calm: { scale_to: 3 },
   params: {
     duration: { type: 'number', default: 0.5, min: 0.4, max: 1.2, step: 0.05, unit: 's', label: 'Length of the hand-over' },
     scale_to: { type: 'number', default: 8, min: 3, max: 12, step: 0.5, unit: 'x', label: 'How far the camera pushes in' },

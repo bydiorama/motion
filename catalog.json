@@ -20,6 +20,7 @@
     "ease_exit": "cubic.in",
     "ease_move": "cubic.inOut",
     "ease_loop": "linear",
+    "transitions": "standard",
     "ui": {
       "duration": {
         "fast": 0.12,
@@ -2526,6 +2527,9 @@
           "unit": "ratio",
           "label": "Share of the time both scenes are visible"
         }
+      },
+      "calm": {
+        "blur": 12
       }
     },
     {
@@ -2594,6 +2598,10 @@
           "unit": "ratio",
           "label": "Shutter: share of a frame the motion smears over (0.5 = film)"
         }
+      },
+      "calm": {
+        "parallax": 0.15,
+        "blur": 0.25
       }
     },
     {
@@ -2653,6 +2661,9 @@
           "unit": "ratio",
           "label": "How much the outgoing scene pushes in"
         }
+      },
+      "calm": {
+        "push_in": 0.02
       }
     },
     {
@@ -2697,6 +2708,9 @@
           "unit": "ratio",
           "label": "How far each panel trails the one before"
         }
+      },
+      "calm": {
+        "lag": 0.06
       }
     },
     {
@@ -2756,6 +2770,9 @@
           ],
           "label": "accelerate hits the cut at speed; glide eases in and out and arrives at rest"
         }
+      },
+      "calm": {
+        "scale_to": 3
       }
     },
     {
@@ -2844,6 +2861,10 @@
           "unit": "% of width",
           "label": "Corner radius while moving"
         }
+      },
+      "calm": {
+        "recede": 0.97,
+        "dim": 0.4
       }
     },
     {
@@ -2886,6 +2907,10 @@
           "unit": "% of width",
           "label": "How far the old scene drifts"
         }
+      },
+      "calm": {
+        "slant": 10,
+        "drift": 3
       }
     },
     {
@@ -2948,6 +2973,12 @@
           "unit": "ratio",
           "label": "Motion blur: share of a frame the move smears over"
         }
+      },
+      "calm": {
+        "pull": 0.04,
+        "tilt": 5,
+        "gap": 0,
+        "shutter": 0.3
       }
     },
     {
@@ -2992,6 +3023,10 @@
           "unit": "ratio",
           "label": "Motion blur: share of a frame the whip smears over"
         }
+      },
+      "calm": {
+        "anticipation": 0,
+        "shutter": 0.3
       }
     },
     {
@@ -3045,6 +3080,10 @@
           "unit": "ratio",
           "label": "How much the outgoing scene grows as it is covered"
         }
+      },
+      "calm": {
+        "glow": 0.5,
+        "push": 0.01
       }
     },
     {
@@ -3096,6 +3135,11 @@
           "unit": "ratio",
           "label": "How much closer the next scene starts"
         }
+      },
+      "calm": {
+        "spread": 0.15,
+        "tumble": 15,
+        "defocus": 2
       }
     }
   ]

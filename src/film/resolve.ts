@@ -136,6 +136,7 @@ export function resolveFilm(input: unknown): Resolution {
       walk(film.tokens, '');
     }
   }
+  if (tokens.transitions !== 'standard' && tokens.transitions !== 'calm') err('tokens.transitions', 'bad-value', 'transitions is "standard" or "calm".', 'Calm swaps every transition\'s defaults for its quiet preset.');
   const fps = film.fps ?? tokens.fps;
   if (!Number.isInteger(fps) || fps <= 0) err('fps', 'bad-fps', 'fps is a whole number above zero.');
   if (film.theme !== undefined) {
@@ -478,7 +479,11 @@ export function resolveFilm(input: unknown): Resolution {
         err(`${op}.use`, 'unknown-transition', `There is no code for transition "${use}".`, near ? `Did you mean "${near}"?` : `Transitions: ${oneOf(known)}.`);
       } else {
         unknownKeys(scene.out as unknown as Record<string, unknown>, ['use', 'duration', 'params'], op);
-        const params = checkParams(scene.out.params, t.params, `${op}.params`, t.slug);
+        // A calm film starts every transition from its quiet preset.
+        const specs = tokens.transitions === 'calm' && t.calm
+          ? Object.fromEntries(Object.entries(t.params).map(([k, spec]) => [k, k in t.calm! ? { ...spec, default: t.calm![k] } : spec]))
+          : t.params;
+        const params = checkParams(scene.out.params, specs, `${op}.params`, t.slug);
         if (scene.out.duration !== undefined) {
           const d = seconds(scene.out.duration, `${op}.duration`, 'duration');
           if (d !== undefined) params.duration = d;
