@@ -47,13 +47,56 @@ export interface Ctx {
   easeOverrides: Record<string, Bezier>;
   /** Host-provided content for `el/slot` layers, by slot name. */
   slots: Record<string, (el: HTMLElement) => void>;
+  /**
+   * Still frames pulled from this layer's footage, when drawing for a render.
+   * Set per layer by the CLI (render, check, stills); left out in the studio,
+   * where footage plays from a video element.
+   */
+  frames?: FrameSequence;
 }
+
+/** Frames of a video, extracted to numbered images so every film frame is exact. */
+export interface FrameSequence {
+  /** URL prefix; frame n (0-based) is `${base}${String(n + 1).padStart(5, '0')}.${ext}`. */
+  base: string;
+  ext: string;
+  count: number;
+  /** Source time of frame 0, in seconds. */
+  start: number;
+  /** Extracted frames per second of source time. */
+  rate: number;
+  /** The source's own size in px. */
+  width: number;
+  height: number;
+}
+
+export const frameUrl = (f: FrameSequence, n: number): string =>
+  `${f.base}${String(Math.min(f.count - 1, Math.max(0, n)) + 1).padStart(5, '0')}.${f.ext}`;
 
 /** What `duration` may use: everything except the page. */
 export type PureCtx = Pick<Ctx, 'tokens' | 'seed' | 'size'>;
 
 export interface Instance {
   seek(t: number): void;
+  /**
+   * Resolves when what the last seek asked for is on screen. Only for content
+   * that loads after a seek, such as the next frame of footage; the page awaits
+   * it before a frame is captured.
+   */
+  pending?(): Promise<void>;
+  /**
+   * Where the primitive's moving point is at t, in px from the layer's top-left:
+   * the tip of a line being drawn. A scene's camera can follow it.
+   */
+  tip?(t: number): [number, number] | undefined;
+}
+
+/** A problem a primitive finds in its own props and params, beyond their types and ranges. */
+export interface PrimitiveIssue {
+  /** Relative to the layer, e.g. `props.to`. */
+  path: string;
+  message: string;
+  hint?: string;
 }
 
 export interface Primitive {
@@ -62,6 +105,8 @@ export interface Primitive {
   props: Record<string, PropSpec>;
   params: Record<string, ParamSpec>;
   duration(props: Record<string, unknown>, params: Record<string, unknown>, ctx: PureCtx): number;
+  /** Optional checks that need more than one value at a time. Pure, like duration. */
+  check?(props: Record<string, unknown>, params: Record<string, unknown>, ctx: PureCtx): PrimitiveIssue[];
   build(el: HTMLElement, props: Record<string, unknown>, params: Record<string, unknown>, ctx: Ctx): Instance;
 }
 
@@ -71,6 +116,8 @@ export interface TransitionPrimitive {
   params: Record<string, ParamSpec>;
   /** Default overlap in seconds. */
   duration: number | string;
+  /** Quieter defaults, used when the film's `transitions` token is `calm`. Each must sit inside its param's range. */
+  calm?: Record<string, number | string | boolean>;
   /** Draws the hand-over at progress k (0 = only the outgoing scene, 1 = only the incoming). */
   apply(from: HTMLElement, to: HTMLElement, k: number, params: Record<string, unknown>, ctx: Ctx): void;
   /** Removes whatever `apply` set, once the hand-over is not on screen. */

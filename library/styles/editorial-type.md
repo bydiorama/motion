@@ -6,6 +6,7 @@ status: draft
 origin: designed
 tokens:
   beat: 1.0
+  transitions: calm
 surface:
   canvas: alternates light and dark
   texture: texture/dither

@@ -127,7 +127,8 @@
         "min": 30,
         "max": 45
       },
-      "beat": 1
+      "beat": 1,
+      "transitions": "calm"
     },
     {
       "slug": "style/kinetic-poster",
@@ -1093,7 +1094,7 @@
     {
       "slug": "scene/grid-wall",
       "summary": "A masonry or regular grid of media.",
-      "status": "draft"
+      "status": "specified"
     },
     {
       "slug": "scene/hero-object",

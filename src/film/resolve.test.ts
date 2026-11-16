@@ -116,3 +116,52 @@ test('bake writes overrides into the film and keeps orphans and notes', () => {
   assert.equal(r.film.scenes[0]?.length, 4);
   assert.deepEqual(r.tune, { set: { 'scenes.x.length': 1 }, notes: [note] });
 });
+
+test('an id that starts with a digit says so, and offers a fix', () => {
+  const r = resolveFilm(film([{ id: '1953-043', layers: [text('1953-043')] }]));
+  const ids = r.issues.filter((i) => i.code === 'bad-id');
+  assert.equal(ids.length, 2);
+  assert.match(ids[0]!.message, /starts with a digit/);
+  assert.equal(ids[0]!.hint, 'For example "scene-1953-043".');
+  assert.equal(ids[1]!.hint, 'For example "layer-1953-043".');
+  assert.doesNotMatch(ids[1]!.message, /reserved/);
+});
+
+test('a layer snapped onto the end of its scene is explained, with the last frame it can start on', () => {
+  const r = resolveFilm(film([{ id: 'a', length: 7.6, layers: [text('late', { at: 7.595 })] }], { fps: 30 }));
+  const issue = r.issues.find((i) => i.code === 'never-seen')!;
+  assert.match(issue.message, /the moment scene "a" ends/);
+  assert.match(issue.hint!, /30 fps.*7\.567 s/);
+});
+
+test('a scene camera can follow a line, and says what it can follow', () => {
+  const route = { id: 'route', use: 'fx/path-draw', props: { paths: ['M0 0 L100 100'] } };
+  assert.deepEqual(codes(film([{ id: 'a', follow: { layer: 'route', at: [50, 40], lag: 0.1, blend: 0.5 }, layers: [route] }])), []);
+  assert.deepEqual(codes(film([{ id: 'a', follow: { layer: 'rout' }, layers: [route] }])), ['error:unknown-layer']);
+  assert.deepEqual(codes(film([{ id: 'a', follow: { layer: 't', at: [120, 0] }, layers: [text('t')] }])), ['error:bad-follow', 'error:bad-value']);
+});
+
+test('a calm film starts transitions from their quiet presets; values the film sets still win', () => {
+  const scenes = (params: object) => [
+    { id: 'a', length: 3, layers: [], out: { use: 'transition/camera-travel', params } },
+    { id: 'b', length: 3, layers: [] },
+  ];
+  const calm = resolveFilm(film(scenes({ tilt: 8 }), { tokens: { transitions: 'calm' } }));
+  assert.deepEqual(calm.issues, []);
+  const p = calm.timeline!.scenes[0]!.out!.params;
+  assert.deepEqual([p.pull, p.tilt, p.gap], [0.04, 8, 0]);
+  const standard = resolveFilm(film(scenes({}))).timeline!.scenes[0]!.out!.params;
+  assert.deepEqual([standard.pull, standard.tilt, standard.gap], [0.32, 14, 0.18]);
+  assert.deepEqual(codes(film(scenes({}), { tokens: { transitions: 'quiet' } })), ['error:bad-value']);
+});
+
+test('every calm preset sits inside its params\' ranges', async () => {
+  const { TRANSITIONS } = await import('../primitives/index.ts');
+  for (const t of Object.values(TRANSITIONS)) {
+    for (const [k, v] of Object.entries(t.calm ?? {})) {
+      const spec = t.params[k];
+      assert.ok(spec, `${t.slug}: calm sets unknown param ${k}`);
+      if (typeof v === 'number') assert.ok(v >= spec.min! && v <= spec.max!, `${t.slug}.${k} = ${v} is outside ${spec.min}–${spec.max}`);
+    }
+  }
+});

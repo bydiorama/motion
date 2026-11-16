@@ -241,6 +241,37 @@
           "intent": {
             "type": "string"
           },
+          "follow": {
+            "type": "object",
+            "required": [
+              "layer"
+            ],
+            "additionalProperties": false,
+            "description": "The camera follows the tip of a line as it draws.",
+            "properties": {
+              "layer": {
+                "type": "string"
+              },
+              "at": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "lag": {
+                "type": "number",
+                "minimum": 0
+              },
+              "blend": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          },
           "out": {
             "type": "object",
             "required": [
@@ -303,6 +334,7 @@
                     "el/box",
                     "el/image",
                     "el/frames",
+                    "el/video",
                     "el/html",
                     "el/slot",
                     "type/word-build",
@@ -337,6 +369,7 @@
                     "rig/browser-window",
                     "rig/tab-stack",
                     "fx/pin-drop",
+                    "scene/grid-wall",
                     "fx/slow-push",
                     "ui/page-scroll"
                   ]

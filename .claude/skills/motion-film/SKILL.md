@@ -23,7 +23,7 @@ Follow it in order. Each step is cheap; skipping one costs a round with the pers
 3. **Write the film.** See the rules below, `reference/film.md` for the shape, and `docs/CRAFT.md` for the numbers that make motion look designed: eases, durations, reveal patterns, end cards and safe areas.
 4. **Validate until clean.** `node bin/motion.mjs validate films/<name>.film.json`. Fix exactly what each error says; the hint names the fix and "did you mean" names the slug. Warnings about params out of range are real: bring them back in range unless the brief asks otherwise.
 5. **Look.** `node bin/motion.mjs stills films/<name>.film.json` writes key frames and `sheet.png` to `films/out/<name>/stills/`. Open the sheet. Check: text collides, leaves the frame, is too long to read, or the accent appears more than once per scene.
-6. **Check.** `node bin/motion.mjs check films/<name>.film.json` must report frames that repeat exactly and nothing off stage.
+6. **Check.** `node bin/motion.mjs check films/<name>.film.json` must report frames that repeat exactly and nothing off stage. For loops it also reports the seam: fix a `loop-seam` warning. If no Chromium is installed, add `--browser <path to Chrome or Brave>`.
 7. **Hand over.** Tell the person to run `node bin/motion.mjs preview films/<name>.film.json` (studio at http://127.0.0.1:4321). Say what you would like them to judge.
 8. **Answer notes.** When they come back: `node bin/motion.mjs notes films/<name>.film.json`. Each note has a time, a scene and text. Change the film to answer it, validate again, and say per note what you did. Do not mark notes done; the person does.
 
@@ -43,6 +43,9 @@ Render only when asked: `node bin/motion.mjs render films/<name>.film.json` (nee
 - **One hero move per scene.** Everything else in the frame enters quietly or holds.
 - **Exits are quicker than entrances** (60–75% of the time) and use an ease-in, never the entrance played backwards.
 - **One world per camera move.** When a scene hands to the next by moving the camera, use `transition/camera-travel` (or `whip-pan`), not two layers sliding separately. Give layers that travel far and fast `"motionBlur": true`.
+- **Footage is one layer.** Use `el/video` with `from`/`to`, never an image layer per frame. Loops through footage use `continues`.
+- **Repeating films are scripts.** When layers repeat, write a `.film.mjs` with the builder and run `motion make`; see `reference/film.md`.
+- **A camera that travels a route follows it.** Give the scene `follow` on the `fx/path-draw` layer instead of copying the line's ease into camera keys.
 - **Nothing is dead still.** A scene's `tracks` can carry a slow linear drift (`scale` 1.03 → 1 over the scene) under the holds.
 
 ## Never

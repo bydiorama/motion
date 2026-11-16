@@ -20,11 +20,31 @@ export interface Resolution {
 }
 
 const ID = /^[a-z][a-z0-9-]*$/;
+/** What is wrong with an id, in words: the pattern alone does not say which rule broke. */
+function idProblem(id: unknown, what: 'scene' | 'layer'): string {
+  const name = `Give the ${what} an id: lower-case letters, digits and dashes, starting with a letter.`;
+  if (typeof id !== 'string' || id === '') return `${name} It has none.`;
+  if (what === 'layer' && id === 'scene') return `"scene" cannot be a layer id: times use "scene.end" for the scene itself.`;
+  if (/^[0-9]/.test(id)) return `The ${what} id "${id}" starts with a digit. ${name}`;
+  if (/[A-Z]/.test(id)) return `The ${what} id "${id}" has capital letters. ${name}`;
+  const bad = [...new Set(id.replace(/[a-z0-9-]/g, ''))].map((c) => (c === ' ' ? 'a space' : `"${c}"`));
+  return `The ${what} id "${id}" contains ${bad.join(', ')}. ${name}`;
+}
+/** A corrected id to offer, when one is easy to make. */
+function idHint(id: unknown, what: 'scene' | 'layer', fallback: string): string {
+  if (typeof id !== 'string' || id === '' || id === 'scene') return fallback;
+  let fixed = id.toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
+  if (/^[0-9]/.test(fixed)) fixed = `${what}-${fixed}`;
+  return fixed && fixed !== id ? `For example "${fixed}".` : fallback;
+}
+
 const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
 const FILM_KEYS = ['$schema', 'motion', 'title', 'size', 'fps', 'seed', 'poster', 'loop', 'narrative', 'style', 'tokens', 'theme', 'scenes'];
-const SCENE_KEYS = ['id', 'length', 'hold', 'background', 'scheme', 'layout', 'layers', 'tracks', 'out', 'uses', 'intent'];
+const SCENE_KEYS = ['id', 'length', 'hold', 'background', 'scheme', 'layout', 'layers', 'tracks', 'follow', 'out', 'uses', 'intent'];
+/** Primitives whose instance has a tip a camera can follow. */
+export const FOLLOWABLE = ['fx/path-draw'];
 const LAYER_KEYS = ['id', 'use', 'props', 'params', 'at', 'style', 'place', 'enter', 'exit', 'tracks', 'motionBlur'];
 const STYLE_KEYS = ['size', 'color', 'font', 'weight', 'align', 'width', 'css'];
 
@@ -116,6 +136,7 @@ export function resolveFilm(input: unknown): Resolution {
       walk(film.tokens, '');
     }
   }
+  if (tokens.transitions !== 'standard' && tokens.transitions !== 'calm') err('tokens.transitions', 'bad-value', 'transitions is "standard" or "calm".', 'Calm swaps every transition\'s defaults for its quiet preset.');
   const fps = film.fps ?? tokens.fps;
   if (!Number.isInteger(fps) || fps <= 0) err('fps', 'bad-fps', 'fps is a whole number above zero.');
   if (film.theme !== undefined) {
@@ -219,7 +240,7 @@ export function resolveFilm(input: unknown): Resolution {
     const sp = `scenes.${sid}`;
     if (!isObject(scene)) { err(sp, 'bad-scene', 'A scene is an object.'); return; }
     unknownKeys(scene as unknown as Record<string, unknown>, SCENE_KEYS, sp);
-    if (typeof scene.id !== 'string' || !ID.test(scene.id)) err(`${sp}.id`, 'bad-id', 'Give the scene an id: lower-case letters, digits and dashes.', 'For example "title" or "stat-2".');
+    if (typeof scene.id !== 'string' || !ID.test(scene.id)) err(`${sp}.id`, 'bad-id', idProblem(scene.id, 'scene'), idHint(scene.id, 'scene', 'For example "title" or "stat-2".'));
     else if (sceneIds.has(scene.id)) err(`${sp}.id`, 'duplicate-id', `Two scenes are called "${scene.id}".`);
     sceneIds.add(sid);
     if (scene.scheme !== undefined && scene.scheme !== 'light' && scene.scheme !== 'dark') err(`${sp}.scheme`, 'bad-value', 'scheme is "light" or "dark".');
@@ -239,7 +260,7 @@ export function resolveFilm(input: unknown): Resolution {
       if (!isObject(layer)) { err(lp, 'bad-layer', 'A layer is an object.'); return; }
       unknownKeys(layer as unknown as Record<string, unknown>, LAYER_KEYS, lp);
       if (typeof layer.id !== 'string' || !ID.test(layer.id) || layer.id === 'scene') {
-        err(`${lp}.id`, 'bad-id', 'Give the layer an id: lower-case letters, digits and dashes. "scene" is reserved.'); return;
+        err(`${lp}.id`, 'bad-id', idProblem(layer.id, 'layer'), idHint(layer.id, 'layer', 'For example "headline" or "photo-2".')); return;
       }
       if (drafts.has(layer.id)) { err(`${lp}.id`, 'duplicate-id', `Two layers in scene "${sid}" are called "${layer.id}".`); return; }
       const prim = typeof layer.use === 'string' ? PRIMITIVES[layer.use] : undefined;
@@ -297,6 +318,11 @@ export function resolveFilm(input: unknown): Resolution {
       checkTracks(layer.tracks, `${lp}.tracks`);
       if (layer.motionBlur !== undefined && typeof layer.motionBlur !== 'boolean' && !(isNum(layer.motionBlur) && layer.motionBlur >= 0 && layer.motionBlur <= 1)) {
         err(`${lp}.motionBlur`, 'bad-value', 'motionBlur is true (a half-frame shutter) or the share of a frame the shutter is open, 0 to 1.');
+      }
+      if (prim.check) {
+        try {
+          for (const i of prim.check(props, params, ctx)) err(`${lp}.${i.path}`, 'bad-value', i.message, i.hint);
+        } catch { /* reported above as a bad prop or param */ }
       }
       let duration = 0;
       try { duration = prim.duration(props, params, ctx); } catch { /* reported above as a bad prop or param */ }
@@ -392,7 +418,11 @@ export function resolveFilm(input: unknown): Resolution {
       if (d.start === undefined) continue;
       const end = d.start + lengthOf(id);
       if (d.start >= length) {
-        err(`${d.path}.at`, 'never-seen', `Layer "${id}" starts at ${d.start.toFixed(2)} s but scene "${sid}" is ${length.toFixed(2)} s long.`, 'Start it earlier or make the scene longer.');
+        const last = Math.max(0, length - frame);
+        err(`${d.path}.at`, 'never-seen', d.start - length < frame / 2
+          ? `Layer "${id}" starts at ${d.start.toFixed(3)} s, the moment scene "${sid}" ends, so it is never on screen.`
+          : `Layer "${id}" starts at ${d.start.toFixed(3)} s, after scene "${sid}" ends at ${length.toFixed(3)} s.`,
+        `Times snap to whole frames at ${fps} fps, so the last frame a layer can start on is ${last.toFixed(3)} s. Start it earlier or make the scene longer.`);
         continue;
       }
       if (end > length + 1e-6) {
@@ -416,6 +446,28 @@ export function resolveFilm(input: unknown): Resolution {
       });
     }
 
+    // ---- camera follow -----------------------------------------------------------
+    if (scene.follow !== undefined) {
+      const fp = `${sp}.follow`, f = scene.follow;
+      if (!isObject(f)) err(fp, 'bad-follow', 'follow is { layer, at, lag, blend }.');
+      else {
+        unknownKeys(f as unknown as Record<string, unknown>, ['layer', 'at', 'lag', 'blend'], fp);
+        const target = typeof f.layer === 'string' ? layers.find((l) => l.id === f.layer) : undefined;
+        if (!target) {
+          const ids = layers.filter((l) => FOLLOWABLE.includes(l.use)).map((l) => l.id), near = typeof f.layer === 'string' ? nearest(f.layer, ids) : undefined;
+          err(`${fp}.layer`, 'unknown-layer', `Scene "${sid}" has no layer "${String(f.layer)}" to follow.`, near ? `Did you mean "${near}"?` : ids.length ? `Lines here: ${oneOf(ids)}.` : `Add a line to follow: ${oneOf(FOLLOWABLE)}.`);
+        } else if (!FOLLOWABLE.includes(target.use)) {
+          err(`${fp}.layer`, 'bad-follow', `${target.use} has no tip to follow.`, `The camera can follow: ${oneOf(FOLLOWABLE)}.`);
+        }
+        if (f.at !== undefined && !(Array.isArray(f.at) && f.at.length === 2 && f.at.every((v) => isNum(v) && v >= 0 && v <= 100))) {
+          err(`${fp}.at`, 'bad-value', 'at is [x, y] in % of the stage, 0 to 100.', 'The middle is [50, 50].');
+        }
+        for (const k of ['lag', 'blend'] as const) {
+          if (f[k] !== undefined && !(isNum(f[k]) && f[k]! >= 0)) err(`${fp}.${k}`, 'bad-time', `${k} is seconds, zero or more.`);
+        }
+      }
+    }
+
     // ---- hand-over to the next scene ------------------------------------------
     let out: ResolvedScene['out'];
     if (scene.out !== undefined) {
@@ -427,7 +479,11 @@ export function resolveFilm(input: unknown): Resolution {
         err(`${op}.use`, 'unknown-transition', `There is no code for transition "${use}".`, near ? `Did you mean "${near}"?` : `Transitions: ${oneOf(known)}.`);
       } else {
         unknownKeys(scene.out as unknown as Record<string, unknown>, ['use', 'duration', 'params'], op);
-        const params = checkParams(scene.out.params, t.params, `${op}.params`, t.slug);
+        // A calm film starts every transition from its quiet preset.
+        const specs = tokens.transitions === 'calm' && t.calm
+          ? Object.fromEntries(Object.entries(t.params).map(([k, spec]) => [k, k in t.calm! ? { ...spec, default: t.calm![k] } : spec]))
+          : t.params;
+        const params = checkParams(scene.out.params, specs, `${op}.params`, t.slug);
         if (scene.out.duration !== undefined) {
           const d = seconds(scene.out.duration, `${op}.duration`, 'duration');
           if (d !== undefined) params.duration = d;
@@ -455,11 +511,48 @@ export function resolveFilm(input: unknown): Resolution {
     s.end = snap(s.start + s.length);
     cursor = s.end;
   });
+  linkFootage(scenes, frame, err);
   const duration = snap(cursor);
   if (film.poster !== undefined && (!isNum(film.poster) || film.poster < 0 || film.poster > duration)) {
     err('poster', 'bad-time', `poster is a time inside the film, 0 to ${duration.toFixed(2)} s.`);
   }
   return done(tokens, { duration, fps, frames: Math.round(duration * fps), size: [size[0], size[1]], scenes });
+}
+
+/**
+ * Footage that `continues` another video layer opens on the frame after that
+ * layer's last one on screen, so a film that ends on a shot and opens on its
+ * continuation loops through the footage without a seam.
+ */
+function linkFootage(scenes: ResolvedScene[], frame: number, err: (path: string, code: string, message: string, hint?: string) => void) {
+  for (const s of scenes) {
+    for (const l of s.layers) {
+      const ref = l.use === 'el/video' && typeof l.props.continues === 'string' ? l.props.continues : '';
+      if (!ref) continue;
+      const path = `scenes.${s.id}.layers.${l.id}.props.continues`;
+      const [sid, lid] = ref.split('.');
+      const scene = scenes.find((x) => x.id === sid), target = scene?.layers.find((x) => x.id === lid);
+      if (!scene || !target) {
+        err(path, 'unknown-layer', `There is no layer "${ref}" to continue.`, 'Name a video layer as "scene.layer".');
+        continue;
+      }
+      if (target.use !== 'el/video') { err(path, 'bad-value', `"${ref}" is ${target.use}, not el/video.`); continue; }
+      if (target === l) { err(path, 'self-reference', 'A video layer cannot continue itself.'); continue; }
+      if (target.props.src !== l.props.src) err(path, 'bad-value', `"${ref}" plays ${String(target.props.src)}, a different file.`, 'A continuation plays the same footage.');
+      // The target's last frame on screen: its exit's end, or the scene's last frame.
+      const last = Math.min(scene.length, target.exit ? target.exit.start + target.exit.duration : scene.length) - frame;
+      const rate = typeof target.params.rate === 'number' ? target.params.rate : 1;
+      const lt = Math.max(0, last - target.start);
+      const from = typeof target.props.from === 'number' ? target.props.from : 0, to = typeof target.props.to === 'number' ? target.props.to : 0;
+      let at = from + lt * rate;
+      if (target.params.loop === true && to > from) at = from + ((lt * rate) % (to - from));
+      else if (to > from) at = Math.min(to, at);
+      l.props = { ...l.props, from: Number((at + frame * rate).toFixed(6)) };
+      if (typeof l.props.to === 'number' && l.props.to !== 0 && l.props.to <= (l.props.from as number)) {
+        err(`scenes.${s.id}.layers.${l.id}.props.to`, 'bad-value', `to (${l.props.to} s) comes before the continuation starts (${(l.props.from as number).toFixed(3)} s).`, 'Leave it at 0, or move it later.');
+      }
+    }
+  }
 }
 
 /** A compact, readable account of the timeline: what an agent reads back after writing a film. */

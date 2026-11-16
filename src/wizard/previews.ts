@@ -82,6 +82,12 @@ export function moveLayer(slug: string, id = 'move', text?: string): Layer | und
     case 'type/echo': return { id, use: slug, props: { text: text && text.length <= 12 ? text : 'Again' }, style: { size: 'hero' } };
     case 'type/scribble-highlight': return { id, use: slug, props: { text: text ?? 'Ship it today', mark: [(text ?? 'Ship it today').split(/\s+/).pop() ?? ''] }, params: { delay: 0.1 }, style: { size: 'headline', width: 86, css: BIG } };
     case 'fx/odometer': return { id, use: slug, props: { value: 12480 }, style: { size: 'hero' } };
+    case 'scene/grid-wall': {
+      // Plain grey tiles of mixed proportions: the move is the packing and the opening order.
+      const tile = (grey: string) => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="4" height="4"><rect width="4" height="4" fill="${grey}"/></svg>`)}`;
+      const ratios = [1.3, 0.75, 1, 1.5, 0.8, 1.2, 0.7, 1.4, 1, 0.9, 1.6, 0.8];
+      return { id, use: slug, props: { images: ratios.map((_, i) => tile(['#9C9C9B', '#B5B5B4', '#7A7A79'][i % 3]!)), ratios }, params: { columns: 4, width: 70, gap: 20, drift_speed: 0 } };
+    }
     case 'fx/path-draw': return { id, use: slug, props: { paths: ['M10 50 C 30 10, 70 10, 90 50 S 70 90, 50 70', 'M20 80 L 80 20'], viewbox: '0 0 100 100' }, params: { width: 30, stroke: 4 } };
     case 'fx/shape-morph': return { id, use: slug, props: { shapes: ['circle', 'squircle', 'star'] }, params: { size: 34 } };
     case 'fx/grid-ripple': return { id, use: slug, params: { cols: 20, opacity: 0.8 } };

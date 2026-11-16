@@ -7,6 +7,7 @@ export const stackOver: TransitionPrimitive = {
   slug: 'transition/stack-over',
   summary: 'The next scene slides over the current one, which recedes and dims beneath it.',
   duration: 0.7,
+  calm: { recede: 0.97, dim: 0.4 },
   params: {
     duration: { type: 'number', default: 0.7, min: 0.4, max: 1.2, step: 0.05, unit: 's', label: 'Length of the hand-over' },
     direction: { type: 'choice', default: 'up', options: ['up', 'down', 'left', 'right'], label: 'Which way the new scene travels' },

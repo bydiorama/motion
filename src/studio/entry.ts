@@ -4,6 +4,7 @@
 //   as a built file     a read-only player
 import { startPage } from '../dom/page.ts';
 import type { Film, Tune } from '../film/types.ts';
+import type { FrameSequence } from '../primitives/types.ts';
 import { createStudio } from './studio.ts';
 
 declare global {
@@ -25,7 +26,9 @@ async function main() {
   const slots = window.motionSlots;
 
   if (location.hash === '#render') {
-    await startPage({ film, tune, host: root, ...(slots ? { slots } : {}) });
+    // The CLI pulls footage frames before it opens the page; a built file has none.
+    const frames = live ? await fetch('/api/frames').then((r) => (r.ok ? r.json() : {})).catch(() => ({})) as Record<string, FrameSequence> : {};
+    await startPage({ film, tune, host: root, frames, ...(slots ? { slots } : {}) });
     return;
   }
   const studio = createStudio({

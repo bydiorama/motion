@@ -2,6 +2,7 @@
 export { bezier, clamp, EASE_NAMES, lerp, progress, resolveEase, rng, spring, UI_EASE } from './core/ease.ts';
 export type { Bezier, EaseSpec, SpringSpec } from './core/ease.ts';
 export { track } from './core/track.ts';
+export { staggerByDistance, staggerDelays, staggerSteps } from './core/stagger.ts';
 export type { Key } from './core/track.ts';
 export { DEFAULT_TOKENS, mergeTokens } from './tokens.ts';
 export type { TokenOverrides, Tokens } from './tokens.ts';

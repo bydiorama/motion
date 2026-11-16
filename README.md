@@ -65,11 +65,15 @@ node bin/motion.mjs catalog                          # what a film may use (read
 node bin/motion.mjs validate films/showcase.film.json  # errors with paths, hints and "did you mean"
 node bin/motion.mjs preview films/showcase.film.json   # studio at http://127.0.0.1:4321
 node bin/motion.mjs stills films/showcase.film.json    # key frames and a contact sheet
-node bin/motion.mjs check films/showcase.film.json     # frames repeat exactly, nothing off stage
+node bin/motion.mjs check films/showcase.film.json     # frames repeat exactly, nothing off stage (--loop: the seam)
+node bin/motion.mjs make examples/builder.film.mjs     # a film written as a script: checked, then written as JSON
+node bin/motion.mjs capture https://example.com --sections  # a 2× screenshot per section, banners hidden
 node bin/motion.mjs render films/showcase.film.json    # MP4 and a report (needs ffmpeg)
 node bin/motion.mjs bake films/showcase.film.json      # write agreed tuning into the film
 pnpm verify                                          # type-check, tests, catalog, films
 ```
+
+Commands that draw (`stills`, `check`, `render`, `capture`) use Playwright's Chromium. Without it, point them at any installed Chromium-based browser: `--browser "/Applications/Brave Browser.app/Contents/MacOS/Brave Browser"`, or set `MOTION_CHROMIUM` once. Films with `el/video` need ffmpeg, which pulls the frames each layer shows.
 
 The studio is one screen: scenes on the left, each with a still and its intent, the stage with a transport under it (Space plays, ←/→ step a frame, Shift steps a second, [ and ] jump between scenes), an inspector with Tune, Notes and Issues on the right, and the DialKit timeline along the bottom.
 

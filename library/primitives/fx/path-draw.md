@@ -33,6 +33,9 @@ params:
     min: 0.1
     max: 1
     unit: s
+  ease:
+    default: quart.inOut
+    unit: ease
 related:
 - type/scribble-highlight
 - scene/logo-reveal
@@ -48,3 +51,4 @@ One or more vector paths draw on as if traced by a pen, one after another; the f
 - Draw at a steady speed; when several strokes chain, each takes time in proportion to its length.
 - Round caps and joins.
 - Stroke first, then fill: the fill fades in over 0.1–1 s after the last stroke.
+- A camera can follow the tip as it draws (a scene's `follow`), so a route is travelled rather than watched from afar; it lands when the line does.

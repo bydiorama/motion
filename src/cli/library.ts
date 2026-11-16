@@ -45,6 +45,7 @@ export function readLibrary(root = path.join(ROOT, 'library')): Library {
       slug: String(meta.slug), summary: String(meta.summary ?? ''), character: section(body, 'Character'),
       uses: strings(meta.uses), avoids: strings(meta.avoids), formats: strings(meta.formats), duration: range(meta.duration),
       beat: Number((meta.tokens as { beat?: number } | undefined)?.beat ?? 0) || undefined,
+      transitions: (meta.tokens as { transitions?: string } | undefined)?.transitions === 'calm' ? 'calm' as const : undefined,
     })),
     narratives: of('narrative').map(({ meta }) => ({
       slug: String(meta.slug), summary: String(meta.summary ?? ''), family: (FAMILIES.includes(meta.family as Family) ? meta.family : 'graphics') as Family,

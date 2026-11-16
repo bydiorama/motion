@@ -7,7 +7,7 @@ import { applyTune } from '../film/tune.ts';
 import type { Film, Issue, ResolvedLayer, ResolvedMove, ResolvedScene, Timeline, Tracks, Tune } from '../film/types.ts';
 import { directionalBlur, streak } from '../primitives/blur.ts';
 import { PRIMITIVES, TRANSITIONS } from '../primitives/index.ts';
-import type { Ctx, Instance } from '../primitives/types.ts';
+import type { Ctx, FrameSequence, Instance } from '../primitives/types.ts';
 import { merge, type Tokens } from '../tokens.ts';
 import { STAGE_CSS } from './stage.css.ts';
 import { readUiTokens } from './tokens.ts';
@@ -27,6 +27,8 @@ export interface MountOptions {
   slots?: Record<string, (el: HTMLElement) => void>;
   /** Draw at the film's own pixel size instead of fitting the host. Used when rendering. */
   fixed?: boolean;
+  /** Footage frames pulled by the CLI, by `"<scene>/<layer>"`. Without them el/video plays a video element. */
+  frames?: Record<string, FrameSequence>;
 }
 
 export interface LayerBox {
@@ -38,8 +40,6 @@ export interface LayerBox {
   /** How far the layer reaches past each stage edge, in px. Zero when inside. */
   off: { left: number; top: number; right: number; bottom: number };
   empty: boolean;
-  /** The scene has a camera (scene tracks): its layers form a world larger than the frame, and may lie outside it. */
-  world: boolean;
 }
 
 export interface Mounted {
@@ -55,13 +55,17 @@ export interface Mounted {
   /** Resolves when images are decoded and fonts are loaded: the first moment frames are final. */
   ready: Promise<void>;
   seek(t: number): void;
+  /** Resolves when everything the last seek asked for has loaded, such as a frame of footage. */
+  settled(): Promise<void>;
   /** Where every visible layer sits at time t. Seeks to t. */
   audit(t: number): LayerBox[];
   destroy(): void;
 }
 
 interface LiveLayer { spec: ResolvedLayer; el: HTMLElement; instance: Instance; tracks: Sampler; ease: { enter?: (x: number) => number; exit?: (x: number) => number }; shutter: number }
-interface LiveScene { spec: ResolvedScene; el: HTMLElement; cam: HTMLElement; layers: LiveLayer[]; tracks: Sampler; handover: boolean }
+interface LiveScene { spec: ResolvedScene; el: HTMLElement; cam: HTMLElement; layers: LiveLayer[]; tracks: Sampler; handover: boolean; follow?: LiveFollow }
+/** A camera following a layer's tip: the layer, where its box sits in the camera's world, and the settings. */
+interface LiveFollow { layer: LiveLayer; origin: [number, number]; at: [number, number]; lag: number; blend: number }
 type Sampler = Partial<Record<keyof Tracks, (t: number) => number>>;
 
 const SURFACE = new Set(['base', 'surface', 'sunken', 'accent', 'inverse']);
@@ -70,6 +74,14 @@ const ANCHOR: Record<string, string> = {
   'bottom-left': '0 -100%', bottom: '-50% -100%', 'bottom-right': '-100% -100%',
 };
 const FLEX: Record<string, string> = { start: 'flex-start', center: 'center', end: 'flex-end', between: 'space-between' };
+
+/** How wide a placed layer can be, in % of the stage, before its anchor pushes it off stage. */
+export function placedRoom(place: { x: number; anchor?: string }): number {
+  const a = place.anchor ?? 'center', x = Math.min(100, Math.max(0, place.x));
+  const room = a.endsWith('left') ? 100 - x : a.endsWith('right') ? x : 2 * Math.min(x, 100 - x);
+  // Never narrower than a fifth of the stage: a layer anchored at the edge still needs a line.
+  return Math.max(20, room);
+}
 
 function ensureCss(doc: Document) {
   if (doc.getElementById('m-stage-css')) return;
@@ -131,7 +143,9 @@ function writePose(el: HTMLElement, p: Pose, depth: number, smear = '') {
   const still = p.x === 0 && p.y === 0 && p.scale === 1 && p.rotate === 0 && p.skew === 0 && p.yShare === 0 && flat;
   const parts: string[] = [];
   if (!flat) parts.push(`perspective(${depth}px)`);
-  if (p.yShare !== 0) parts.push(`translateY(${p.yShare * 100}%)`);
+  // A mask travels its own height plus the room above and below it, so the
+  // line is fully out of the window before the move starts.
+  if (p.yShare !== 0) parts.push(`translateY(calc(${p.yShare * 100}% + ${p.yShare * 2} * ${MASK_PAD}))`);
   parts.push(`translate(${p.x}px, ${p.y}px)`);
   if (!flat) parts.push(`rotateX(${p.rotateX}deg) rotateY(${p.rotateY}deg)`);
   parts.push(`rotate(${p.rotate}deg)`);
@@ -140,14 +154,35 @@ function writePose(el: HTMLElement, p: Pose, depth: number, smear = '') {
   el.style.transform = still ? '' : parts.join(' ');
   el.style.opacity = p.opacity >= 1 ? '' : String(Math.max(0, p.opacity));
   el.style.filter = [smear, p.blur > 0.01 ? `blur(${p.blur}px)` : ''].filter(Boolean).join(' ');
-  // A mask hides what has left the layer's own box; it travels with the layer,
-  // so the clip is moved back by the same share.
+  el.style.clipPath = clipFor(p);
+}
+
+/**
+ * Room a mask leaves above and below the layer's box, for ascenders, accents,
+ * descenders and old-style figures that reach past the line. A stylesheet can
+ * change it with `--m-mask-pad` on the layer.
+ */
+const MASK_PAD = 'var(--m-mask-pad, 0.3em)';
+
+/** The clip-path for a pose's wipes and masks, or '' when nothing is clipped. */
+export function clipFor(p: Pick<Pose, 'clip' | 'yShare'>): string {
   const [t, r, b, l] = p.clip;
-  const mt = p.yShare < 0 ? -p.yShare : 0, mb = p.yShare > 0 ? p.yShare : 0;
-  const top = Math.max(t, mt), bottom = Math.max(b, mb);
-  el.style.clipPath = top + r + bottom + l > 0.0001
-    ? `inset(${(top * 100).toFixed(3)}% ${(r * 100).toFixed(3)}% ${(bottom * 100).toFixed(3)}% ${(l * 100).toFixed(3)}%)`
-    : '';
+  const pct = (v: number) => `${(v * 100).toFixed(3)}%`;
+  if (Math.abs(p.yShare) < 1e-6) {
+    // Wipes clip at the box itself: their edge is the move.
+    return t + r + b + l > 0.0001 ? `inset(${pct(t)} ${pct(r)} ${pct(b)} ${pct(l)})` : '';
+  }
+  // A mask is a window from MASK_PAD above the box to MASK_PAD below it, fixed
+  // on stage. The layer travels through it, so in the layer's own space the
+  // window moves back by the travel. Sides are left open, so italics and
+  // overhangs are not cut. When the move ends the clip is removed: everything
+  // inside the padding was already showing, so nothing jumps.
+  const y = Math.abs(p.yShare), travel = `(${(y * 100).toFixed(3)}% + ${(y * 2).toFixed(4)} * ${MASK_PAD})`;
+  const near = `calc(${travel} - ${MASK_PAD})`, far = `calc(-1 * ${MASK_PAD})`;
+  const [mTop, mBottom] = p.yShare > 0 ? [far, near] : [near, far];
+  const edge = (wipe: number, mask: string) => (wipe > 0.0001 ? `max(${pct(wipe)}, ${mask})` : mask);
+  const side = (wipe: number) => (wipe > 0.0001 ? pct(wipe) : '-100%');
+  return `inset(${edge(t, mTop)} ${side(r)} ${edge(b, mBottom)} ${side(l)})`;
 }
 
 /** A layer's shutter: `true` is the film-standard half frame, a number is the share of a frame. */
@@ -236,6 +271,8 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
     el.appendChild(cam);
     stage.appendChild(el);
 
+    // A scene whose camera moves is a canvas the camera travels over.
+    const canvas = !!s.follow || (['x', 'y', 'scale', 'rotate', 'rotateX', 'rotateY'] as const).some((k) => (s.tracks?.[k]?.length ?? 0) > 1);
     const layers: LiveLayer[] = spec.layers.map((layer) => {
       const le = doc.createElement('div');
       le.className = 'm-layer';
@@ -253,17 +290,36 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
         le.style.left = `${place.x}%`;
         le.style.top = `${place.y}%`;
         le.style.translate = ANCHOR[place.anchor ?? 'center']!;
+        // An absolute box shrinks to the room right of its `left`, so a centred
+        // headline would wrap at half the stage. Size it to its content instead,
+        // up to style.width, or else up to the room its anchor leaves on stage.
+        // Not on a canvas, though: where the scene's camera moves, layers lie beyond the
+        // stage on purpose, and the stage's edge is no limit on how wide they are.
+        le.style.width = 'max-content';
+        if (st.width === undefined && !canvas) le.style.maxWidth = `${(placedRoom(place) / 100) * W}px`;
       }
       for (const [k, v] of Object.entries(st.css ?? {})) le.style.setProperty(k, v);
       cam.appendChild(le);
-      const instance = PRIMITIVES[layer.use]!.build(le, layer.props, layer.params, ctx);
+      const frames = options.frames?.[`${spec.id}/${layer.id}`];
+      const instance = PRIMITIVES[layer.use]!.build(le, layer.props, layer.params, frames ? { ...ctx, frames } : ctx);
       return {
         spec: layer, el: le, instance, tracks: samplers(layer.source.tracks, tokens.ease_move, ui.ease),
         ease: { ...(layer.enter ? { enter: ctx.ease(layer.enter.ease) } : {}), ...(layer.exit ? { exit: ctx.ease(layer.exit.ease) } : {}) },
         shutter: shutterOf(layer.source.motionBlur),
       };
     });
-    return { spec, el, cam, layers, tracks: samplers(s.tracks, tokens.ease_move, ui.ease), handover: false };
+    const live: LiveScene = { spec, el, cam, layers, tracks: samplers(s.tracks, tokens.ease_move, ui.ease), handover: false };
+    const f = s.follow, target = f ? layers.find((l) => l.spec.id === f.layer) : undefined;
+    if (f && target?.instance.tip) {
+      // Where the layer's box sits in the camera's world, measured once while nothing is moved.
+      const k = stage.getBoundingClientRect().width / W || 1;
+      const a = target.el.getBoundingClientRect(), c = cam.getBoundingClientRect();
+      live.follow = {
+        layer: target, origin: [(a.left - c.left) / k, (a.top - c.top) / k],
+        at: [((f.at?.[0] ?? 50) / 100) * W, ((f.at?.[1] ?? 50) / 100) * H], lag: f.lag ?? 0, blend: f.blend ?? 0.6,
+      };
+    }
+    return live;
   });
 
   const last = scenes[scenes.length - 1]!;
@@ -295,6 +351,7 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
 
       const cam = rest();
       sample(cam, scene.tracks, local);
+      if (scene.follow) follow(cam, scene.follow, local);
       writePose(scene.cam, cam, W * 1.2);
 
       for (const layer of scene.layers) {
@@ -328,6 +385,39 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
         }
       }
     });
+  }
+
+  /**
+   * Moves the camera so the followed tip sits at its mark. The camera turns and
+   * scales about the stage centre, so the translation that puts a world point P
+   * at A is A − C − R·S·(P − C). Lag averages the tip over the last `lag`
+   * seconds, which trails it smoothly; blend eases over from the scene's own
+   * x and y tracks, starting when the layer does.
+   */
+  function follow(cam: Pose, f: LiveFollow, local: number) {
+    const l = f.layer, lt = local - l.spec.start;
+    const tipAt = (t: number) => l.instance.tip!(Math.max(0, t));
+    let p = tipAt(lt);
+    if (!p) return;
+    if (f.lag > 0) {
+      const n = 12;
+      let sx = 0, sy = 0, m = 0;
+      for (let i = 0; i <= n; i++) {
+        const q = tipAt(lt - (f.lag * i) / n);
+        if (q) { sx += q[0]; sy += q[1]; m++; }
+      }
+      if (m) p = [sx / m, sy / m];
+    }
+    // The layer's own travel (its enter move, its tracks) carries the tip with it.
+    const own = poseAt(l, local);
+    const P: [number, number] = [f.origin[0] + p[0] + own.x, f.origin[1] + p[1] + own.y];
+    const C: [number, number] = [W / 2, H / 2], r = (cam.rotate * Math.PI) / 180, s = cam.scale;
+    const dx = P[0] - C[0], dy = P[1] - C[1];
+    const tx = f.at[0] - C[0] - s * (Math.cos(r) * dx - Math.sin(r) * dy);
+    const ty = f.at[1] - C[1] - s * (Math.sin(r) * dx + Math.cos(r) * dy);
+    const w = f.blend > 0 ? ctx.ease('smooth')(clamp(lt / f.blend, 0, 1)) : lt >= 0 ? 1 : 0;
+    cam.x += (tx - cam.x) * w;
+    cam.y += (ty - cam.y) * w;
   }
 
   /** Where a layer's enter, exit and tracks put it at `local` seconds into its scene. */
@@ -373,7 +463,6 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
           x: round(x), y: round(y), width: round(width), height: round(height),
           off: bleed ? { left: 0, top: 0, right: 0, bottom: 0 } : { left: round(Math.max(0, -x)), top: round(Math.max(0, -y)), right: round(Math.max(0, x + width - W)), bottom: round(Math.max(0, y + height - H)) },
           empty: width < 1 || height < 1,
-          world: Object.keys(scene.spec.source.tracks ?? {}).length > 0,
         });
       }
     }
@@ -381,14 +470,20 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
   }
 
   const images = [...stage.querySelectorAll('img')];
+  const videos = [...stage.querySelectorAll('video')];
   const ready = Promise.all([
     doc.fonts.ready,
     ...images.map((img) => img.decode().catch(() => { throw new Error(`Image did not load: ${img.getAttribute('src')}`); })),
+    ...videos.map((v) => (v.readyState >= 2 ? Promise.resolve() : new Promise<void>((resolve, reject) => {
+      v.addEventListener('loadeddata', () => resolve(), { once: true });
+      v.addEventListener('error', () => reject(new Error(`Video did not load: ${v.getAttribute('src')}`)), { once: true });
+    }))),
   ]).then(() => undefined);
+  const settled = () => Promise.all(scenes.flatMap((s) => s.layers.map((l) => l.instance.pending?.()))).then(() => undefined);
 
   seek(0);
   return {
-    film, timeline, tokens, issues: res.issues, orphans, duration: timeline.duration, fps: timeline.fps, stage, ready, seek, audit,
+    film, timeline, tokens, issues: res.issues, orphans, duration: timeline.duration, fps: timeline.fps, stage, ready, seek, settled, audit,
     destroy() { observer?.disconnect(); stage.remove(); },
   };
 }

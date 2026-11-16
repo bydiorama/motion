@@ -17,7 +17,7 @@ export const FORMATS: Record<Format, { size: [number, number]; label: string }> 
 export const FEELS: Record<Feel, { label: string; summary: string; tokens: Record<string, unknown> }> = {
   calm: {
     label: 'Calm', summary: 'Slow, soft arrivals and long holds. Lets the message breathe.',
-    tokens: { duration: { base: 0.8, slow: 1.2 }, stagger: { base: 0.12 }, ease_enter: 'sine.out', hold: 1 },
+    tokens: { duration: { base: 0.8, slow: 1.2 }, stagger: { base: 0.12 }, ease_enter: 'sine.out', hold: 1, transitions: 'calm' },
   },
   crisp: {
     label: 'Crisp', summary: 'Fast arrivals that settle precisely. The library default.',
@@ -93,7 +93,7 @@ export function writeBrief(a: Answers, ctx: BriefContext): string {
     return `- \`${slug}\`: ${p.summary}${props.length ? ` Props: ${props.join(', ')}.` : ''}${params.length ? ` Params: ${params.join(', ')}.` : ''}`;
   };
 
-  const tokens = { beat: style.beat ?? catalog.tokens.beat, ...feel.tokens };
+  const tokens = { beat: style.beat ?? catalog.tokens.beat, ...(style.transitions ? { transitions: style.transitions } : {}), ...feel.tokens };
   const theme = { ...(a.scheme ? { scheme: a.scheme } : {}), ...(a.accent ? { accent: a.accent } : {}) };
   const sizeNote = formats.length > 1
     ? `Make the ${formats[0]} film first. Then make one film per other format (${formats.slice(1).map((f) => `${f} at ${FORMATS[f].size.join('×')}`).join(', ')}) with the same scenes, re-laid for the frame, not cropped.`
