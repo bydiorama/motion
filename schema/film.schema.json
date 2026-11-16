@@ -334,6 +334,7 @@
                     "type/fill-text",
                     "texture/signal-field",
                     "rig/browser-window",
+                    "rig/tab-stack",
                     "fx/pin-drop"
                   ]
                 },

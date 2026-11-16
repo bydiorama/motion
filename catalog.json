@@ -1901,33 +1901,6 @@
           "unit": "height / width",
           "label": "Shape of the page"
         },
-        "tilt": {
-          "type": "number",
-          "default": -24,
-          "min": -40,
-          "max": 40,
-          "step": 1,
-          "unit": "deg",
-          "label": "Turn once in perspective (negative faces left)"
-        },
-        "pitch": {
-          "type": "number",
-          "default": 10,
-          "min": 0,
-          "max": 25,
-          "step": 1,
-          "unit": "deg",
-          "label": "Lean back once in perspective"
-        },
-        "move": {
-          "type": "number",
-          "default": 1,
-          "min": 0.4,
-          "max": 2.4,
-          "step": 0.05,
-          "unit": "s",
-          "label": "Time to turn into perspective"
-        },
         "lift": {
           "type": "number",
           "default": 140,
@@ -1937,6 +1910,119 @@
           "unit": "px",
           "label": "How far the part rises off the page"
         },
+        "lift_at": {
+          "type": "number",
+          "default": 0.8,
+          "min": 0,
+          "max": 6,
+          "step": 0.05,
+          "unit": "s",
+          "label": "When the part starts to rise (it takes 0.8 s)"
+        },
+        "path": {
+          "type": "choice",
+          "default": "in",
+          "options": [
+            "in",
+            "out",
+            "in-out",
+            "hold"
+          ],
+          "label": "Camera path: in turns from square-on to the pose, out from the pose to square-on, in-out goes and comes back, hold stays in the pose"
+        },
+        "tilt": {
+          "type": "number",
+          "default": -24,
+          "min": -40,
+          "max": 40,
+          "step": 1,
+          "unit": "deg, negative faces left",
+          "label": "Turn",
+          "pad": {
+            "name": "angle",
+            "axis": "x"
+          }
+        },
+        "pitch": {
+          "type": "number",
+          "default": 10,
+          "min": -15,
+          "max": 30,
+          "step": 1,
+          "unit": "deg",
+          "label": "Lean",
+          "pad": {
+            "name": "angle",
+            "axis": "y"
+          }
+        },
+        "roll": {
+          "type": "number",
+          "default": -2.4,
+          "min": -12,
+          "max": 12,
+          "step": 0.5,
+          "unit": "deg",
+          "label": "Camera roll"
+        },
+        "zoom": {
+          "type": "number",
+          "default": 0.92,
+          "min": 0.5,
+          "max": 1.8,
+          "step": 0.01,
+          "unit": "x",
+          "label": "Camera zoom in the pose (below 1 stands back)"
+        },
+        "pan_x": {
+          "type": "number",
+          "default": 0,
+          "min": -50,
+          "max": 50,
+          "step": 0.5,
+          "unit": "% of the rig",
+          "label": "Across",
+          "pad": {
+            "name": "look",
+            "axis": "x"
+          }
+        },
+        "pan_y": {
+          "type": "number",
+          "default": 0,
+          "min": -50,
+          "max": 50,
+          "step": 0.5,
+          "unit": "% of the rig",
+          "label": "Down",
+          "pad": {
+            "name": "look",
+            "axis": "y"
+          }
+        },
+        "move": {
+          "type": "number",
+          "default": 1,
+          "min": 0.4,
+          "max": 3,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time the camera takes for each move"
+        },
+        "hold": {
+          "type": "number",
+          "default": 1,
+          "min": 0,
+          "max": 6,
+          "step": 0.05,
+          "unit": "s",
+          "label": "For in-out: time in the pose before it comes back"
+        },
+        "ease": {
+          "type": "ease",
+          "default": "cubic.inOut",
+          "label": "Curve of each camera move"
+        },
         "drift": {
           "type": "number",
           "default": 1.2,
@@ -1944,7 +2030,193 @@
           "max": 4,
           "step": 0.1,
           "unit": "deg/s",
-          "label": "Slow turn back towards frontal after the move"
+          "label": "Slow drift once the camera has arrived"
+        }
+      }
+    },
+    {
+      "slug": "rig/tab-stack",
+      "summary": "Tabs stacked as stairs in depth; the open tab slides through them, then pops forward.",
+      "props": {
+        "items": {
+          "type": "string[]",
+          "required": true,
+          "label": "Tab titles, in order"
+        },
+        "details": {
+          "type": "string[]",
+          "default": [],
+          "label": "What each tab shows when open, in the same order"
+        },
+        "from": {
+          "type": "number",
+          "default": 1,
+          "label": "Tab open at the start (1 is the first)"
+        },
+        "to": {
+          "type": "number",
+          "default": 0,
+          "label": "Tab open at the end (0 is the last)"
+        }
+      },
+      "params": {
+        "width": {
+          "type": "number",
+          "default": 64,
+          "min": 30,
+          "max": 100,
+          "step": 1,
+          "unit": "% of stage width",
+          "label": "Width of the stack"
+        },
+        "stack": {
+          "type": "number",
+          "default": 34,
+          "min": 0,
+          "max": 90,
+          "step": 1,
+          "unit": "px",
+          "label": "Height of each step towards the camera"
+        },
+        "slide_at": {
+          "type": "number",
+          "default": 0.9,
+          "min": 0,
+          "max": 6,
+          "step": 0.05,
+          "unit": "s",
+          "label": "When the open tab starts to slide"
+        },
+        "slide": {
+          "type": "number",
+          "default": 1.6,
+          "min": 0.3,
+          "max": 5,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time for the open tab to slide from first to last"
+        },
+        "pop": {
+          "type": "number",
+          "default": 46,
+          "min": 0,
+          "max": 140,
+          "step": 1,
+          "unit": "px",
+          "label": "How far the tab that ends open pops forward"
+        },
+        "path": {
+          "type": "choice",
+          "default": "out",
+          "options": [
+            "in",
+            "out",
+            "in-out",
+            "hold"
+          ],
+          "label": "Camera path: in turns from square-on to the pose, out from the pose to square-on, in-out goes and comes back, hold stays in the pose"
+        },
+        "tilt": {
+          "type": "number",
+          "default": -19,
+          "min": -40,
+          "max": 40,
+          "step": 1,
+          "unit": "deg, negative faces left",
+          "label": "Turn",
+          "pad": {
+            "name": "angle",
+            "axis": "x"
+          }
+        },
+        "pitch": {
+          "type": "number",
+          "default": 13,
+          "min": -15,
+          "max": 30,
+          "step": 1,
+          "unit": "deg",
+          "label": "Lean",
+          "pad": {
+            "name": "angle",
+            "axis": "y"
+          }
+        },
+        "roll": {
+          "type": "number",
+          "default": -1.5,
+          "min": -12,
+          "max": 12,
+          "step": 0.5,
+          "unit": "deg",
+          "label": "Camera roll"
+        },
+        "zoom": {
+          "type": "number",
+          "default": 0.9,
+          "min": 0.5,
+          "max": 1.8,
+          "step": 0.01,
+          "unit": "x",
+          "label": "Camera zoom in the pose (below 1 stands back)"
+        },
+        "pan_x": {
+          "type": "number",
+          "default": 0,
+          "min": -50,
+          "max": 50,
+          "step": 0.5,
+          "unit": "% of the rig",
+          "label": "Across",
+          "pad": {
+            "name": "look",
+            "axis": "x"
+          }
+        },
+        "pan_y": {
+          "type": "number",
+          "default": 0,
+          "min": -50,
+          "max": 50,
+          "step": 0.5,
+          "unit": "% of the rig",
+          "label": "Down",
+          "pad": {
+            "name": "look",
+            "axis": "y"
+          }
+        },
+        "move": {
+          "type": "number",
+          "default": 1.6,
+          "min": 0.4,
+          "max": 3,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Time the camera takes for each move"
+        },
+        "hold": {
+          "type": "number",
+          "default": 1,
+          "min": 0,
+          "max": 6,
+          "step": 0.05,
+          "unit": "s",
+          "label": "For in-out: time in the pose before it comes back"
+        },
+        "ease": {
+          "type": "ease",
+          "default": "cubic.inOut",
+          "label": "Curve of each camera move"
+        },
+        "drift": {
+          "type": "number",
+          "default": 1.2,
+          "min": 0,
+          "max": 4,
+          "step": 0.1,
+          "unit": "deg/s",
+          "label": "Slow drift once the camera has arrived"
         }
       }
     },

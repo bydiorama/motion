@@ -35,17 +35,29 @@
       "out": { "use": "transition/camera-travel", "duration": 1.45, "params": { "direction": "down", "pull": 0.34, "tilt": 16 } }
     },
     {
+      "id": "features",
+      "intent": "The camera lands on the features at an angle, tabs stepped like stairs; the open tab slides through them as the view turns square.",
+      "background": "#0C0D10",
+      "layout": { "gap": 64, "padding": 80 },
+      "layers": [
+        { "id": "caption", "use": "type/fill-text", "at": 0.2, "props": { "text": "Six capabilities.\nOne open at a time.", "accent": ["open"] }, "params": { "duration": 1.2 }, "style": { "size": "title", "weight": 450, "css": { "font-size": "calc(var(--m-u) * 5)", "line-height": "1.15" } } },
+        { "id": "tabs", "use": "rig/tab-stack", "props": { "items": ["Monitoring", "Detection", "Narrative mapping", "Source tracing", "Alerts", "Reporting"], "details": ["Every channel, watched continuously.", "Unusual activity, flagged the moment it starts.", "How a story spreads, and who carries it.", "Where it began, account by account.", "The right people, told at the right time.", "A brief that is ready when you are: what happened, where it came from and what to do next."] }, "params": { "width": 84, "path": "out", "tilt": -20, "pitch": 14, "roll": -1.5, "zoom": 0.88, "move": 1.7, "slide_at": 0.9, "slide": 1.8, "stack": 30, "pop": 50 } }
+      ],
+      "hold": 1.3,
+      "out": { "use": "transition/whip-pan", "params": { "direction": "left" } }
+    },
+    {
       "id": "world",
-      "intent": "The camera arrived from above: one world, one move. A chip brakes in with real motion blur.",
+      "intent": "A chip brakes in with motion blur along its path: sharp the moment it stops.",
       "background": "#0C0D10",
       "layout": { "gap": 56, "padding": 96 },
       "layers": [
         { "id": "ground", "use": "fx/grid-ripple", "params": { "cols": 18, "opacity": 0.25, "pulse": 0.2 } },
-        { "id": "chip", "use": "el/text", "at": 0.15, "props": { "text": "ONE CAMERA" }, "style": { "size": "caption", "font": "mono", "color": "accent" }, "enter": { "move": "slide-left", "amount": 900, "duration": 0.7, "ease": "expo.out" }, "motionBlur": true },
-        { "id": "line", "use": "type/fill-text", "at": 0.35, "props": { "text": "Two scenes, one place.\nOnly the camera moves.", "accent": ["camera"] }, "params": { "duration": 1.5 }, "style": { "size": "headline", "weight": 450 } }
+        { "id": "chip", "use": "el/text", "at": 0.15, "props": { "text": "MOTION BLUR" }, "style": { "size": "caption", "font": "mono", "color": "accent" }, "enter": { "move": "slide-left", "amount": 900, "duration": 0.7, "ease": "expo.out" }, "motionBlur": true },
+        { "id": "line", "use": "type/fill-text", "at": 0.35, "props": { "text": "Blur follows speed,\nalong the path only.", "accent": ["speed"] }, "params": { "duration": 1.5 }, "style": { "size": "headline", "weight": 450 } }
       ],
       "hold": 1.2,
-      "out": { "use": "transition/whip-pan", "params": { "direction": "left" } }
+      "out": { "use": "transition/push", "params": { "direction": "up" } }
     },
     {
       "id": "places",

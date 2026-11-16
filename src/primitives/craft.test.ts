@@ -67,3 +67,29 @@ test('motionBlur is true or a shutter between 0 and 1', () => {
   assert.ok(resolveFilm(film(2)).issues.some((i) => i.code === 'bad-value' && i.path.endsWith('motionBlur')));
   assert.ok(resolveFilm(film('yes')).issues.some((i) => i.code === 'bad-value'));
 });
+
+test('camera paths: in, out, in-out and hold reach their poses and come back', async () => {
+  const { cameraAt, cameraEnd, cameraWeight } = await import('./rig/camera.ts');
+  const lin = (x: number) => x;
+  const p = (path: string) => ({ path, tilt: -20, pitch: 10, roll: -2, zoom: 0.8, pan_x: 10, pan_y: 0, move: 1, hold: 0.5, drift: 0 });
+  assert.equal(cameraWeight(0, p('in'), lin), 0);
+  assert.equal(cameraWeight(1, p('in'), lin), 1);
+  assert.equal(cameraWeight(0, p('out'), lin), 1);
+  assert.equal(cameraWeight(1, p('out'), lin), 0);
+  assert.equal(cameraWeight(1.2, p('in-out'), lin), 1);
+  assert.equal(cameraWeight(2.5, p('in-out'), lin), 0);
+  assert.equal(cameraWeight(0, p('hold'), lin), 1);
+  assert.deepEqual([cameraEnd(p('in')), cameraEnd(p('in-out')), cameraEnd(p('hold'))], [1, 2.5, 0]);
+  const pose = cameraAt(1, p('in'), lin);
+  assert.deepEqual([pose.ry, pose.rx, pose.rz, pose.zoom, pose.x], [-20, 10, -2, 0.8, 0.1]);
+  // Drift relaxes the pose towards square-on, never more than half way.
+  const drifted = cameraAt(30, { ...p('in'), drift: 2 }, lin);
+  assert.equal(drifted.ry, -10);
+});
+
+test('tab-stack: one tab of openness is shared between neighbours', async () => {
+  const { openness, openRange } = await import('./rig/tab-stack.ts');
+  for (const c of [0, 0.3, 1.5, 2.99, 4]) assert.ok(Math.abs(openness(5, c).reduce((a, b) => a + b, 0) - 1) < 1e-9, `at ${c}`);
+  assert.deepEqual(openRange({ items: ['a', 'b', 'c'] }), [0, 2]);
+  assert.deepEqual(openRange({ items: ['a', 'b', 'c'], from: 3, to: 1 }), [2, 0]);
+});

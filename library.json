@@ -179,6 +179,7 @@
         "transition/push",
         "fx/odometer",
         "rig/browser-window",
+        "rig/tab-stack",
         "transition/camera-travel"
       ],
       "avoids": [
@@ -947,9 +948,10 @@
         {
           "name": "pages",
           "share": 30,
-          "content": "Inner pages, reached by one camera move or a whip",
+          "content": "Inner pages, reached by one camera move or a whip; features as stacked tabs that open one after another",
           "primitives": [
             "transition/camera-travel",
+            "rig/tab-stack",
             "transition/whip-pan",
             "type/fill-text"
           ]
@@ -1060,6 +1062,11 @@
       "slug": "rig/rolodex",
       "summary": "Cards on a short cylinder that spins while the whole rig swings.",
       "status": "draft"
+    },
+    {
+      "slug": "rig/tab-stack",
+      "summary": "Tabs stacked as stairs in depth; the open tab slides through them, then pops forward.",
+      "status": "specified"
     },
     {
       "slug": "rig/tumbling-object",

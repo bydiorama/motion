@@ -81,6 +81,7 @@ export function moveLayer(slug: string, id = 'move', text?: string): Layer | und
     case 'ui/cursor-click': return { id, use: slug, params: { size: 4 } };
     case 'type/fill-text': return { id, use: slug, props: { text: text ?? 'Noise into signal', accent: text ? [] : ['signal'] }, style: { size: 'headline', width: 86, css: BIG } };
     case 'texture/signal-field': return { id, use: slug, params: { cols: 24, settle_at: 0.4 } };
+    case 'rig/tab-stack': return { id, use: slug, props: { items: ['Monitor', 'Detect', 'Respond', 'Report'], details: ['', '', '', 'Every signal, in one place.'] }, params: { width: 80, slide_at: 0.5, slide: 1.2 } };
     case 'rig/browser-window': return { id, use: slug, props: { lift: [36, 54, 28, 38] }, params: { width: 90, move: 0.9 } };
     case 'fx/pin-drop': return { id, use: slug, props: { points: [28, 70, 70, 55], labels: ['Found', 'Here'] }, params: { size: 28, stem: 220 } };
     default: return undefined;

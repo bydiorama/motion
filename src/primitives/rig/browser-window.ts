@@ -1,13 +1,15 @@
 // rig/browser-window. See library/primitives/rig/browser-window.md.
 //
-// A page in a browser window that pulls back from frontal into perspective,
-// then lifts one part of itself off the page towards the camera. The lifted part
-// is the page's own picture, cropped: the same image (or the same drawn page)
-// painted twice, so nothing is retyped and nothing is out of step. Its shadow
-// grows with its height, and the page darkens beneath it. After the move the
-// window keeps turning slowly, so the hold is never dead still.
+// A page in a browser window, seen by the rigs' shared camera (./camera.ts):
+// by default it turns from square-on into perspective, then lifts one part of
+// itself off the page towards the camera. The lifted part is the page's own
+// picture, cropped: the same image (or the same drawn page) painted twice, so
+// nothing is retyped and nothing is out of step. Its shadow grows with its
+// height, and the page darkens beneath it. Once the camera has arrived it keeps
+// drifting slowly, so the hold is never dead still.
 import { clamp } from '../../core/ease.ts';
 import { nums, num, str, type Primitive } from '../types.ts';
+import { cameraAt, cameraEnd, cameraParams, cameraTransform } from './camera.ts';
 
 const hairline = (pct: number) => `color-mix(in srgb, var(--m-text-primary) ${pct}%, transparent)`;
 
@@ -48,14 +50,12 @@ export const browserWindow: Primitive = {
   params: {
     width: { type: 'number', default: 80, min: 40, max: 100, step: 1, unit: '% of stage width', label: 'Width of the window' },
     aspect: { type: 'number', default: 0.625, min: 0.4, max: 1.4, step: 0.005, unit: 'height / width', label: 'Shape of the page' },
-    tilt: { type: 'number', default: -24, min: -40, max: 40, step: 1, unit: 'deg', label: 'Turn once in perspective (negative faces left)' },
-    pitch: { type: 'number', default: 10, min: 0, max: 25, step: 1, unit: 'deg', label: 'Lean back once in perspective' },
-    move: { type: 'number', default: 1.0, min: 0.4, max: 2.4, step: 0.05, unit: 's', label: 'Time to turn into perspective' },
     lift: { type: 'number', default: 140, min: 0, max: 320, step: 5, unit: 'px', label: 'How far the part rises off the page' },
-    drift: { type: 'number', default: 1.2, min: 0, max: 4, step: 0.1, unit: 'deg/s', label: 'Slow turn back towards frontal after the move' },
+    lift_at: { type: 'number', default: 0.8, min: 0, max: 6, step: 0.05, unit: 's', label: 'When the part starts to rise (it takes 0.8 s)' },
+    ...cameraParams({ path: 'in', tilt: -24, pitch: 10, roll: -2.4, zoom: 0.92, move: 1.0 }),
   },
-  // The move, then the lift, which starts at 80% of the move and takes 0.8 s.
-  duration: (props, p) => (nums(props.lift).length === 4 && num(p.lift) > 0 ? Math.max(num(p.move), num(p.move) * 0.8 + 0.8) : num(p.move)),
+  // The camera's moves and the lift, whichever ends last.
+  duration: (props, p) => Math.max(cameraEnd(p), nums(props.lift).length === 4 && num(p.lift) > 0 ? num(p.lift_at) + 0.8 : 0),
   build(el, props, p, ctx) {
     const doc = el.ownerDocument;
     const [W] = ctx.size, u = W / 1080;
@@ -125,18 +125,11 @@ export const browserWindow: Primitive = {
     wrap.appendChild(win);
     el.appendChild(wrap);
 
-    const ease = ctx.ease('cubic.inOut'), rise = ctx.ease('expo.out');
-    const move = Math.max(0.01, num(p.move)), tilt = num(p.tilt), pitch = num(p.pitch), drift = num(p.drift);
-    const depth = winW * 0.18, liftZ = num(p.lift) * u, liftAt = move * 0.8;
+    const ease = ctx.ease(p.ease as never), rise = ctx.ease('expo.out');
+    const liftZ = num(p.lift) * u, liftAt = num(p.lift_at);
     return {
       seek(t) {
-        const e = ease(clamp(t / move));
-        // Two clocks: the eased turn, then a slow linear relaxation under the hold.
-        const after = Math.max(0, t - move), sign = Math.sign(tilt) || 1;
-        const ry = tilt * e - sign * Math.min(Math.abs(tilt) * 0.5, drift * after);
-        const rx = pitch * e - Math.min(pitch * 0.5, drift * 0.4 * after);
-        const rz = -0.1 * tilt * e;
-        win.style.transform = `translateZ(${(-depth * e).toFixed(2)}px) rotateX(${rx.toFixed(3)}deg) rotateY(${ry.toFixed(3)}deg) rotateZ(${rz.toFixed(3)}deg)`;
+        win.style.transform = cameraTransform(cameraAt(t, p, ease), P, winW, winH);
         if (!lift) return;
         const k = rise(clamp((t - liftAt) / 0.8));
         const z = liftZ * k, sh = clamp(z / (140 * u));

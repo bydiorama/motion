@@ -33,9 +33,10 @@ beats:
   - transition/fly-past
 - name: pages
   share: 30
-  content: Inner pages, reached by one camera move or a whip
+  content: Inner pages, reached by one camera move or a whip; features as stacked tabs that open one after another
   primitives:
   - transition/camera-travel
+  - rig/tab-stack
   - transition/whip-pan
   - type/fill-text
 - name: proof
