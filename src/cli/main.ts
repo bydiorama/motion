@@ -11,6 +11,7 @@ import { describeTimeline, resolveFilm, type Resolution } from '../film/resolve.
 import { applyTune, bake } from '../film/tune.ts';
 import type { Issue, Timeline } from '../film/types.ts';
 import { open, type Session } from './browser.ts';
+import { capture } from './capture.ts';
 import type { LayerBox } from '../dom/mount.ts';
 import { bundle, wizardPage, filmName, inlineCss, readFilm, readJson, readTune, ROOT, tunePath, writeJson } from './files.ts';
 import { filmSchema } from './schema.ts';
@@ -38,6 +39,11 @@ Look
   check <film> [--json] [--loop]    Draw it and test: repeatable frames, layers on stage, page errors;
                                     --loop (or "loop": true) measures the seam from last frame to first
 
+Collect
+  capture <url> [--sections] [--selector css] [--out dir] [--width 1440] [--scale 2]
+          [--hide sel,sel] [--keep-banners] [--keep-header]
+                                    Screenshots of a page, or of each section, for a film to use
+
 Deliver
   render <film> [--out file.mp4] [--scale 2] [--crf 15]   MP4 through ffmpeg, plus a report
   build <film> [--out file.html]    One self-contained page that plays the film
@@ -46,6 +52,8 @@ Deliver
 Options for every command that draws
   --css <file>    A stylesheet to load, e.g. a bydiorama/ui theme. Repeat for more.
   --no-tune       Ignore <film>.tune.json
+  --browser <path>  A Chromium-based browser to draw with (Chrome, Brave, Edge),
+                  when Playwright's own is not installed. Or set MOTION_CHROMIUM.
 `;
 
 interface Args { _: string[]; flags: Record<string, string | boolean>; css: string[] }
@@ -161,6 +169,26 @@ async function make(args: Args) {
   }
   writeJson(out, value);
   if (!json) console.log(`${path.relative(process.cwd(), out)} written: ${res.timeline!.duration.toFixed(2)} s, ${res.issues.length} warning(s).`);
+}
+
+async function captureCmd(args: Args) {
+  const url = args._[1];
+  if (!url) throw new Error('Name a page to capture: motion capture https://example.com --sections');
+  const href = /^[a-z]+:\/\//i.test(url) ? url : fs.existsSync(url) ? pathToFileURL(path.resolve(url)).href : `https://${url}`;
+  const host = new URL(href).hostname || filmName(url).replace(/\.html?$/, '') || 'page';
+  const num = (k: string, d: number) => { const v = Number(args.flags[k] ?? d); if (!(v > 0)) throw new Error(`--${k} takes a number above zero.`); return v; };
+  const shots = await capture({
+    url: href, out: path.resolve(typeof args.flags.out === 'string' ? args.flags.out : path.join('out', 'capture', host)),
+    sections: !!args.flags.sections, ...(typeof args.flags.selector === 'string' ? { selector: args.flags.selector } : {}),
+    width: num('width', 1440), scale: num('scale', 2),
+    hide: typeof args.flags.hide === 'string' ? args.flags.hide.split(',').map((x) => x.trim()).filter(Boolean) : [],
+    keepBanners: !!args.flags['keep-banners'], keepHeader: !!args.flags['keep-header'], ...browserOpt(args),
+  });
+  const dir = path.dirname(shots[0]!.file);
+  writeJson(path.join(dir, 'capture.json'), { url: href, width: num('width', 1440), scale: num('scale', 2), shots: shots.map((x) => ({ ...x, file: path.basename(x.file) })) });
+  if (args.flags.json) return print({ url: href, dir, shots });
+  console.log(`${shots.length} screenshot(s) at ${num('scale', 2)}× in ${path.relative(process.cwd(), dir) || '.'}/`);
+  for (const x of shots) console.log(`  ${path.basename(x.file).padEnd(32)} ${x.width}×${x.height} px at y ${x.y}`);
 }
 
 function validate(args: Args) {
@@ -467,6 +495,7 @@ export async function main(argv: string[]) {
   if (!cmd || args.flags.help) return console.log(HELP);
   if (cmd === 'catalog') return catalog(args);
   if (cmd === 'make') return make(args);
+  if (cmd === 'capture') return captureCmd(args);
   if (cmd === 'validate') return validate(args);
   if (cmd === 'inspect') return inspect(args);
   if (cmd === 'notes') return notes(args);
