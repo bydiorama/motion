@@ -302,6 +302,7 @@
                     "el/text",
                     "el/box",
                     "el/image",
+                    "el/video",
                     "el/html",
                     "el/slot",
                     "type/word-build",

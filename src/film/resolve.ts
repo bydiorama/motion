@@ -316,6 +316,11 @@ export function resolveFilm(input: unknown): Resolution {
       if (layer.motionBlur !== undefined && typeof layer.motionBlur !== 'boolean' && !(isNum(layer.motionBlur) && layer.motionBlur >= 0 && layer.motionBlur <= 1)) {
         err(`${lp}.motionBlur`, 'bad-value', 'motionBlur is true (a half-frame shutter) or the share of a frame the shutter is open, 0 to 1.');
       }
+      if (prim.check) {
+        try {
+          for (const i of prim.check(props, params, ctx)) err(`${lp}.${i.path}`, 'bad-value', i.message, i.hint);
+        } catch { /* reported above as a bad prop or param */ }
+      }
       let duration = 0;
       try { duration = prim.duration(props, params, ctx); } catch { /* reported above as a bad prop or param */ }
       drafts.set(layer.id, { layer, path: lp, duration: Number.isFinite(duration) ? duration : 0, params, props });
@@ -477,11 +482,48 @@ export function resolveFilm(input: unknown): Resolution {
     s.end = snap(s.start + s.length);
     cursor = s.end;
   });
+  linkFootage(scenes, frame, err);
   const duration = snap(cursor);
   if (film.poster !== undefined && (!isNum(film.poster) || film.poster < 0 || film.poster > duration)) {
     err('poster', 'bad-time', `poster is a time inside the film, 0 to ${duration.toFixed(2)} s.`);
   }
   return done(tokens, { duration, fps, frames: Math.round(duration * fps), size: [size[0], size[1]], scenes });
+}
+
+/**
+ * Footage that `continues` another video layer opens on the frame after that
+ * layer's last one on screen, so a film that ends on a shot and opens on its
+ * continuation loops through the footage without a seam.
+ */
+function linkFootage(scenes: ResolvedScene[], frame: number, err: (path: string, code: string, message: string, hint?: string) => void) {
+  for (const s of scenes) {
+    for (const l of s.layers) {
+      const ref = l.use === 'el/video' && typeof l.props.continues === 'string' ? l.props.continues : '';
+      if (!ref) continue;
+      const path = `scenes.${s.id}.layers.${l.id}.props.continues`;
+      const [sid, lid] = ref.split('.');
+      const scene = scenes.find((x) => x.id === sid), target = scene?.layers.find((x) => x.id === lid);
+      if (!scene || !target) {
+        err(path, 'unknown-layer', `There is no layer "${ref}" to continue.`, 'Name a video layer as "scene.layer".');
+        continue;
+      }
+      if (target.use !== 'el/video') { err(path, 'bad-value', `"${ref}" is ${target.use}, not el/video.`); continue; }
+      if (target === l) { err(path, 'self-reference', 'A video layer cannot continue itself.'); continue; }
+      if (target.props.src !== l.props.src) err(path, 'bad-value', `"${ref}" plays ${String(target.props.src)}, a different file.`, 'A continuation plays the same footage.');
+      // The target's last frame on screen: its exit's end, or the scene's last frame.
+      const last = Math.min(scene.length, target.exit ? target.exit.start + target.exit.duration : scene.length) - frame;
+      const rate = typeof target.params.rate === 'number' ? target.params.rate : 1;
+      const lt = Math.max(0, last - target.start);
+      const from = typeof target.props.from === 'number' ? target.props.from : 0, to = typeof target.props.to === 'number' ? target.props.to : 0;
+      let at = from + lt * rate;
+      if (target.params.loop === true && to > from) at = from + ((lt * rate) % (to - from));
+      else if (to > from) at = Math.min(to, at);
+      l.props = { ...l.props, from: Number((at + frame * rate).toFixed(6)) };
+      if (typeof l.props.to === 'number' && l.props.to !== 0 && l.props.to <= (l.props.from as number)) {
+        err(`scenes.${s.id}.layers.${l.id}.props.to`, 'bad-value', `to (${l.props.to} s) comes before the continuation starts (${(l.props.from as number).toFixed(3)} s).`, 'Leave it at 0, or move it later.');
+      }
+    }
+  }
 }
 
 /** A compact, readable account of the timeline: what an agent reads back after writing a film. */

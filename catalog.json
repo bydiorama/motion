@@ -209,9 +209,110 @@
           "unit": "px",
           "label": "Width"
         },
+        "height": {
+          "type": "number",
+          "default": 0,
+          "min": 0,
+          "max": 4000,
+          "step": 1,
+          "unit": "px",
+          "label": "Height; 0 keeps the picture's own proportions, otherwise it is cropped to fill"
+        },
         "radius": {
           "type": "number",
           "default": 16,
+          "min": 0,
+          "max": 400,
+          "step": 1,
+          "unit": "px",
+          "label": "Corner radius"
+        },
+        "frame": {
+          "type": "number",
+          "default": 0,
+          "min": 0,
+          "max": 24,
+          "step": 0.5,
+          "unit": "px",
+          "label": "Ring drawn inside the edge, in the border colour (--m-frame to change it)"
+        },
+        "bevel": {
+          "type": "number",
+          "default": 0,
+          "min": 0,
+          "max": 1,
+          "step": 0.05,
+          "unit": "strength",
+          "label": "A light top edge and a dark bottom edge, as on a printed card"
+        }
+      }
+    },
+    {
+      "slug": "el/video",
+      "summary": "Footage. Plays a stretch of a video file; the path is relative to the film file.",
+      "props": {
+        "src": {
+          "type": "string",
+          "required": true,
+          "label": "Video path or URL"
+        },
+        "from": {
+          "type": "number",
+          "default": 0,
+          "label": "Source time the layer opens on, in seconds"
+        },
+        "to": {
+          "type": "number",
+          "default": 0,
+          "label": "Source time it ends on, in seconds; 0 plays on until the scene ends"
+        },
+        "crop": {
+          "type": "number[]",
+          "default": [],
+          "label": "Part of the picture to show: [x, y, width, height] in % of the source"
+        },
+        "continues": {
+          "type": "string",
+          "default": "",
+          "label": "Open on the frame after another video layer ends, as \"scene.layer\": a seamless loop through footage"
+        }
+      },
+      "params": {
+        "rate": {
+          "type": "number",
+          "default": 1,
+          "min": 0.1,
+          "max": 4,
+          "step": 0.05,
+          "unit": "×",
+          "label": "Playback speed"
+        },
+        "loop": {
+          "type": "boolean",
+          "default": false,
+          "label": "Wrap from \"to\" back to \"from\" until the scene ends"
+        },
+        "width": {
+          "type": "number",
+          "default": 1280,
+          "min": 1,
+          "max": 8000,
+          "step": 1,
+          "unit": "px",
+          "label": "Width"
+        },
+        "height": {
+          "type": "number",
+          "default": 0,
+          "min": 0,
+          "max": 8000,
+          "step": 1,
+          "unit": "px",
+          "label": "Height; 0 keeps the shot's proportions"
+        },
+        "radius": {
+          "type": "number",
+          "default": 0,
           "min": 0,
           "max": 400,
           "step": 1,

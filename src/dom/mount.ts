@@ -7,7 +7,7 @@ import { applyTune } from '../film/tune.ts';
 import type { Film, Issue, ResolvedLayer, ResolvedMove, ResolvedScene, Timeline, Tracks, Tune } from '../film/types.ts';
 import { directionalBlur, streak } from '../primitives/blur.ts';
 import { PRIMITIVES, TRANSITIONS } from '../primitives/index.ts';
-import type { Ctx, Instance } from '../primitives/types.ts';
+import type { Ctx, FrameSequence, Instance } from '../primitives/types.ts';
 import { merge, type Tokens } from '../tokens.ts';
 import { STAGE_CSS } from './stage.css.ts';
 import { readUiTokens } from './tokens.ts';
@@ -27,6 +27,8 @@ export interface MountOptions {
   slots?: Record<string, (el: HTMLElement) => void>;
   /** Draw at the film's own pixel size instead of fitting the host. Used when rendering. */
   fixed?: boolean;
+  /** Footage frames pulled by the CLI, by `"<scene>/<layer>"`. Without them el/video plays a video element. */
+  frames?: Record<string, FrameSequence>;
 }
 
 export interface LayerBox {
@@ -53,6 +55,8 @@ export interface Mounted {
   /** Resolves when images are decoded and fonts are loaded: the first moment frames are final. */
   ready: Promise<void>;
   seek(t: number): void;
+  /** Resolves when everything the last seek asked for has loaded, such as a frame of footage. */
+  settled(): Promise<void>;
   /** Where every visible layer sits at time t. Seeks to t. */
   audit(t: number): LayerBox[];
   destroy(): void;
@@ -290,7 +294,8 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
       }
       for (const [k, v] of Object.entries(st.css ?? {})) le.style.setProperty(k, v);
       cam.appendChild(le);
-      const instance = PRIMITIVES[layer.use]!.build(le, layer.props, layer.params, ctx);
+      const frames = options.frames?.[`${spec.id}/${layer.id}`];
+      const instance = PRIMITIVES[layer.use]!.build(le, layer.props, layer.params, frames ? { ...ctx, frames } : ctx);
       return {
         spec: layer, el: le, instance, tracks: samplers(layer.source.tracks, tokens.ease_move, ui.ease),
         ease: { ...(layer.enter ? { enter: ctx.ease(layer.enter.ease) } : {}), ...(layer.exit ? { exit: ctx.ease(layer.exit.ease) } : {}) },
@@ -414,14 +419,20 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
   }
 
   const images = [...stage.querySelectorAll('img')];
+  const videos = [...stage.querySelectorAll('video')];
   const ready = Promise.all([
     doc.fonts.ready,
     ...images.map((img) => img.decode().catch(() => { throw new Error(`Image did not load: ${img.getAttribute('src')}`); })),
+    ...videos.map((v) => (v.readyState >= 2 ? Promise.resolve() : new Promise<void>((resolve, reject) => {
+      v.addEventListener('loadeddata', () => resolve(), { once: true });
+      v.addEventListener('error', () => reject(new Error(`Video did not load: ${v.getAttribute('src')}`)), { once: true });
+    }))),
   ]).then(() => undefined);
+  const settled = () => Promise.all(scenes.flatMap((s) => s.layers.map((l) => l.instance.pending?.()))).then(() => undefined);
 
   seek(0);
   return {
-    film, timeline, tokens, issues: res.issues, orphans, duration: timeline.duration, fps: timeline.fps, stage, ready, seek, audit,
+    film, timeline, tokens, issues: res.issues, orphans, duration: timeline.duration, fps: timeline.fps, stage, ready, seek, settled, audit,
     destroy() { observer?.disconnect(); stage.remove(); },
   };
 }
