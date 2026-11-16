@@ -28,6 +28,7 @@ uses:
 - transition/fly-past
 - fx/pin-drop
 - rig/layer-stack
+- scene/bento-grid
 avoids:
 - texture/halftone-field
 formats:

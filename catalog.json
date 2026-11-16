@@ -3034,6 +3034,186 @@
           "label": "Motion blur: share of a frame the scroll smears over"
         }
       }
+    },
+    {
+      "slug": "scene/bento-grid",
+      "summary": "Tiles of different sizes on one grid, each cycling its own content on its own clock.",
+      "props": {
+        "areas": {
+          "type": "string",
+          "required": true,
+          "label": "The grid as named areas, rows split by \"/\": \"a b c / d b e\". A name over several cells is one larger tile"
+        },
+        "items": {
+          "type": "string[]",
+          "required": true,
+          "label": "What the tiles show: markup or a picture path each. Dealt to tiles in turn, or by counts"
+        },
+        "counts": {
+          "type": "number[]",
+          "default": [],
+          "label": "How many items each tile cycles, in tile order (reading order of first appearance). 1 holds still"
+        },
+        "swaps": {
+          "type": "string[]",
+          "default": [],
+          "label": "Swap move per tile: slide-up, slide-left, flip, stack or fade. Left out, the swap param decides"
+        }
+      },
+      "params": {
+        "width": {
+          "type": "number",
+          "default": 92,
+          "min": 30,
+          "max": 100,
+          "step": 1,
+          "unit": "% of stage width",
+          "label": "Width of the grid; the margin is the same all round"
+        },
+        "gap": {
+          "type": "number",
+          "default": 14,
+          "min": 0,
+          "max": 60,
+          "step": 1,
+          "unit": "px",
+          "label": "Space between tiles (corners are ¾ of it, or --m-card-radius)"
+        },
+        "hold": {
+          "type": "number",
+          "default": 1.6,
+          "min": 0.4,
+          "max": 6,
+          "step": 0.05,
+          "unit": "s",
+          "label": "How long each item rests before its tile swaps again"
+        },
+        "swap": {
+          "type": "choice",
+          "default": "mixed",
+          "options": [
+            "mixed",
+            "slide-up",
+            "slide-left",
+            "flip",
+            "stack",
+            "fade"
+          ],
+          "label": "Swap move for tiles without their own: mixed gives neighbours different moves"
+        },
+        "swap_time": {
+          "type": "number",
+          "default": 0.7,
+          "min": 0.2,
+          "max": 2,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Length of one swap"
+        },
+        "offset": {
+          "type": "number",
+          "default": 0.3,
+          "min": 0,
+          "max": 2,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Phase between one tile’s swap and the next, in reading order"
+        },
+        "stagger": {
+          "type": "number",
+          "default": 0.06,
+          "min": 0,
+          "max": 0.2,
+          "step": 0.005,
+          "unit": "s",
+          "label": "Delay between tiles opening from the centre; 0: the grid is there from the first frame (for loops)"
+        }
+      }
+    },
+    {
+      "slug": "scene/post-carousel",
+      "summary": "Slides shown one at a time as a post or posters, turning past in depth.",
+      "props": {
+        "slides": {
+          "type": "string[]",
+          "required": true,
+          "label": "The slides, in order: markup or a picture path each"
+        },
+        "handle": {
+          "type": "string",
+          "default": "yourbrand",
+          "label": "Account name in the post header"
+        },
+        "avatar": {
+          "type": "string",
+          "default": "",
+          "label": "Picture for the avatar. Left out: the handle’s first letter on the accent"
+        }
+      },
+      "params": {
+        "width": {
+          "type": "number",
+          "default": 54,
+          "min": 20,
+          "max": 100,
+          "step": 1,
+          "unit": "% of stage width",
+          "label": "Width of a slide (made smaller if the post would not fit the stage height)"
+        },
+        "ratio": {
+          "type": "choice",
+          "default": "4:5",
+          "options": [
+            "4:5",
+            "1:1",
+            "9:16",
+            "3:4",
+            "16:9"
+          ],
+          "label": "Shape of a slide, width : height"
+        },
+        "chrome": {
+          "type": "choice",
+          "default": "post",
+          "options": [
+            "post",
+            "none"
+          ],
+          "label": "post: a header and footer frame the slides; none: bare posters"
+        },
+        "hold": {
+          "type": "number",
+          "default": 1.4,
+          "min": 0.4,
+          "max": 6,
+          "step": 0.05,
+          "unit": "s",
+          "label": "How long each slide rests in front"
+        },
+        "turn": {
+          "type": "number",
+          "default": 0.8,
+          "min": 0.3,
+          "max": 2,
+          "step": 0.05,
+          "unit": "s",
+          "label": "Length of one turn to the next slide"
+        },
+        "angle": {
+          "type": "number",
+          "default": 72,
+          "min": 0,
+          "max": 85,
+          "step": 1,
+          "unit": "deg",
+          "label": "How far the neighbours are turned away; 0 lays them flat beside the frame"
+        },
+        "loop": {
+          "type": "boolean",
+          "default": false,
+          "label": "Turn on from the last slide back to the first, so the film can loop"
+        }
+      }
     }
   ],
   "transitions": [

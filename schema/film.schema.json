@@ -372,7 +372,9 @@
                     "fx/pin-drop",
                     "scene/grid-wall",
                     "fx/slow-push",
-                    "ui/page-scroll"
+                    "ui/page-scroll",
+                    "scene/bento-grid",
+                    "scene/post-carousel"
                   ]
                 },
                 "props": {

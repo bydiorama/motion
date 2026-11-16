@@ -104,13 +104,21 @@ export function moveLayer(slug: string, id = 'move', text?: string): Layer | und
     case 'rig/browser-window': return { id, use: slug, props: { lift: [36, 54, 28, 38] }, params: { width: 90, move: 0.9 } };
     case 'fx/slow-push': return { id, use: slug, props: { src: PICTURE }, params: { width: 1040, height: 780, radius: 24, from: 1, to: 1.16, pan_x: -6, duration: 3 } };
     case 'ui/page-scroll': return { id, use: slug, props: { srcs: PAGE, stops: [45] }, params: { width: 1000, height: 820, radius: 24, duration: 2.6, rest: 0.5, delay: 0.3 } };
+    case 'scene/bento-grid': {
+      const word = (s: string) => `<b style="font:700 calc(var(--m-u) * 6)/1 var(--m-font-display);color:var(--m-text-primary)">${s}</b>`;
+      return { id, use: slug, props: {
+        areas: 'a b c / d b e', counts: [1, 2, 2, 2, 2],
+        items: [word('Atlas'), PICTURE, PAGE[1]!, word('01'), word('02'), PAGE[0]!, PICTURE, word('Go'), word('On')],
+      }, params: { width: 84, hold: 1.25, swap_time: 0.5, offset: 0.2, stagger: 0 } };
+    }
+    case 'scene/post-carousel': return { id, use: slug, props: { slides: [PICTURE, PAGE[1]!, PAGE[0]!], handle: 'atlas' }, params: { width: 30, hold: 0.8, turn: 0.6, loop: true } };
     case 'fx/pin-drop': return { id, use: slug, props: { points: [28, 70, 70, 55], labels: ['Found', 'Here'] }, params: { size: 28, stem: 220 } };
     default: return undefined;
   }
 }
 
 /** Moves that fill the stage and loop, so their thumbnails get a set length and no padding. */
-const FULL_STAGE = new Set(['scene/marquee-wall', 'texture/halftone-field', 'texture/gradient-drift', 'texture/grain', 'fx/grid-ripple', 'ui/cursor-click', 'texture/signal-field', 'fx/pin-drop']);
+const FULL_STAGE = new Set(['scene/marquee-wall', 'scene/bento-grid', 'texture/halftone-field', 'texture/gradient-drift', 'texture/grain', 'fx/grid-ripple', 'ui/cursor-click', 'texture/signal-field', 'fx/pin-drop']);
 
 const handover = (slug: string): number => { const d = TRANSITIONS[slug]?.duration; return typeof d === 'number' ? d : 0.8; };
 

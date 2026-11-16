@@ -12,6 +12,8 @@ import { staggerFill } from './fx/stagger-fill.ts';
 import { orbitRing } from './rig/orbit-ring.ts';
 import { marqueeWall } from './scene/marquee-wall.ts';
 import { gridWall } from './scene/grid-wall.ts';
+import { bentoGrid } from './scene/bento-grid.ts';
+import { postCarousel } from './scene/post-carousel.ts';
 import { halftoneField } from './texture/halftone-field.ts';
 import { beatCut } from './transition/beat-cut.ts';
 import { blurDissolve } from './transition/blur-dissolve.ts';
@@ -65,7 +67,7 @@ export const PRIMITIVES: Record<string, Primitive> = byslug([
   text, box, image, frames, video, html, slot, wordBuild, typedTitle, scramble, counterRoll, staggerFill, depthDrift, marqueeWall, orbitRing, halftoneField,
   maskReveal, charCascade, blockReveal, wordRoller, trackingIn, shimmer, echo, scribbleHighlight,
   odometer, pathDraw, shapeMorph, gridRipple, logoReveal, barChart, lineChart, gradientDrift, grain, cursorClick,
-  fillText, signalField, browserWindow, tabStack, layerStack, pinDrop, gridWall, slowPush, pageScroll,
+  fillText, signalField, browserWindow, tabStack, layerStack, pinDrop, gridWall, slowPush, pageScroll, bentoGrid, postCarousel,
 ]);
 
 export const TRANSITIONS: Record<string, TransitionPrimitive> = byslug([

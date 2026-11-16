@@ -17,7 +17,9 @@
         "fx/grid-ripple",
         "type/mask-reveal",
         "transition/cover-reveal",
-        "rig/layer-stack"
+        "rig/layer-stack",
+        "scene/bento-grid",
+        "scene/post-carousel"
       ],
       "avoids": [
         "texture/dither",
@@ -88,7 +90,8 @@
         "transition/signal-wipe",
         "transition/fly-past",
         "fx/pin-drop",
-        "rig/layer-stack"
+        "rig/layer-stack",
+        "scene/bento-grid"
       ],
       "avoids": [
         "texture/halftone-field"
@@ -148,7 +151,8 @@
         "transition/curtain",
         "transition/step-wipe",
         "transition/torn-edge",
-        "texture/grain"
+        "texture/grain",
+        "scene/post-carousel"
       ],
       "avoids": [
         "transition/blur-dissolve",
@@ -1094,6 +1098,11 @@
       "status": "specified"
     },
     {
+      "slug": "scene/bento-grid",
+      "summary": "Tiles of different sizes on one grid, each cycling its own content on its own clock.",
+      "status": "draft"
+    },
+    {
       "slug": "scene/end-card",
       "summary": "The logo alone.",
       "status": "specified"
@@ -1131,6 +1140,11 @@
     {
       "slug": "scene/mosaic",
       "summary": "Thousands of tiny tiles filling the frame.",
+      "status": "draft"
+    },
+    {
+      "slug": "scene/post-carousel",
+      "summary": "Slides shown one at a time as a post or posters, turning past in depth.",
       "status": "draft"
     },
     {
