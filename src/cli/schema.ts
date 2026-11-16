@@ -44,6 +44,11 @@ export function filmSchema(c: Catalog) {
             background: { anyOf: [{ enum: c.surfaces }, { type: 'string' }] }, scheme: { enum: ['light', 'dark'] },
             layout: { type: 'object', additionalProperties: false, properties: { align: { enum: ['start', 'center', 'end'] }, justify: { enum: ['start', 'center', 'end', 'between'] }, gap: { type: 'number' }, padding: { type: 'number' } } },
             tracks, uses: { type: 'array', items: { type: 'string' } }, intent: { type: 'string' },
+            follow: {
+              type: 'object', required: ['layer'], additionalProperties: false,
+              description: 'The camera follows the tip of a line as it draws.',
+              properties: { layer: { type: 'string' }, at: { type: 'array', items: { type: 'number', minimum: 0, maximum: 100 }, minItems: 2, maxItems: 2 }, lag: { type: 'number', minimum: 0 }, blend: { type: 'number', minimum: 0 } },
+            },
             out: { type: 'object', required: ['use'], additionalProperties: false, properties: { use: { enum: c.transitions.map((t) => t.slug) }, duration: seconds, params: { type: 'object' } } },
             layers: {
               type: 'array',
