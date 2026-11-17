@@ -2,8 +2,14 @@
   "name": "@bydiorama/motion",
   "version": "0.4.0",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "description": "Diorama motion library: films as data, written by agents, directed by people.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bydiorama/motion.git"
+  },
+  "homepage": "https://github.com/bydiorama/motion#readme",
+  "bugs": "https://github.com/bydiorama/motion/issues",
   "type": "module",
   "packageManager": "pnpm@10.30.3",
   "engines": {

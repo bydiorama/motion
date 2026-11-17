@@ -1,5 +1,8 @@
 # Motion Library
 
+[![validate](https://github.com/bydiorama/motion/actions/workflows/validate.yml/badge.svg)](https://github.com/bydiorama/motion/actions/workflows/validate.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 Our own vocabulary for making motion videos with code. It is the reference that the motion skills read.
 
 A video = **one narrative + one style + brand input**.
@@ -87,4 +90,6 @@ Entries describe **patterns, not sources**. No links, no brand names, no "seen i
 
 ## Licence
 
-No licence file is included yet, so the content is not licensed for reuse by others. Add one before making the repository public. The showcase and the studio bundle the DialKit stylesheet under its MIT licence (`showcase/vendor/DIALKIT-LICENSE`). The studio bundles the Aspekta typeface under the SIL Open Font License (`src/studio/theme/fonts/OFL.txt`).
+MIT, © 2026 Diorama (bydiorama). See [LICENSE](LICENSE).
+
+Two bundled files keep their own licences: the DialKit stylesheet (MIT, `showcase/vendor/DIALKIT-LICENSE`) and the Aspekta typeface (SIL Open Font License 1.1, `src/studio/theme/fonts/OFL.txt`). [CREDITS.md](CREDITS.md) lists everything this repository bundles or draws on.
