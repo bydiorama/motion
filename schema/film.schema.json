@@ -230,6 +230,45 @@
               }
             }
           },
+          "artboard": {
+            "type": "object",
+            "required": [
+              "width",
+              "height"
+            ],
+            "additionalProperties": false,
+            "description": "A design's frame for layers placed in px: they keep its coordinates and sizes, and it is scaled to the stage as one.",
+            "properties": {
+              "width": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 20000
+              },
+              "height": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 20000
+              },
+              "fit": {
+                "enum": [
+                  "cover",
+                  "contain",
+                  "width",
+                  "height"
+                ]
+              },
+              "align": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            }
+          },
           "tracks": {
             "type": "object",
             "additionalProperties": false,
@@ -568,6 +607,13 @@
                         "bottom",
                         "bottom-right"
                       ]
+                    },
+                    "unit": {
+                      "enum": [
+                        "%",
+                        "px"
+                      ],
+                      "description": "% of the stage (default), or px of the scene's artboard."
                     }
                   }
                 },
@@ -592,7 +638,9 @@
                         "wipe-left",
                         "wipe-right",
                         "swing",
-                        "slot-up"
+                        "slot-up",
+                        "wipe",
+                        "slide"
                       ]
                     },
                     {
@@ -621,7 +669,9 @@
                             "wipe-left",
                             "wipe-right",
                             "swing",
-                            "slot-up"
+                            "slot-up",
+                            "wipe",
+                            "slide"
                           ]
                         },
                         "duration": {
@@ -721,6 +771,10 @@
                         },
                         "amount": {
                           "type": "number"
+                        },
+                        "angle": {
+                          "type": "number",
+                          "description": "For wipe and slide: degrees, 0 rightwards, 90 downwards."
                         }
                       }
                     }
@@ -747,7 +801,9 @@
                         "wipe-left",
                         "wipe-right",
                         "swing",
-                        "slot-up"
+                        "slot-up",
+                        "wipe",
+                        "slide"
                       ]
                     },
                     {
@@ -776,7 +832,9 @@
                             "wipe-left",
                             "wipe-right",
                             "swing",
-                            "slot-up"
+                            "slot-up",
+                            "wipe",
+                            "slide"
                           ]
                         },
                         "duration": {
@@ -876,6 +934,10 @@
                         },
                         "amount": {
                           "type": "number"
+                        },
+                        "angle": {
+                          "type": "number",
+                          "description": "For wipe and slide: degrees, 0 rightwards, 90 downwards."
                         },
                         "at": {
                           "anyOf": [
@@ -979,6 +1041,42 @@
                       }
                     }
                   }
+                },
+                "parallax": {
+                  "description": "Depth against the camera: 1 travels with the scene, above 1 nearer and faster, 0 holds still. Or { depth, home }.",
+                  "anyOf": [
+                    {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 10
+                    },
+                    {
+                      "type": "object",
+                      "required": [
+                        "depth"
+                      ],
+                      "additionalProperties": false,
+                      "properties": {
+                        "depth": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 10
+                        },
+                        "home": {
+                          "anyOf": [
+                            {
+                              "type": "number",
+                              "minimum": 0
+                            },
+                            {
+                              "type": "string",
+                              "description": "e.g. \"headline.end + 0.2\", \"scene.end - 1\", \"title.end + 1b\" or, with a tempo, \"4b\""
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  ]
                 },
                 "motionBlur": {
                   "anyOf": [

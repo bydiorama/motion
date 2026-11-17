@@ -4,7 +4,7 @@ import { clamp, progress, resolveEase, type Bezier, type EaseSpec } from '../cor
 import { track } from '../core/track.ts';
 import { resolveFilm } from '../film/resolve.ts';
 import { applyTune } from '../film/tune.ts';
-import type { Film, Issue, ResolvedLayer, ResolvedMove, ResolvedScene, Timeline, Tracks, Tune } from '../film/types.ts';
+import type { Artboard, Film, Issue, ResolvedLayer, ResolvedMove, ResolvedScene, Timeline, Tracks, Tune } from '../film/types.ts';
 import { directionalBlur, streak } from '../primitives/blur.ts';
 import { PRIMITIVES, TRANSITIONS } from '../primitives/index.ts';
 import type { Ctx, FrameSequence, Instance } from '../primitives/types.ts';
@@ -63,10 +63,18 @@ export interface Mounted {
   destroy(): void;
 }
 
-interface LiveLayer { spec: ResolvedLayer; el: HTMLElement; instance: Instance; tracks: Sampler; ease: { enter?: (x: number) => number; exit?: (x: number) => number }; shutter: number }
-interface LiveScene { spec: ResolvedScene; el: HTMLElement; cam: HTMLElement; layers: LiveLayer[]; tracks: Sampler; handover: boolean; follow?: LiveFollow }
+interface LiveLayer {
+  spec: ResolvedLayer; el: HTMLElement; instance: Instance; tracks: Sampler; ease: { enter?: (x: number) => number; exit?: (x: number) => number }; shutter: number;
+  /** Stage px to one of the layer's own px: the artboard's scale for a layer placed on one, else 1. */
+  unit: number;
+}
+interface LiveScene {
+  spec: ResolvedScene; el: HTMLElement; cam: HTMLElement; layers: LiveLayer[]; tracks: Sampler; handover: boolean; follow?: LiveFollow;
+  /** The camera at each parallax home time, worked out once. */
+  homes: Map<number, Pose>;
+}
 /** A camera following a layer's tip: the layer, where its box sits in the camera's world, and the settings. */
-interface LiveFollow { layer: LiveLayer; origin: [number, number]; at: [number, number]; lag: number; blend: number }
+interface LiveFollow { layer: LiveLayer; origin: [number, number]; at: [number, number]; lag: number; blend: number; scale: number }
 type Sampler = Partial<Record<keyof Tracks, (t: number) => number>>;
 
 const SURFACE = new Set(['base', 'surface', 'sunken', 'accent', 'inverse']);
@@ -127,8 +135,22 @@ interface Pose {
   clip: [number, number, number, number];
   /** Px a slot move has carried the layer down (positive) or up (negative), clipped at its box. */
   slot?: number;
+  /** An angled wipe: its direction in degrees, the share of the box still covered, and whether it is leaving. */
+  cut?: { angle: number; hidden: number; leaving: boolean };
 }
 const rest = (): Pose => ({ x: 0, y: 0, scale: 1, rotate: 0, opacity: 1, blur: 0, rotateX: 0, rotateY: 0, skew: 0, yShare: 0, clip: [0, 0, 0, 0] });
+
+/**
+ * The side a wipe clips, as an index into Pose.clip (top, right, bottom, left). The edge
+ * travels in the named direction: wipe-right uncovers from the left edge rightwards, so on
+ * the way in the clip sits on the right and shrinks; on the way out it grows from the left.
+ */
+export function wipeSide(move: string, leaving: boolean): 0 | 1 | 2 | 3 {
+  const sides: Record<string, [0 | 1 | 2 | 3, 0 | 1 | 2 | 3]> = {
+    'wipe-up': [0, 2], 'wipe-down': [2, 0], 'wipe-left': [3, 1], 'wipe-right': [1, 3],
+  };
+  return sides[move]![leaving ? 1 : 0];
+}
 
 function applyMove(p: Pose, m: ResolvedMove, k: number, leaving: boolean) {
   // `gone` is how far from rest: 1 before an entrance starts and after an exit ends.
@@ -137,7 +159,8 @@ function applyMove(p: Pose, m: ResolvedMove, k: number, leaving: boolean) {
   const g = Math.max(0, Math.min(1, gone));
   const amount = m.amount ?? 0;
   const dir = leaving ? -1 : 1;
-  const fades = !m.move.startsWith('mask-') && !m.move.startsWith('wipe-') && m.move !== 'slot-up';
+  const fades = !m.move.startsWith('mask-') && !m.move.startsWith('wipe') && m.move !== 'slot-up';
+  const rad = ((m.angle ?? 0) * Math.PI) / 180, ux = Math.cos(rad), uy = Math.sin(rad);
   if (fades) p.opacity *= m.move === 'pop' || m.move === 'swing' ? 1 - Math.min(1, g * 2.5) : 1 - g;
   switch (m.move) {
     case 'rise': p.y += dir * gone * amount; break;
@@ -152,10 +175,18 @@ function applyMove(p: Pose, m: ResolvedMove, k: number, leaving: boolean) {
     case 'mask-up': p.yShare += gone * (leaving ? -1 : 1); break;
     case 'mask-down': p.yShare += gone * (leaving ? 1 : -1); break;
     // A wipe's edge travels in the named direction, uncovering or covering.
-    case 'wipe-up': p.clip[leaving ? 2 : 0] = Math.max(p.clip[leaving ? 2 : 0], g); break;
-    case 'wipe-down': p.clip[leaving ? 0 : 2] = Math.max(p.clip[leaving ? 0 : 2], g); break;
-    case 'wipe-left': p.clip[leaving ? 3 : 1] = Math.max(p.clip[leaving ? 3 : 1], g); break;
-    case 'wipe-right': p.clip[leaving ? 1 : 3] = Math.max(p.clip[leaving ? 1 : 3], g); break;
+    case 'wipe-up': case 'wipe-down': case 'wipe-left': case 'wipe-right': {
+      const side = wipeSide(m.move, leaving);
+      p.clip[side] = Math.max(p.clip[side], g);
+      break;
+    }
+    // Along any angle: the edge, and the layer by `amount`, travel that way, in and out.
+    case 'wipe': {
+      p.cut = { angle: m.angle ?? 0, hidden: g, leaving };
+      p.x -= dir * gone * amount * ux; p.y -= dir * gone * amount * uy;
+      break;
+    }
+    case 'slide': p.x -= dir * gone * amount * ux; p.y -= dir * gone * amount * uy; break;
     case 'swing': p.rotateX += dir * gone * amount; break;
     // Into its slot from below, out of it through the top: the box stays where it is.
     case 'slot-up': { const d = gone * amount * (leaving ? -1 : 1); p.y += d; p.slot = (p.slot ?? 0) + d; break; }
@@ -179,7 +210,8 @@ function writePose(el: HTMLElement, p: Pose, depth: number, smear = '') {
   el.style.transform = still ? '' : parts.join(' ');
   el.style.opacity = p.opacity >= 1 ? '' : String(Math.max(0, p.opacity));
   el.style.filter = [smear, p.blur > 0.01 ? `blur(${p.blur}px)` : ''].filter(Boolean).join(' ');
-  el.style.clipPath = clipFor(p);
+  // An angled wipe cuts in the layer's own px, so it needs the box's size (untransformed).
+  el.style.clipPath = clipFor(p, p.cut && p.cut.hidden > 0 ? [el.offsetWidth, el.offsetHeight] : undefined);
 }
 
 /**
@@ -189,10 +221,62 @@ function writePose(el: HTMLElement, p: Pose, depth: number, smear = '') {
  */
 const MASK_PAD = 'var(--m-mask-pad, 0.3em)';
 
-/** The clip-path for a pose's wipes and masks, or '' when nothing is clipped. */
-export function clipFor(p: Pick<Pose, 'clip' | 'yShare' | 'slot'>): string {
+/**
+ * The most a placed layer without its own width may run: on a still stage, the room its
+ * anchor leaves; on a canvas the camera travels, no limit, since a rule or a picture
+ * there is meant to run past the stage's edge.
+ */
+export const placedMaxWidth = (place: Parameters<typeof placedRoom>[0], canvas: boolean, stageWidth: number): string =>
+  canvas ? 'none' : `${(placedRoom(place) / 100) * stageWidth}px`;
+
+/** Where an artboard sits on the stage: its scale, and the stage px of its top-left corner. */
+export function artboardFit(stage: [number, number], board: Pick<Artboard, 'width' | 'height' | 'fit' | 'align'>): { scale: number; x: number; y: number } {
+  const [W, H] = stage, sw = W / board.width, sh = H / board.height;
+  const fit = board.fit ?? 'cover';
+  const scale = fit === 'contain' ? Math.min(sw, sh) : fit === 'width' ? sw : fit === 'height' ? sh : Math.max(sw, sh);
+  const [ax, ay] = board.align ?? [50, 50];
+  return { scale, x: ((W - board.width * scale) * ax) / 100 || 0, y: ((H - board.height * scale) * ay) / 100 || 0 };
+}
+
+/**
+ * What an angled wipe leaves showing of a w × h box, as a polygon in the box's px: the box,
+ * less any straight wipes (`inset`, shares of top, right, bottom, left), cut by a line square
+ * to `angle`. Entering, the line runs from the box's trailing corner to its leading one and
+ * shows what it has passed; leaving, it hides what it has passed. `hidden` is the share of
+ * the sweep still to come, or already gone.
+ */
+export function cutPolygon(w: number, h: number, inset: [number, number, number, number], cut: NonNullable<Pose['cut']>): [number, number][] {
+  const [t, r, b, l] = inset;
+  const rad = (cut.angle * Math.PI) / 180, ux = Math.cos(rad), uy = Math.sin(rad);
+  const s = (x: number, y: number) => x * ux + y * uy;
+  const proj = [s(0, 0), s(w, 0), s(w, h), s(0, h)];
+  const lo = Math.min(...proj), hi = Math.max(...proj);
+  const c = lo + (cut.leaving ? cut.hidden : 1 - cut.hidden) * (hi - lo);
+  // Signed distance past the line: kept where it is <= 0.
+  // Points within a hair of the line count as on it, so a corner on the line is kept once.
+  const side = (x: number, y: number) => { const d = cut.leaving ? c - s(x, y) : s(x, y) - c; return Math.abs(d) < 1e-6 ? 0 : d; };
+  const box: [number, number][] = [[l * w, t * h], [(1 - r) * w, t * h], [(1 - r) * w, (1 - b) * h], [l * w, (1 - b) * h]];
+  const out: [number, number][] = [];
+  for (let i = 0; i < box.length; i++) {
+    const a = box[i]!, z = box[(i + 1) % box.length]!, da = side(a[0], a[1]), dz = side(z[0], z[1]);
+    if (da <= 0) out.push(a);
+    if ((da < 0 && dz > 0) || (da > 0 && dz < 0)) {
+      const k = da / (da - dz);
+      out.push([a[0] + (z[0] - a[0]) * k, a[1] + (z[1] - a[1]) * k]);
+    }
+  }
+  // A corner or an edge alone shows nothing.
+  return out.length < 3 ? [] : out;
+}
+
+/** The clip-path for a pose's wipes and masks, or '' when nothing is clipped. `size` is the box, needed for an angled wipe. */
+export function clipFor(p: Pick<Pose, 'clip' | 'yShare' | 'slot' | 'cut'>, size?: [number, number]): string {
   const [t, r, b, l] = p.clip;
   const pct = (v: number) => `${(v * 100).toFixed(3)}%`;
+  if (p.cut && p.cut.hidden > 0 && size && Math.abs(p.yShare) < 1e-6) {
+    const pts = cutPolygon(size[0], size[1], p.clip, p.cut);
+    return pts.length < 3 ? 'polygon(0 0, 0 0, 0 0)' : `polygon(${pts.map(([x, y]) => `${x.toFixed(2)}px ${y.toFixed(2)}px`).join(', ')})`;
+  }
   const slot = p.slot ?? 0;
   if (Math.abs(p.yShare) < 1e-6 && Math.abs(slot) > 1e-3) {
     // A slot move: the layer has travelled `slot` px; what passed the box's edge is cut off.
@@ -309,6 +393,9 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
     stage.appendChild(el);
 
     // A scene whose camera moves is a canvas the camera travels over.
+    const frame = s.artboard ?? { width: W, height: H };
+    const fit = artboardFit([W, H], frame);
+    let board: HTMLElement | undefined;
     const canvas = !!s.follow || (['x', 'y', 'scale', 'rotate', 'rotateX', 'rotateY'] as const).some((k) => (s.tracks?.[k]?.length ?? 0) > 1);
     const layers: LiveLayer[] = spec.layers.map((layer) => {
       const le = doc.createElement('div');
@@ -320,12 +407,14 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
       if (st.font) le.style.fontFamily = `var(--m-font-${st.font})`;
       if (st.weight !== undefined) le.style.fontWeight = String(st.weight);
       if (st.align) le.style.textAlign = st.align;
-      if (st.width !== undefined) le.style.maxWidth = `${(st.width / 100) * W}px`;
       const place = layer.source.place;
+      const onBoard = place?.unit === 'px';
+      // style.width is a share of the stage, or on an artboard, of the artboard.
+      if (st.width !== undefined) le.style.maxWidth = `${(st.width / 100) * (onBoard ? frame.width : W)}px`;
       if (place) {
         le.style.position = 'absolute';
-        le.style.left = `${place.x}%`;
-        le.style.top = `${place.y}%`;
+        le.style.left = `${place.x}${onBoard ? 'px' : '%'}`;
+        le.style.top = `${place.y}${onBoard ? 'px' : '%'}`;
         le.style.translate = ANCHOR[place.anchor ?? 'center']!;
         // An absolute box shrinks to the room right of its `left`, so a centred
         // headline would wrap at half the stage. Size it to its content instead,
@@ -333,19 +422,30 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
         // Not on a canvas, though: where the scene's camera moves, layers lie beyond the
         // stage on purpose, and the stage's edge is no limit on how wide they are.
         le.style.width = 'max-content';
-        if (st.width === undefined && !canvas) le.style.maxWidth = `${(placedRoom(place) / 100) * W}px`;
+        // On an artboard the design sets the sizes, not the stage.
+        if (st.width === undefined) le.style.maxWidth = onBoard ? 'none' : placedMaxWidth(place, canvas, W);
       }
       for (const [k, v] of Object.entries(st.css ?? {})) le.style.setProperty(k, v);
-      cam.appendChild(le);
+      // Layers placed in px sit on the artboard. A run of them shares one; a layer on the
+      // stage in between starts a new one, so they stack in the order they are written.
+      if (onBoard) {
+        if (!board || cam.lastElementChild !== board) {
+          board = doc.createElement('div');
+          board.className = 'm-artboard';
+          board.style.cssText = `position:absolute;left:${fit.x}px;top:${fit.y}px;width:${frame.width}px;height:${frame.height}px;transform-origin:0 0;transform:scale(${fit.scale})`;
+          cam.appendChild(board);
+        }
+        board.appendChild(le);
+      } else cam.appendChild(le);
       const frames = options.frames?.[`${spec.id}/${layer.id}`];
       const instance = PRIMITIVES[layer.use]!.build(le, layer.props, layer.params, frames ? { ...ctx, frames } : ctx);
       return {
         spec: layer, el: le, instance, tracks: samplers(layer.source.tracks, tokens.ease_move, ui.ease),
         ease: { ...(layer.enter ? { enter: ctx.ease(layer.enter.ease) } : {}), ...(layer.exit ? { exit: ctx.ease(layer.exit.ease) } : {}) },
-        shutter: shutterOf(layer.source.motionBlur),
+        shutter: shutterOf(layer.source.motionBlur), unit: onBoard ? fit.scale : 1,
       };
     });
-    const live: LiveScene = { spec, el, cam, layers, tracks: samplers(s.tracks, tokens.ease_move, ui.ease), handover: false };
+    const live: LiveScene = { spec, el, cam, layers, tracks: samplers(s.tracks, tokens.ease_move, ui.ease), handover: false, homes: new Map() };
     const f = s.follow, target = f ? layers.find((l) => l.spec.id === f.layer) : undefined;
     if (f && target?.instance.tip) {
       // Where the layer's box sits in the camera's world, measured once while nothing is moved.
@@ -354,6 +454,8 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
       live.follow = {
         layer: target, origin: [(a.left - c.left) / k, (a.top - c.top) / k],
         at: [((f.at?.[0] ?? 50) / 100) * W, ((f.at?.[1] ?? 50) / 100) * H], lag: f.lag ?? 0, blend: f.blend ?? 0.6,
+        // A layer on an artboard draws its tip, and travels, in the design's pixels.
+        scale: target.spec.source.place?.unit === 'px' ? fit.scale : 1,
       };
     }
     return live;
@@ -386,9 +488,7 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
       if (!on) return;
       const local = t - spec.start;
 
-      const cam = rest();
-      sample(cam, scene.tracks, local);
-      if (scene.follow) follow(cam, scene.follow, local);
+      const cam = camAt(scene, local);
       writePose(scene.cam, cam, W * 1.2);
 
       for (const layer of scene.layers) {
@@ -398,12 +498,12 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
         layer.el.style.visibility = gone ? 'hidden' : 'inherit';
         if (gone) continue;
         layer.instance.seek(lt);
-        const pose = poseAt(layer, local);
+        const pose = poseAt(layer, local, scene, cam);
         // Motion blur: the layer's speed from the poses half a frame either side,
         // smeared along its path only, and gone the moment it stops.
         let smear = '';
         if (layer.shutter > 0) {
-          const h = 0.5 / timeline.fps, a = poseAt(layer, local - h), b = poseAt(layer, local + h);
+          const h = 0.5 / timeline.fps, a = poseAt(layer, local - h, scene), b = poseAt(layer, local + h, scene);
           smear = directionalBlur(layer.el, streak(b.x - a.x, layer.shutter), streak(b.y - a.y, layer.shutter));
         }
         writePose(layer.el, pose, W * 0.8, smear);
@@ -447,7 +547,7 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
     }
     // The layer's own travel (its enter move, its tracks) carries the tip with it.
     const own = poseAt(l, local);
-    const P: [number, number] = [f.origin[0] + p[0] + own.x, f.origin[1] + p[1] + own.y];
+    const P: [number, number] = [f.origin[0] + f.scale * (p[0] + own.x), f.origin[1] + f.scale * (p[1] + own.y)];
     const C: [number, number] = [W / 2, H / 2], r = (cam.rotate * Math.PI) / 180, s = cam.scale;
     const dx = P[0] - C[0], dy = P[1] - C[1];
     const tx = f.at[0] - C[0] - s * (Math.cos(r) * dx - Math.sin(r) * dy);
@@ -457,12 +557,33 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
     cam.y += (ty - cam.y) * w;
   }
 
-  /** Where a layer's enter, exit and tracks put it at `local` seconds into its scene. */
-  function poseAt(layer: LiveLayer, local: number): Pose {
+  /** The scene's camera at `local` seconds: its tracks, then the follow. */
+  function camAt(scene: LiveScene, local: number): Pose {
+    const cam = rest();
+    sample(cam, scene.tracks, local);
+    if (scene.follow) follow(cam, scene.follow, local);
+    return cam;
+  }
+
+  /**
+   * Where a layer's enter, exit and tracks put it at `local` seconds into its scene, and with
+   * the scene, its parallax: a layer at depth d moves d times the camera's travel since its
+   * home time, so inside the camera it moves (d − 1) times it, in its own px.
+   */
+  function poseAt(layer: LiveLayer, local: number, scene?: LiveScene, cam?: Pose): Pose {
     const l = layer.spec, pose = rest();
     if (l.enter && layer.ease.enter) applyMove(pose, l.enter, progress(local, l.enter.start, l.enter.duration, layer.ease.enter), false);
     if (l.exit && layer.ease.exit && local >= l.exit.start) applyMove(pose, l.exit, progress(local, l.exit.start, l.exit.duration, layer.ease.exit), true);
     sample(pose, layer.tracks, local - l.start);
+    const px = l.parallax;
+    if (scene && px && px.depth !== 1) {
+      const now = cam ?? camAt(scene, local);
+      let home = scene.homes.get(px.home);
+      if (!home) scene.homes.set(px.home, (home = camAt(scene, px.home)));
+      const k = (px.depth - 1) / (layer.unit * (now.scale || 1));
+      pose.x += k * (now.x - home.x);
+      pose.y += k * (now.y - home.y);
+    }
     return pose;
   }
 

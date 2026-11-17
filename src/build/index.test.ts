@@ -24,3 +24,11 @@ test('sequence chains layers end to start', () => {
   const s = sequence([layer('a', 'el/text'), layer('b', 'el/text'), layer('c', 'el/text')], 0.2);
   assert.deepEqual(s.map((l) => l.at), [0, 'a.end + 0.2', 'b.end + 0.2']);
 });
+
+test('staggerFrom reads layers placed in px against the artboard they sit on', () => {
+  const at = (x: number, y: number, id: string) => layer(id, 'el/box', { place: { x, y, unit: 'px' as const } });
+  const timed = staggerFrom([at(1800, 540, 'far'), at(100, 540, 'near')], { focus: [0, 50], step: 0.5, artboard: { width: 1920, height: 1080 } });
+  assert.equal(timed.find((l) => l.id === 'near')!.at, 0);
+  assert.ok(Number(timed.find((l) => l.id === 'far')!.at) > 0);
+  assert.throws(() => staggerFrom([at(1, 1, 'x')], { focus: [0, 0], step: 1 }), /artboard/);
+});

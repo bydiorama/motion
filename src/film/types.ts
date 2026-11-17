@@ -28,22 +28,31 @@ export type Tracks = Partial<Record<TrackProp, Key[]>>;
  *  swing: turns in on a horizontal hinge, in perspective.
  *  slot-up: rises `amount` px into its own box, cut off at the box's bottom edge, no
  *    fade: a picture settling into a slot that was already there.
+ *  wipe: like wipe-*, along any `angle`; it can also travel `amount` px that way as it is
+ *    uncovered, so a band unrolls along its own slant.
+ *  slide: like slide-*, along any `angle`.
  */
 export type MoveName =
   | 'fade' | 'rise' | 'drop' | 'scale' | 'blur' | 'slide-left' | 'slide-right'
-  | 'zoom' | 'pop' | 'focus' | 'mask-up' | 'mask-down' | 'wipe-up' | 'wipe-down' | 'wipe-left' | 'wipe-right' | 'swing' | 'slot-up';
+  | 'zoom' | 'pop' | 'focus' | 'mask-up' | 'mask-down' | 'wipe-up' | 'wipe-down' | 'wipe-left' | 'wipe-right' | 'swing' | 'slot-up'
+  | 'wipe' | 'slide';
 export const MOVE_NAMES: readonly MoveName[] = [
   'fade', 'rise', 'drop', 'scale', 'blur', 'slide-left', 'slide-right',
   'zoom', 'pop', 'focus', 'mask-up', 'mask-down', 'wipe-up', 'wipe-down', 'wipe-left', 'wipe-right', 'swing', 'slot-up',
+  'wipe', 'slide',
 ];
+/** Moves that take an `angle`. */
+export const ANGLED_MOVES: readonly MoveName[] = ['wipe', 'slide'];
 
 export interface Move {
   move: MoveName;
   /** Seconds, or a token such as `"$duration.base"`. */
   duration?: number | string;
   ease?: EaseSpec;
-  /** Travel in px for rise, drop, slide and focus; scale offset for scale, zoom and pop; px for blur; degrees for swing. Masks and wipes ignore it. */
+  /** Travel in px for rise, drop, slide and focus; scale offset for scale, zoom and pop; px for blur; degrees for swing; travel along the angle for wipe. Masks and wipe-* ignore it. */
   amount?: number;
+  /** For wipe and slide: the direction the edge or the layer travels, in degrees. 0 is rightwards, 90 downwards, 180 leftwards, 270 upwards. */
+  angle?: number;
 }
 export interface ExitMove extends Move {
   /** When the exit starts. Defaults to the scene end minus the exit duration. */
@@ -68,12 +77,44 @@ export interface LayerStyle {
 }
 
 export interface Place {
-  /** Percent of the stage, measured to the layer's anchor. */
+  /** Measured to the layer's anchor: percent of the stage, or with `unit: "px"` pixels of the scene's artboard. */
   x: number;
   y: number;
   anchor?: 'center' | 'top-left' | 'top' | 'top-right' | 'left' | 'right' | 'bottom-left' | 'bottom' | 'bottom-right';
+  /**
+   * `%` (the default): percent of the stage. `px`: pixels of the scene's artboard, the
+   * design the layer was taken from; the layer sits on the artboard and is scaled with it,
+   * so its size, tracks and move amounts are design pixels too. Without an artboard, px are
+   * the stage's own.
+   */
+  unit?: '%' | 'px';
 }
 export const ANCHORS = ['center', 'top-left', 'top', 'top-right', 'left', 'right', 'bottom-left', 'bottom', 'bottom-right'] as const;
+export const PLACE_UNITS = ['%', 'px'] as const;
+
+/**
+ * A design's own frame, laid on the stage: a 1920×1080 slide or a 4:5 post rebuilt from its
+ * layers. Layers placed in `px` keep the design's coordinates and sizes, and the artboard
+ * is scaled to the stage as one.
+ */
+export interface Artboard {
+  /** The design's size in its own pixels. */
+  width: number;
+  height: number;
+  /**
+   * How it meets the stage: `cover` fills it and lets the rest fall off (the default),
+   * `contain` shows all of it, `width` and `height` match that side.
+   */
+  fit?: 'cover' | 'contain' | 'width' | 'height';
+  /** Where it sits when it does not match the stage: percent along each side, [0, 0] top-left. Default [50, 50]. */
+  align?: [number, number];
+}
+export interface Parallax {
+  depth: number;
+  home?: TimeRef;
+}
+
+export const ARTBOARD_FITS = ['cover', 'contain', 'width', 'height'] as const;
 
 export interface Layer {
   id: string;
@@ -91,6 +132,14 @@ export interface Layer {
   exit?: MoveName | ExitMove;
   /** Keyframes in seconds from the layer start. */
   tracks?: Tracks;
+  /**
+   * Depth against the scene's camera, so layers of one picture travel at different speeds
+   * (parallax). 1 travels with the scene, above 1 is nearer and faster, below 1 farther and
+   * slower, 0 holds still on the stage. A number, or `{ depth, home }`, where `home` is the
+   * moment the layer sits exactly where it is placed (default: the scene's end, the frame
+   * the camera arrives at). It follows the camera's x and y travel.
+   */
+  parallax?: number | Parallax;
   /**
    * Motion blur while the layer moves: `true` for a half-frame shutter, or the
    * share of a frame the shutter is open (0–1). Smears along the path only and
@@ -142,6 +191,8 @@ export interface Scene {
   background?: Surface | string;
   scheme?: 'light' | 'dark';
   layout?: SceneLayout;
+  /** A design's frame for layers placed in `px`. */
+  artboard?: Artboard;
   layers: Layer[];
   /** Camera: keyframes in seconds from the scene start, applied to the whole scene. */
   tracks?: Tracks;
@@ -244,6 +295,8 @@ export interface ResolvedMove {
   duration: number;
   ease: EaseSpec;
   amount?: number;
+  /** Degrees, for wipe and slide. */
+  angle?: number;
 }
 
 export interface ResolvedLayer {
@@ -263,6 +316,8 @@ export interface ResolvedLayer {
   cues?: Cue[];
   /** Fastest travel of the layer's picture across the stage, px a second, when the primitive reports it. */
   speed?: number;
+  /** Depth against the camera, and the scene time it sits where it is placed. */
+  parallax?: { depth: number; home: number };
   source: Layer;
 }
 

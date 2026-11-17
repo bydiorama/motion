@@ -21,7 +21,7 @@ export function filmSchema(c: Catalog) {
   const move = (exit: boolean) => ({
     anyOf: [{ enum: c.moves }, {
       type: 'object', required: ['move'], additionalProperties: false,
-      properties: { move: { enum: c.moves }, duration: seconds, ease, amount: { type: 'number' }, ...(exit ? { at: timeRef } : {}) },
+      properties: { move: { enum: c.moves }, duration: seconds, ease, amount: { type: 'number' }, angle: { type: 'number', description: 'For wipe and slide: degrees, 0 rightwards, 90 downwards.' }, ...(exit ? { at: timeRef } : {}) },
     }],
   });
   return {
@@ -59,6 +59,11 @@ export function filmSchema(c: Catalog) {
             length: { anyOf: [{ type: 'number', exclusiveMinimum: 0 }, beats] }, hold: seconds,
             background: { anyOf: [{ enum: c.surfaces }, { type: 'string' }] }, scheme: { enum: ['light', 'dark'] },
             layout: { type: 'object', additionalProperties: false, properties: { align: { enum: ['start', 'center', 'end'] }, justify: { enum: ['start', 'center', 'end', 'between'] }, gap: { type: 'number' }, padding: { type: 'number' } } },
+            artboard: {
+              type: 'object', required: ['width', 'height'], additionalProperties: false,
+              description: "A design's frame for layers placed in px: they keep its coordinates and sizes, and it is scaled to the stage as one.",
+              properties: { width: { type: 'number', minimum: 1, maximum: 20000 }, height: { type: 'number', minimum: 1, maximum: 20000 }, fit: { enum: ['cover', 'contain', 'width', 'height'] }, align: { type: 'array', items: { type: 'number', minimum: 0, maximum: 100 }, minItems: 2, maxItems: 2 } },
+            },
             tracks, uses: { type: 'array', items: { type: 'string' } }, intent: { type: 'string' },
             follow: {
               type: 'object', required: ['layer'], additionalProperties: false,
@@ -78,8 +83,12 @@ export function filmSchema(c: Catalog) {
                     type: 'object', additionalProperties: false,
                     properties: { size: { enum: c.sizes }, color: { enum: c.colors }, font: { enum: ['display', 'body', 'mono'] }, weight: { type: 'number' }, align: { enum: ['left', 'center', 'right'] }, width: { type: 'number', exclusiveMinimum: 0, maximum: 100 }, css: { type: 'object', additionalProperties: { type: 'string' } } },
                   },
-                  place: { type: 'object', required: ['x', 'y'], additionalProperties: false, properties: { x: { type: 'number' }, y: { type: 'number' }, anchor: { enum: c.anchors } } },
+                  place: { type: 'object', required: ['x', 'y'], additionalProperties: false, properties: { x: { type: 'number' }, y: { type: 'number' }, anchor: { enum: c.anchors }, unit: { enum: ['%', 'px'], description: '% of the stage (default), or px of the scene\'s artboard.' } } },
                   enter: move(false), exit: move(true), tracks,
+                  parallax: {
+                    description: 'Depth against the camera: 1 travels with the scene, above 1 nearer and faster, 0 holds still. Or { depth, home }.',
+                    anyOf: [{ type: 'number', minimum: 0, maximum: 10 }, { type: 'object', required: ['depth'], additionalProperties: false, properties: { depth: { type: 'number', minimum: 0, maximum: 10 }, home: timeRef } }],
+                  },
                   motionBlur: { anyOf: [{ type: 'boolean' }, { type: 'number', minimum: 0, maximum: 1 }] },
                 },
               },

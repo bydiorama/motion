@@ -9,7 +9,7 @@ import type { Key } from '../core/track.ts';
 import { isTokenRef, mergeTokens, readToken, tokenPaths, type Tokens } from '../tokens.ts';
 import { beatsToSeconds, framesPerBeat, isBeats, wholeFrameTempos, type Tempo } from './tempo.ts';
 import {
-  ANCHORS, MOVE_NAMES, SURFACES, TEXT_SIZES, TONES, TRACK_PROPS,
+  ANCHORS, ANGLED_MOVES, ARTBOARD_FITS, PLACE_UNITS, MOVE_NAMES, SURFACES, TEXT_SIZES, TONES, TRACK_PROPS,
   type ExitMove, type Film, type Issue, type Layer, type Move, type MoveName, type ResolvedLayer,
   type ResolvedMove, type ResolvedScene, type Scene, type TimeRef, type Timeline, type Tracks, type FilmAudio,
 } from './types.ts';
@@ -45,15 +45,16 @@ const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v =
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
 const FILM_KEYS = ['$schema', 'motion', 'title', 'size', 'fps', 'seed', 'poster', 'loop', 'narrative', 'style', 'tokens', 'tempo', 'audio', 'theme', 'scenes'];
-const SCENE_KEYS = ['id', 'length', 'hold', 'background', 'scheme', 'layout', 'layers', 'tracks', 'follow', 'out', 'uses', 'intent'];
+const SCENE_KEYS = ['id', 'length', 'hold', 'background', 'scheme', 'layout', 'artboard', 'layers', 'tracks', 'follow', 'out', 'uses', 'intent'];
 /** Primitives whose instance has a tip a camera can follow. */
 export const FOLLOWABLE = ['fx/path-draw'];
-const LAYER_KEYS = ['id', 'use', 'props', 'params', 'at', 'style', 'place', 'enter', 'exit', 'tracks', 'motionBlur'];
+const LAYER_KEYS = ['id', 'use', 'props', 'params', 'at', 'style', 'place', 'enter', 'exit', 'tracks', 'motionBlur', 'parallax'];
 const STYLE_KEYS = ['size', 'color', 'font', 'weight', 'align', 'width', 'css'];
 
 const MOVE_AMOUNT: Record<MoveName, number> = {
   fade: 0, rise: 40, drop: 40, scale: 0.08, blur: 16, 'slide-left': 120, 'slide-right': 120,
   zoom: 0.12, pop: 0.5, focus: 24, 'mask-up': 0, 'mask-down': 0, 'wipe-up': 0, 'wipe-down': 0, 'wipe-left': 0, 'wipe-right': 0, swing: 70, 'slot-up': 48,
+  wipe: 0, slide: 120,
 };
 /** Moves that read best with their own curve when the film does not give one. */
 const MOVE_EASE: Partial<Record<MoveName, { enter: EaseSpec; exit: EaseSpec }>> = {
@@ -65,6 +66,7 @@ const MOVE_EASE: Partial<Record<MoveName, { enter: EaseSpec; exit: EaseSpec }>> 
   'wipe-down': { enter: 'quart.inOut', exit: 'quart.inOut' },
   'wipe-left': { enter: 'quart.inOut', exit: 'quart.inOut' },
   'wipe-right': { enter: 'quart.inOut', exit: 'quart.inOut' },
+  wipe: { enter: 'quart.inOut', exit: 'quart.inOut' },
   swing: { enter: { spring: { duration: 0.6, bounce: 0.2 } }, exit: 'cubic.in' },
 };
 
@@ -305,6 +307,20 @@ export function resolveFilm(input: unknown): Resolution {
       if (!isObject(scene.layout)) err(`${sp}.layout`, 'bad-layout', 'layout is { align, justify, gap, padding }.');
       else unknownKeys(scene.layout as Record<string, unknown>, ['align', 'justify', 'gap', 'padding'], `${sp}.layout`);
     }
+    if (scene.artboard !== undefined) {
+      const ab = scene.artboard, ap = `${sp}.artboard`;
+      if (!isObject(ab)) err(ap, 'bad-artboard', 'artboard is { width, height } in the design\'s pixels, with an optional fit and align.');
+      else {
+        unknownKeys(ab as unknown as Record<string, unknown>, ['width', 'height', 'fit', 'align'], ap);
+        for (const k of ['width', 'height'] as const) {
+          if (!isNum(ab[k]) || ab[k] < 1 || ab[k] > 20000) err(`${ap}.${k}`, 'bad-value', `${k} is the design's ${k} in its own pixels, 1 to 20000.`);
+        }
+        if (ab.fit !== undefined && !(ARTBOARD_FITS as readonly string[]).includes(ab.fit)) err(`${ap}.fit`, 'bad-value', `fit is one of: ${oneOf(ARTBOARD_FITS)}.`);
+        if (ab.align !== undefined && !(Array.isArray(ab.align) && ab.align.length === 2 && ab.align.every((v) => isNum(v) && v >= 0 && v <= 100))) {
+          err(`${ap}.align`, 'bad-value', 'align is [x, y], each 0 to 100: where the artboard sits along each side of the stage.');
+        }
+      }
+    }
     const sceneTracks = checkTracks(scene.tracks, `${sp}.tracks`);
     if (!Array.isArray(scene.layers)) { err(`${sp}.layers`, 'no-layers', 'A scene has a list of layers. It may be empty.'); return; }
 
@@ -369,8 +385,12 @@ export function resolveFilm(input: unknown): Resolution {
       }
       if (layer.place !== undefined) {
         const pl = layer.place;
-        if (!isObject(pl) || !isNum(pl.x) || !isNum(pl.y)) err(`${lp}.place`, 'bad-place', 'place is { x, y } in percent of the stage, with an optional anchor.');
-        else if (pl.anchor !== undefined && !(ANCHORS as readonly string[]).includes(pl.anchor)) err(`${lp}.place.anchor`, 'bad-value', `anchor is one of: ${oneOf(ANCHORS)}.`);
+        if (!isObject(pl) || !isNum(pl.x) || !isNum(pl.y)) err(`${lp}.place`, 'bad-place', 'place is { x, y } in percent of the stage (or artboard pixels with unit "px"), with an optional anchor.');
+        else {
+          unknownKeys(pl as unknown as Record<string, unknown>, ['x', 'y', 'anchor', 'unit'], `${lp}.place`);
+          if (pl.anchor !== undefined && !(ANCHORS as readonly string[]).includes(pl.anchor)) err(`${lp}.place.anchor`, 'bad-value', `anchor is one of: ${oneOf(ANCHORS)}.`);
+          if (pl.unit !== undefined && !(PLACE_UNITS as readonly string[]).includes(pl.unit)) err(`${lp}.place.unit`, 'bad-value', `unit is "%" (of the stage) or "px" (of the scene's artboard).`);
+        }
       }
       const tracks = checkTracks(layer.tracks, `${lp}.tracks`);
       if (layer.motionBlur !== undefined && typeof layer.motionBlur !== 'boolean' && !(isNum(layer.motionBlur) && layer.motionBlur >= 0 && layer.motionBlur <= 1)) {
@@ -401,13 +421,18 @@ export function resolveFilm(input: unknown): Resolution {
         err(path, 'unknown-move', `A move is one of: ${oneOf(MOVE_NAMES)}.`, near ? `Did you mean "${near}"?` : undefined);
         return undefined;
       }
-      unknownKeys(m as unknown as Record<string, unknown>, exit ? ['move', 'duration', 'ease', 'amount', 'at'] : ['move', 'duration', 'ease', 'amount'], path);
+      unknownKeys(m as unknown as Record<string, unknown>, exit ? ['move', 'duration', 'ease', 'amount', 'angle', 'at'] : ['move', 'duration', 'ease', 'amount', 'angle'], path);
+      const angled = ANGLED_MOVES.includes(m.move);
+      if (m.angle !== undefined) {
+        if (!isNum(m.angle)) err(`${path}.angle`, 'bad-value', 'angle is degrees: 0 rightwards, 90 downwards, 180 leftwards, 270 upwards.');
+        else if (!angled) warn(`${path}.angle`, 'unused', `${m.move} has a fixed direction, so angle is ignored.`, `Use "wipe" or "slide" to travel at an angle.`);
+      }
       const duration = m.duration === undefined ? (exit ? tokens.duration.fast : tokens.duration.base) : seconds(m.duration, `${path}.duration`, 'duration');
       const own = MOVE_EASE[m.move];
       const ease = m.ease === undefined ? (own ? own[exit ? 'exit' : 'enter'] : exit ? tokens.ease_exit : tokens.ease_enter) : checkEase(m.ease, `${path}.ease`);
       if (m.amount !== undefined && !isNum(m.amount)) err(`${path}.amount`, 'bad-value', 'amount is a number.');
       if (duration === undefined || ease === undefined) return undefined;
-      return { move: m.move, duration, ease, amount: isNum(m.amount) ? m.amount : MOVE_AMOUNT[m.move] };
+      return { move: m.move, duration, ease, amount: isNum(m.amount) ? m.amount : MOVE_AMOUNT[m.move], ...(angled ? { angle: isNum(m.angle) ? m.angle : 0 } : {}) };
     };
     const enters = new Map<string, Omit<ResolvedMove, 'start'>>();
     for (const [id, d] of drafts) {
@@ -481,6 +506,7 @@ export function resolveFilm(input: unknown): Resolution {
     const length = sceneLength;
 
     const layers: ResolvedLayer[] = [];
+    const cameraMoves = !!scene.follow || (['x', 'y'] as const).some((k) => (scene.tracks?.[k]?.length ?? 0) > 1);
     const cycling: { path: string; id: string; start: number; cues: Cue[] }[] = [];
     for (const [id, d] of drafts) {
       if (d.start === undefined) continue;
@@ -511,9 +537,23 @@ export function resolveFilm(input: unknown): Resolution {
           else if (exit.start < end - 1e-6) warn(`${d.path}.exit`, 'exit-early', `Layer "${id}" starts leaving at ${exit.start.toFixed(2)} s while it is still arriving (until ${end.toFixed(2)} s).`);
         }
       }
+      let parallax: ResolvedLayer['parallax'];
+      if (d.layer.parallax !== undefined) {
+        const pp = `${d.path}.parallax`, raw = d.layer.parallax;
+        const spec = isNum(raw) ? { depth: raw } : raw;
+        if (!isObject(spec) || !isNum(spec.depth) || spec.depth < 0 || spec.depth > 10) {
+          err(pp, 'bad-value', 'parallax is a depth from 0 to 10 (1 travels with the scene, above 1 is nearer), or { depth, home }.');
+        } else {
+          unknownKeys(spec as unknown as Record<string, unknown>, ['depth', 'home'], pp);
+          const home = spec.home === undefined ? length : timeRef(spec.home, `${pp}.home`, undefined);
+          if (home !== undefined) parallax = { depth: spec.depth, home: Math.min(home, length) };
+          if (!cameraMoves) warn(pp, 'unused', `Scene "${sid}"'s camera does not travel, so parallax has nothing to follow.`, 'Give the scene x or y tracks, or a follow.');
+          if (scene.follow && isObject(scene.follow) && scene.follow.layer === id) err(pp, 'bad-follow', `The camera follows "${id}", so it cannot also travel against the camera.`);
+        }
+      }
       layers.push({
         id, use: d.layer.use, start: d.start, duration: d.duration, end, props: d.props, params: d.params, ...(d.cues ? { cues: d.cues } : {}), ...(d.speed !== undefined ? { speed: d.speed } : {}),
-        ...(enter ? { enter: { ...enter, start: d.start } } : {}), ...(exit ? { exit } : {}), source: d.layer,
+        ...(enter ? { enter: { ...enter, start: d.start } } : {}), ...(exit ? { exit } : {}), ...(parallax ? { parallax } : {}), source: d.layer,
       });
     }
 

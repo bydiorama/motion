@@ -16,6 +16,7 @@ import type { Film, Layer, Place, Scene } from '../film/types.ts';
 import { VERSION } from '../version.ts';
 
 export { iso, type IsoFace, type Vec3 } from './iso.ts';
+export { sceneFromDesign, kindOf, readingOrder, type Design, type DesignLayer, type DesignKind, type DesignOptions } from './design.ts';
 
 type Without<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 
@@ -49,13 +50,21 @@ export function grid(count: number, columns: number, area: { x?: [number, number
 /**
  * Times placed layers so the nearest to `focus` (in % of the stage) start first,
  * `step` seconds apart, from `start`. Layers at the same distance start together.
- * Layers without `place` keep their own `at`.
+ * Layers without `place` keep their own `at`. For layers placed in px on an artboard,
+ * pass the `artboard`: positions and `focus` are then read as % of it.
  */
-export function staggerFrom<T extends Layer>(layers: T[], opts: { focus: [number, number]; step: number; start?: number; aspect?: number }): T[] {
-  // Distances are measured on the stage, so % across counts for more on a wide frame.
-  const aspect = opts.aspect ?? 16 / 9;
+export function staggerFrom<T extends Layer>(layers: T[], opts: { focus: [number, number]; step: number; start?: number; aspect?: number; artboard?: { width: number; height: number } }): T[] {
+  // Distances are measured on the frame, so % across counts for more on a wide one.
+  const ab = opts.artboard;
+  const aspect = opts.aspect ?? (ab ? ab.width / ab.height : 16 / 9);
   const placed = layers.filter((l) => l.place);
-  const steps = staggerByDistance(placed.map((l) => [l.place!.x * aspect, l.place!.y] as const), [opts.focus[0] * aspect, opts.focus[1]], 0.01);
+  const pos = (l: T): [number, number] => {
+    const p = l.place!;
+    if (p.unit !== 'px') return [p.x, p.y];
+    if (!ab) throw new Error(`staggerFrom: layer "${l.id}" is placed in px; pass the scene's artboard.`);
+    return [(p.x / ab.width) * 100, (p.y / ab.height) * 100];
+  };
+  const steps = staggerByDistance(placed.map((l) => { const [x, y] = pos(l); return [x * aspect, y] as const; }), [opts.focus[0] * aspect, opts.focus[1]], 0.01);
   const at = new Map(placed.map((l, i) => [l, round((opts.start ?? 0) + steps[i]! * opts.step, 4)]));
   return layers.map((l) => (at.has(l) ? { ...l, at: at.get(l)! } : l));
 }

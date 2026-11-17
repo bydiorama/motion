@@ -178,3 +178,40 @@ test('theme.ui names one of the bundled bydiorama/ui themes', async () => {
   const bad = resolveFilm(film(one, { theme: { ui: 'neon' } })).issues;
   assert.deepEqual(bad.map((i) => `${i.code}:${i.path}`), ['bad-value:theme.ui']);
 });
+
+test('an artboard takes a design size, a fit and an alignment; px placement is checked', () => {
+  const sc = (extra: object, place: object = { x: 103, y: 327, anchor: 'top-left', unit: 'px' }) =>
+    codes(film([{ id: 'a', length: 2, ...extra, layers: [{ id: 'b', use: 'el/box', place }] }]));
+  assert.deepEqual(sc({ artboard: { width: 1920, height: 1080, fit: 'height', align: [0, 50] } }), []);
+  assert.ok(sc({ artboard: { width: 0, height: 1080 } }).includes('error:bad-value'));
+  assert.ok(sc({ artboard: { width: 1920, height: 1080, fit: 'stretch' } }).includes('error:bad-value'));
+  assert.ok(sc({ artboard: { width: 1920, height: 1080, align: [50] } }).includes('error:bad-value'));
+  assert.ok(sc({ artboard: { width: 1920, height: 1080, scale: 2 } }).some((c) => c.endsWith('unknown-key')));
+  assert.ok(sc({}, { x: 1, y: 1, unit: 'em' }).includes('error:bad-value'));
+  // px without an artboard are the stage's own: allowed.
+  assert.deepEqual(sc({}), []);
+});
+
+test('parallax takes a depth, or a depth and a home time; it needs a camera that travels', () => {
+  const moving = { tracks: { x: [[0, 0], [2, -400]] } };
+  const sc = (parallax: unknown, extra: object = moving) =>
+    codes(film([{ id: 'a', length: 2, ...extra, layers: [{ id: 'b', use: 'el/box', parallax }] }]));
+  assert.deepEqual(sc(1.3), []);
+  assert.deepEqual(sc({ depth: 0.5, home: 0 }), []);
+  assert.ok(sc(-1).includes('error:bad-value'));
+  assert.ok(sc({ depth: 2, at: 1 }).some((c) => c.endsWith('unknown-key')));
+  assert.ok(sc(1.3, {}).includes('warning:unused'));
+  // Home defaults to the scene's end: the frame the camera arrives at.
+  const r = resolveFilm(film([{ id: 'a', length: 2, ...moving, layers: [{ id: 'b', use: 'el/box', parallax: 1.5 }] }]));
+  assert.deepEqual(r.timeline?.scenes[0]?.layers[0]?.parallax, { depth: 1.5, home: 2 });
+});
+
+test('wipe and slide travel at any angle; other moves keep their own direction', () => {
+  const enter = (e: unknown) => resolveFilm(film([{ id: 'a', length: 2, layers: [{ id: 'b', use: 'el/box', enter: e }] }]));
+  const w = enter({ move: 'wipe', angle: 30, amount: 80 });
+  assert.equal(w.issues.length, 0);
+  assert.deepEqual([w.timeline?.scenes[0]?.layers[0]?.enter?.angle, w.timeline?.scenes[0]?.layers[0]?.enter?.amount], [30, 80]);
+  assert.equal(enter('slide').timeline?.scenes[0]?.layers[0]?.enter?.angle, 0);
+  assert.deepEqual(enter({ move: 'rise', angle: 30 }).issues.map((i) => `${i.level}:${i.code}`), ['warning:unused']);
+  assert.ok(enter({ move: 'wipe', angle: 'up' }).issues.some((i) => i.code === 'bad-value'));
+});
