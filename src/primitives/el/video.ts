@@ -40,6 +40,8 @@ export const video: Primitive = {
     radius: { type: 'number', default: 0, min: 0, max: 400, step: 1, unit: 'px', label: 'Corner radius' },
   },
   // Without an end the footage plays for as long as the scene: the scene's length or hold sets it.
+  // Footage and ambient drift are not moves: the pace check skips them.
+  cues: () => [],
   duration: (props, p) => {
     const from = num(props.from), to = num(props.to);
     return p.loop === true || !(to > from) ? 0 : (to - from) / num(p.rate, 1);

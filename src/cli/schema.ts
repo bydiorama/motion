@@ -4,8 +4,9 @@
 import type { Catalog } from '../catalog.ts';
 
 export function filmSchema(c: Catalog) {
-  const seconds = { anyOf: [{ type: 'number', minimum: 0 }, { type: 'string', pattern: '^\\$' }] };
-  const timeRef = { anyOf: [{ type: 'number', minimum: 0 }, { type: 'string', description: 'e.g. "headline.end + 0.2" or "scene.end - 1"' }] };
+  const beats = { type: 'string', pattern: '^\\s*\\d+(\\.\\d+)?\\s*(b|beats?|bars?)\\s*$', description: 'Beats or bars at the film tempo, e.g. "2b" or "1bar"' };
+  const seconds = { anyOf: [{ type: 'number', minimum: 0 }, { type: 'string', pattern: '^\\$' }, beats] };
+  const timeRef = { anyOf: [{ type: 'number', minimum: 0 }, { type: 'string', description: 'e.g. "headline.end + 0.2", "scene.end - 1", "title.end + 1b" or, with a tempo, "4b"' }] };
   const ease = {
     anyOf: [
       { enum: c.eases }, { type: 'string', pattern: '^\\$' },
@@ -15,7 +16,7 @@ export function filmSchema(c: Catalog) {
   };
   const tracks = {
     type: 'object', additionalProperties: false,
-    properties: Object.fromEntries(c.tracks.map((p) => [p, { type: 'array', items: { type: 'array', minItems: 2, maxItems: 3 } }])),
+    properties: Object.fromEntries(c.tracks.map((p) => [p, { type: 'array', items: { type: 'array', minItems: 2, maxItems: 3, description: '[time, value] or [time, value, ease]; time in seconds or beats ("2b")' } }])),
   };
   const move = (exit: boolean) => ({
     anyOf: [{ enum: c.moves }, {
@@ -33,6 +34,11 @@ export function filmSchema(c: Catalog) {
       size: { type: 'array', items: { type: 'integer', minimum: 1 }, minItems: 2, maxItems: 2 },
       fps: { type: 'integer', minimum: 1 }, seed: { type: 'integer' }, poster: { type: 'number', minimum: 0 }, loop: { type: 'boolean' },
       narrative: { type: 'string' }, style: { type: 'string' }, tokens: { type: 'object' },
+      tempo: {
+        type: 'object', required: ['bpm'], additionalProperties: false,
+        description: 'One pulse for the whole film: times may then be written in beats and bars, and `motion pace` checks the grid.',
+        properties: { bpm: { type: 'number', minimum: 40, maximum: 240 }, bar: { type: 'integer', minimum: 2, maximum: 12 } },
+      },
       theme: { type: 'object', additionalProperties: false, properties: { scheme: { enum: ['light', 'dark'] }, accent: { type: 'string' }, onAccent: { type: 'string' }, ui: { enum: ['zero', 'graphite', 'hockney'] }, vars: { type: 'object', additionalProperties: { type: 'string' } } } },
       scenes: {
         type: 'array', minItems: 1,
@@ -40,7 +46,7 @@ export function filmSchema(c: Catalog) {
           type: 'object', required: ['id', 'layers'], additionalProperties: false,
           properties: {
             id: { type: 'string', pattern: '^[a-z][a-z0-9-]*$' },
-            length: { type: 'number', exclusiveMinimum: 0 }, hold: seconds,
+            length: { anyOf: [{ type: 'number', exclusiveMinimum: 0 }, beats] }, hold: seconds,
             background: { anyOf: [{ enum: c.surfaces }, { type: 'string' }] }, scheme: { enum: ['light', 'dark'] },
             layout: { type: 'object', additionalProperties: false, properties: { align: { enum: ['start', 'center', 'end'] }, justify: { enum: ['start', 'center', 'end', 'between'] }, gap: { type: 'number' }, padding: { type: 'number' } } },
             tracks, uses: { type: 'array', items: { type: 'string' } }, intent: { type: 'string' },

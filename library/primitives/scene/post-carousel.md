@@ -54,7 +54,7 @@ since: 0.5.0
 
 A set of slides presented one at a time: the pages of a social carousel post, or a series of posters. The slides stand side by side in one world. The one in front faces the camera; its neighbours stand beside it, turned away and hinged on the edge nearest the frame, so they read as narrow strips that promise more. Each step the whole row turns: the front slide swings out to one side as the next swings in from the other, and the one after takes its place as the new strip.
 
-With `chrome: post`, a post's header (avatar and account name) and footer (actions, and dots that follow the slide in front) stay fixed above and below while the slides turn between them. With `chrome: none`, the slides are bare posters with rounded corners.
+With `chrome: post`, a post's header (avatar and account name) and footer (actions, and dots that follow the slide in front) stay fixed above and below while the slides turn between them. With `chrome: none`, the slides are bare posters with rounded corners and a soft shadow; a stage that sets `--m-card-radius` and `--m-card-shadow` (an identity with square corners and no depth) gives them its own. With `angle: 0` the neighbours lie flat beside the frame and the row slides like a swiped carousel.
 
 Pictures drift slowly inside their slide from the moment they start to arrive until they have gone.
 
@@ -65,4 +65,4 @@ Pictures drift slowly inside their slide from the moment they start to arrive un
 - Neighbours turn 60–80° away: wide enough to show they are there, narrow enough not to compete.
 - The frame of the post holds still; only the slides move. Nothing else on stage moves during a turn.
 - For a loop, set `loop` and give three slides or more: the first waits beside the last and the film ends where it began.
-- On a 4:5 or 9:16 stage the post takes about half the width, so both neighbours stay inside the frame.
+- On a 4:5 or 9:16 stage the post takes about half the width, so both neighbours stay inside the frame. Full width and flat (`angle: 0`), the posts slide along the frame one after another: line up anything ruled in the posts with the stage's own rules.

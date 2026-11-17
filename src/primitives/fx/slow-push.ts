@@ -30,6 +30,8 @@ export const slowPush: Primitive = {
     duration: { type: 'number', default: 4, min: 0.5, max: 30, step: 0.1, unit: 's', label: 'Length of the move' },
     ease: { type: 'ease', default: 'linear', label: 'Curve of the move; linear reads as drift' },
   },
+  // Footage and ambient drift are not moves: the pace check skips them.
+  cues: () => [],
   duration: (_props, p) => num(p.duration, 4),
   build(el, props, p, ctx) {
     const img = el.ownerDocument.createElement('img');

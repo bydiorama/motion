@@ -40,7 +40,39 @@ Write a spring as `{ "spring": { "duration": d, "bounce": b } }`. The runtime le
 
 Tie bounce to impact: a harder hit wobbles more and faster.
 
-## 2. Duration
+## 2. Rhythm
+
+A film feels designed when it keeps one pulse: like moves take like time, rests are even, and the seams between sections are short against the sections. It feels generated when a swap takes 0.6 s here and 1 s there, a picture rests 1.2 s in one scene and 3 s in the next, or a transition lasts as long as what it joins. `motion pace` measures all of this; the numbers below are what it checks.
+
+**Tempo.**
+
+- **Set one tempo and count in beats.** `"tempo": {"bpm": 120}`, then every time is beats or bars (`"2b"`, `"1bar"`). A beat is 60 / bpm seconds. Change the bpm and the whole film retimes in proportion.
+- **A beat is a whole number of frames**: fps × 60 / bpm is an integer. At 60 fps: 100, 120, 144, 150 bpm; at 30: 100, 120, 150; at 25: 100, 125, 150.
+- **Choose the tempo by feel, or by the music.** Calm and editorial: 80–100. Most identity and product films: 110–130. Social and energetic: 130–150. Faster than about 160, changes come every 0.4 s and nothing reads. A film cut to a genre takes its range: jazz runs from ballads (60–80) through medium swing (120–150) to bebop (over 200).
+- **Bars and phrases.** 4 beats a bar, 4 bars a phrase. Scene changes land on the first beat of a bar, and a section lasts whole bars cut to cut. Smaller moves land on the beat or the half-beat, and last whole half-beats. At 120 bpm: a beat 0.5 s, a bar 2 s, a phrase 8 s; a 16 s loop is 8 bars.
+
+**Like moves take like time.**
+
+- **One length per kind of move**, whatever primitive draws it: every hand-over one length, every picture change (swap, shift, turn) one length, every rest one length. Lengths of one kind differ by at most a third.
+- **A ladder in beats.** Hand-over 1 beat (2 for a featured turn of the story, once or twice a film). Picture change 1–2 beats. Rest between changes 2–4 beats, never under 1 s. Opening and closing holds 1–2 beats each, 0.8–1.2 s across the loop seam.
+- **Even density.** The rate of change (changes per second) stays within 2× from scene to scene. A wall of tiles swaps one tile at a time, in turn, while the others rest; several tiles at once in one scene, then one picture every three seconds in the next, reads as a lurch.
+- **Vary on purpose only**, at a phrase boundary: an accelerando into a reveal, halving each time (8 → 4 → 2 → 1 beats) and then holding at least 8; a longer hold, 1.5–2×, on the end card.
+
+**Seams, not sections.**
+
+- **A hand-over is at most a quarter of the shorter scene it joins** (a third is the ceiling). A 0.5 s dissolve between two 2 s pictures already feels enormous.
+- **Each scene has time alone**, with no hand-over on screen, at least twice its longest hand-over. Two loud transitions either side of a short scene leave nothing of the scene.
+- **Inside a scene of changing pictures, a hand-over is at most half of one picture's time** (rest + change). The eye counts pictures, not scenes: a 1.1 s sweep beside 1.2 s rests is felt as one more picture.
+- **The cut sits in the middle of the hand-over.** Half of it belongs to each scene, so a scene's length cut to cut runs from the middle of one hand-over to the middle of the next.
+
+**Held, not moving.**
+
+- **About a third of a film is in motion**, two thirds held or drifting. Over 60% in motion, nothing reads; under 20%, it waits. A wall of tiles on their own clocks counts as its busiest tile.
+- **A picture needs time.** Its gist registers in a tenth of a second, but it is remembered after 1–2 s: rest a full-frame picture at least 1 s plus 0.3 s per thing to see in it; a poster or key visual in a social cut 1.5–2 s; the end card 2.5–3 s.
+
+**Story before rhythm.** Rhythm serves the story, not the other way round. Each scene answers one question and leads to the next by "therefore" or "but", never "and then". An identity film goes from the system (the device, then its colours and type) to its applications, from small to large, into the world, and back to the mark. A series of posts or posters is shown in one format per section (one after another, a feed, a carousel, a grid that builds), never mixed within a phrase.
+
+## 3. Duration
 
 The video scale is longer than an interface's, because nobody is waiting on it.
 
@@ -57,9 +89,9 @@ The video scale is longer than an interface's, because nobody is waiting on it.
 
 - **Exits take 60–75% of their entrance**, and an exit is never the entrance played backwards.
 - **Text holds still** for at least the longer of 1.2 s and 0.3 s per word + 1 s.
-- **Beats.** Product films cut every 1.5–4 s. A word or image swap holds about 0.7 s and moves about 0.4 s. A fast index list steps every 0.5 s.
+- **Beats.** Product films cut every 1.5–4 s. A word or image swap holds about 0.7 s and moves about 0.4 s. A fast index list steps every 0.5 s. On a tempo, round each to the nearest half-beat (see Rhythm).
 
-## 3. Stagger and order
+## 4. Stagger and order
 
 - **Forward order in, backward order out.**
 - **Set the spread, not the gap**, when the count can change: a whole grid of any size grows in within about 1 s.
@@ -67,7 +99,7 @@ The video scale is longer than an interface's, because nobody is waiting on it.
 - **Random order is seeded.** Same film, same frames.
 - Words 80–150 ms apart, lines 60–120 ms, letters 15–60 ms, tiles 20–100 ms.
 
-## 4. Text
+## 5. Text
 
 - **Masks over fades.** Text is uncovered: it rises through its own edge (`type/mask-reveal`, `mask-up`), a block passes over it (`type/block-reveal`), or a clip opens on it (`wipe-*`). A plain fade is for supporting text only.
 - **Reveal by line or word.** Per-letter motion only for display words of 12 characters or fewer (`type/char-cascade`, `type/echo`).
@@ -79,7 +111,7 @@ The video scale is longer than an interface's, because nobody is waiting on it.
 - **A headline over a montage arrives whole.** Reveal all its lines in one move, then let the pictures cut on beneath it. Landing one line per cut makes the sentence wait for the edit and reads as slow; the cuts are the rhythm, the headline is what holds still.
 - **Mark after landing.** Underlines, circles and highlights draw after the line has settled (`type/scribble-highlight`).
 
-## 5. Composition
+## 6. Composition
 
 - **A film has an anchor, and the best anchor is the world itself.** Keep one place the eye returns to: a floor that never moves, a slot where the subject will stand, marked from the first frame and filled later. One continuous drawing on one fixed view (no cuts, the camera still) anchors better than chrome repeated over cut scenes; a crosshair, an orbit and four corner labels around every frame read as decoration, and were rejected in review. Keep the corners to the headline and the mark.
 - **One hero move per scene.** Everything else enters quietly or holds.
@@ -90,7 +122,7 @@ The video scale is longer than an interface's, because nobody is waiting on it.
 - **Show a page whole before it becomes an object.** A site reads as a site when it nearly fills the frame and scrolls (`ui/page-scroll`): one or two rests on whole sections, 0.6–0.9 s each, a hold on the last one, and long legs slower than you think: a scroll that covers several screens wants about 2 s. Only then pull back to the wall, the device or the perspective.
 - **A wall keeps moving.** Once a grid of cards is open, neighbouring columns drift in opposite directions, 60–90 px over the hold, and the wall stays on screen for at least 1.5 s after the last card has landed.
 
-## 6. Depth and camera
+## 7. Depth and camera
 
 What makes 3D look shot rather than assembled.
 
@@ -107,7 +139,7 @@ What makes 3D look shot rather than assembled.
 - **Shared rhythm.** A family of pulses (ripples, glows) shares one phase, so they are the same size at every instant.
 - **Open from black.** A dark film fades in its first texture over 0.6–0.8 s before anything settles; the type starts with it.
 
-## 7. Transitions
+## 8. Transitions
 
 | Transition | Length | When |
 | --- | --- | --- |
@@ -124,13 +156,14 @@ What makes 3D look shot rather than assembled.
 | `transition/whip-pan` | 0.4–0.6 s | Between siblings of equal weight; at most twice a film. |
 | `transition/signal-wipe` | 0.4–0.7 s | A cut drawn by accent light; for dark films. |
 | `transition/fly-past` | 0.8–1.4 s | Out of a scene made of panels or tiles, to what lies beneath. |
+| `transition/band-sweep` | 0.6–1.1 s | Turns of the story in an identity film; bands in the identity's own colours. One or two beats, within half a picture's time. |
 
 - **Content stays still while the edge moves** in a wipe, so it reads as a cut, not a slide.
 - **Swap only while covered.** A cover or curtain changes the scene while the frame is fully covered.
 - **Anticipation before speed.** A whip or a throw pulls back 3–5° for about 0.15 s first.
 - **Changes between logo states are hard cuts**, not crossfades.
 
-## 8. Logo reveals
+## 9. Logo reveals
 
 Pick one pattern for a film and repeat it, short, at the end.
 
@@ -147,14 +180,14 @@ Pick one pattern for a film and repeat it, short, at the end.
 - **Beat pulse.** The mark scales on the beat, once.
 - **Glint.** A band of light passes over the finished mark (`type/shimmer` on the name).
 
-## 9. End cards
+## 10. End cards
 
 - The logo is settled by 1.0–1.5 s into the card and holds for at least 1.5 s.
 - In 16:9 the lockup is 25–35% of the frame width.
 - Three elements at most: mark, name, one line (a call to action, a date or a URL).
 - The poster frame is the end card at rest.
 
-## 10. Data
+## 11. Data
 
 - **Stage it:** axes, then data, then labels, then the one annotation that carries the point. Each stage 0.6–1.0 s.
 - **A counter uses the same curve as its bars**, so they land together.
@@ -162,9 +195,11 @@ Pick one pattern for a film and repeat it, short, at the end.
 - **One highlight.** One bar or point in the accent; the rest muted.
 - Never more than one number moving at a time.
 
-## 11. Loops
+## 12. Loops
 
 - The last frame equals the first. Rotate roles or slots so the state after one period matches the start.
 - Duplicate lists and wrap them, rather than resetting.
 - Desynchronise a family of moves by phase offsets, not by fresh randomness.
-- Loop lengths are whole multiples of the beat.
+- Loop lengths are whole bars at the film's tempo.
+- **Close on the ground you opened on.** An identity loop can start and end on the system's bare device (a ruled grid, a field, a mark) with one small element resting on it. Let that element leave by being covered and come back by landing, so the seam falls on a held frame.
+- **Breathe on the seam, briefly.** The rest at the seam is the end hold plus the opening hold: 0.8–1.2 s in all. Longer reads as a stall when the loop repeats.

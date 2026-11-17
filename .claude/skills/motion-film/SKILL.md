@@ -19,13 +19,14 @@ library.json             styles and narratives: the beats a story needs, what a 
 Follow it in order. Each step is cheap; skipping one costs a round with the person.
 
 1. **Read the brief, then the catalog.** If there is no brief, ask for the four things one needs: what it is about, the one thing to remember, the length, the format. Or point the person at `node bin/motion.mjs wizard`. Read `catalog.json` before writing a single layer: it is the only list of what can be drawn.
-2. **Plan scenes from beats.** One scene per beat is a good start. Merge beats under 1.5 s. Write each scene's `intent` in one line before its layers.
-3. **Write the film.** See the rules below, `reference/film.md` for the shape, and `docs/CRAFT.md` for the numbers that make motion look designed: eases, durations, reveal patterns, end cards and safe areas.
+2. **Plan the story, then the rhythm.** One scene per story beat; each answers one question and leads to the next by "therefore" or "but", never "and then". Write each scene's `intent` in one line before its layers. Then set a `tempo` (music's bpm if there is music; else 100–144) and write the plan in bars before any layer: how many bars each scene lasts cut to cut, one hand-over length for the film (usually one beat), one change length (one or two beats), one rest (two to four beats). Merge scenes shorter than two bars. See `docs/CRAFT.md`, "Rhythm".
+3. **Write the film in beats.** Every time is `"2b"`, `"1bar"`, `"title.end + 1b"`, so the film stays on the grid and a new bpm retimes all of it. See the rules below, `reference/film.md` for the shape, and `docs/CRAFT.md` for the numbers that make motion look designed: eases, durations, reveal patterns, end cards and safe areas.
 4. **Validate until clean.** `node bin/motion.mjs validate films/<name>.film.json`. Fix exactly what each error says; the hint names the fix and "did you mean" names the slug. Warnings about params out of range are real: bring them back in range unless the brief asks otherwise.
-5. **Look.** `node bin/motion.mjs stills films/<name>.film.json` writes key frames and `sheet.png` to `films/out/<name>/stills/`. Open the sheet. Check: text collides, leaves the frame, is too long to read, or the accent appears more than once per scene.
-6. **Check.** `node bin/motion.mjs check films/<name>.film.json` must report frames that repeat exactly and nothing off stage. For loops it also reports the seam: fix a `loop-seam` warning. If no Chromium is installed, add `--browser <path to Chrome or Brave>`.
-7. **Hand over.** Tell the person to run `node bin/motion.mjs preview films/<name>.film.json` (studio at http://127.0.0.1:4321). Say what you would like them to judge.
-8. **Answer notes.** When they come back: `node bin/motion.mjs notes films/<name>.film.json`. Each note has a time, a scene and text. Change the film to answer it, validate again, and say per note what you did. Do not mark notes done; the person does.
+5. **Pace.** `node bin/motion.mjs pace films/<name>.film.json` prints each scene's time alone (free of hand-overs), the lengths of hand-overs, changes and rests, the share in motion, and a chart of the film beat by beat. Fix every rhythm warning before looking at frames: a hand-over that outweighs its scene, moves of one kind with different lengths, a scene far busier than the next, cuts off the bar. They are what makes a film feel fast, then slow.
+6. **Look.** `node bin/motion.mjs stills films/<name>.film.json` writes key frames and `sheet.png` to `films/out/<name>/stills/`. Open the sheet. Check: text collides, leaves the frame, is too long to read, or the accent appears more than once per scene.
+7. **Check.** `node bin/motion.mjs check films/<name>.film.json` must report frames that repeat exactly and nothing off stage. For loops it also reports the seam: fix a `loop-seam` warning. If no Chromium is installed, add `--browser <path to Chrome or Brave>`.
+8. **Hand over.** Tell the person to run `node bin/motion.mjs preview films/<name>.film.json` (studio at http://127.0.0.1:4321). Say what you would like them to judge.
+9. **Answer notes.** When they come back: `node bin/motion.mjs notes films/<name>.film.json`. Each note has a time, a scene and text. Change the film to answer it, validate again, and say per note what you did. Do not mark notes done; the person does.
 
 Render only when asked: `node bin/motion.mjs render films/<name>.film.json` (needs ffmpeg).
 
@@ -34,7 +35,9 @@ Render only when asked: `node bin/motion.mjs render films/<name>.film.json` (nee
 - **Only drawable moves.** `use` must be a slug in `catalog.json`. Library entries that are not in the catalog cannot be drawn: build the effect from drawable ones and `el/*`, or tell the person which move you would need.
 - **Props are content, params are motion.** Words, numbers and items go in `props`. Anything with a range goes in `params`, inside its range.
 - **Times are relative when they depend on something.** `"at": "title.end + 0.2"` survives the person retiming the title; `"at": 1.3` does not. Times snap to whole frames.
-- **Timing comes from tokens.** Put the brief's tokens in `tokens` and write `"$duration.base"`, not `0.5`. A person tunes the whole film's feel by changing one token.
+- **Timing comes from the tempo and tokens.** With a tempo, write beats (`"1b"`), not `0.5`. Without one, write `"$duration.base"`. A person tunes the whole film's feel by changing one value.
+- **Like moves take like time.** Every hand-over in a film is one length; every picture change, swap or turn is one length; every rest between changes is one length. Vary only on purpose: an accelerando into a reveal (8 → 4 → 2 beats), a longer hold on the end card.
+- **A hand-over is a seam, not a section.** It takes at most a quarter of the shorter scene and half of one picture's time; one beat is usual. A loud transition (a colour sweep, a camera travel) once or twice a film, at turns of the story.
 - **Ids are stable.** Lowercase with dashes, never renamed without reason: the person's overrides and notes point at them. If you must rename, say so, because their overrides on the old id become orphans.
 - **Text must be readable twice** in the time it stays. One line of on-screen text per idea. The message gets at least 1.5 s of stillness.
 - **One accent per scene.** The accent colour marks the one thing that matters in that frame.
@@ -53,7 +56,7 @@ Render only when asked: `node bin/motion.mjs render films/<name>.film.json` (nee
 
 - Never write `*.tune.json`. It is the person's. Read it; answer it in the film.
 - Never bake (`motion bake`) unless the person asks. Baking writes their tuning into your film and empties their file.
-- Never claim a film is done without a clean `validate` and `check`, and a look at the stills.
+- Never claim a film is done without a clean `validate`, `pace` and `check`, and a look at the stills.
 - Never invent a primitive, prop, param or ease. If the catalog lacks it, say so.
 
 ## When the person pasted a brief into a chat with no tools

@@ -39,6 +39,8 @@ export const frames: Primitive = {
     width: { type: 'number', default: 640, min: 1, max: 4000, step: 1, unit: 'px', label: 'Width' },
     radius: { type: 'number', default: 0, min: 0, max: 400, step: 1, unit: 'px', label: 'Corner radius' },
   },
+  // Footage and ambient drift are not moves: the pace check skips them.
+  cues: () => [],
   duration: (_props, params) => {
     const p = read(params);
     return p.delay + (Math.abs(p.last - p.first) + 1) / p.fps / p.rate;

@@ -5,8 +5,13 @@
 import type { EaseSpec } from '../core/ease.ts';
 import type { Key } from '../core/track.ts';
 import type { TokenOverrides } from '../tokens.ts';
+import type { Tempo } from './tempo.ts';
+import type { Cue } from '../primitives/types.ts';
 
-/** Seconds from the scene start, or `"<layer id>.start|end"` / `"scene.end"`, optionally `± seconds`. */
+/**
+ * Seconds from the scene start, or `"<layer id>.start|end"` / `"scene.end"`, optionally
+ * `± seconds` or `± beats` (`"title.end + 1b"`). With a tempo, `"4b"` alone is a time too.
+ */
 export type TimeRef = number | string;
 
 export type TrackProp = 'x' | 'y' | 'scale' | 'rotate' | 'opacity' | 'blur' | 'rotateX' | 'rotateY' | 'skew';
@@ -127,8 +132,8 @@ export interface Follow {
 
 export interface Scene {
   id: string;
-  /** Seconds. Left out, the scene lasts until its last layer ends, plus `hold`. */
-  length?: number;
+  /** Seconds, or beats (`"8b"`, `"2bars"`). Left out, the scene lasts until its last layer ends, plus `hold`. */
+  length?: number | string;
   /** Seconds of stillness after the last layer ends, or a token such as `"$hold_end"`. Defaults to the `hold` token. */
   hold?: number | string;
   /** A surface name, or any CSS colour. */
@@ -181,6 +186,11 @@ export interface Film {
   narrative?: string;
   style?: string;
   tokens?: TokenOverrides;
+  /**
+   * One pulse for the whole film. With it, times can be written in beats and bars
+   * ("2b", "1bar") and `motion pace` checks cuts and changes against the grid.
+   */
+  tempo?: { bpm: number; bar?: number };
   theme?: Theme;
   scenes: Scene[];
 }
@@ -229,6 +239,8 @@ export interface ResolvedLayer {
   params: Record<string, unknown>;
   enter?: ResolvedMove;
   exit?: ResolvedMove;
+  /** Changes inside the primitive's own run (a picture swap, a turn), from the layer start. */
+  cues?: Cue[];
   source: Layer;
 }
 
@@ -259,4 +271,6 @@ export interface Timeline {
   frames: number;
   size: [number, number];
   scenes: ResolvedScene[];
+  tempo?: Tempo;
+  loop?: boolean;
 }

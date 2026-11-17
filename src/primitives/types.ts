@@ -91,6 +91,18 @@ export interface Instance {
   tip?(t: number): [number, number] | undefined;
 }
 
+/**
+ * A change inside a primitive's own run: a picture swap, a slide turning, a strip
+ * shift. Seconds from the layer start. The pace check reads these to see whether a
+ * film's changes share one length and land on its beat.
+ */
+export interface Cue {
+  at: number;
+  length: number;
+  /** Which part changes (a tile, a row), when several change on their own clocks. Rests are measured per lane. */
+  lane?: number;
+}
+
 /** A problem a primitive finds in its own props and params, beyond their types and ranges. */
 export interface PrimitiveIssue {
   /** Relative to the layer, e.g. `props.to`. */
@@ -108,6 +120,12 @@ export interface Primitive {
   /** Optional checks that need more than one value at a time. Pure, like duration. */
   check?(props: Record<string, unknown>, params: Record<string, unknown>, ctx: PureCtx): PrimitiveIssue[];
   build(el: HTMLElement, props: Record<string, unknown>, params: Record<string, unknown>, ctx: Ctx): Instance;
+  /**
+   * Optional, pure: the changes inside the run, for primitives that hold and change
+   * on their own clock. Return [] for ambient motion (drift, grain, marquees) that
+   * never reads as a move. Left out, the whole run counts as one move.
+   */
+  cues?(props: Record<string, unknown>, params: Record<string, unknown>, ctx: PureCtx): Cue[];
 }
 
 export interface TransitionPrimitive {
