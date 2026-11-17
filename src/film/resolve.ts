@@ -288,7 +288,7 @@ export function resolveFilm(input: unknown): Resolution {
     if (!Array.isArray(scene.layers)) { err(`${sp}.layers`, 'no-layers', 'A scene has a list of layers. It may be empty.'); return; }
 
     // ---- layers: content and params -------------------------------------------
-    interface Draft { layer: Layer; path: string; duration: number; params: Record<string, unknown>; props: Record<string, unknown>; cues?: Cue[]; start?: number }
+    interface Draft { layer: Layer; path: string; duration: number; params: Record<string, unknown>; props: Record<string, unknown>; cues?: Cue[]; cycles?: boolean; start?: number }
     const drafts = new Map<string, Draft>();
     scene.layers.forEach((layer: Layer, li) => {
       const lid = isObject(layer) && typeof layer.id === 'string' ? layer.id : String(li);
@@ -366,7 +366,7 @@ export function resolveFilm(input: unknown): Resolution {
       try { cues = prim.cues?.(props, params, ctx); } catch { /* as above */ }
       // The resolved layer carries its tracks in seconds, so the page never sees a beat.
       const source = tracks ? { ...layer, tracks } : layer;
-      drafts.set(layer.id, { layer: source, path: lp, duration: Number.isFinite(duration) ? duration : 0, params, props, ...(cues ? { cues } : {}) });
+      drafts.set(layer.id, { layer: source, path: lp, duration: Number.isFinite(duration) ? duration : 0, params, props, ...(cues ? { cues } : {}), ...(prim.cycles ? { cycles: true } : {}) });
     });
 
     // ---- moves ----------------------------------------------------------------
@@ -458,6 +458,7 @@ export function resolveFilm(input: unknown): Resolution {
     const length = sceneLength;
 
     const layers: ResolvedLayer[] = [];
+    const cycling: { path: string; id: string; start: number; cues: Cue[] }[] = [];
     for (const [id, d] of drafts) {
       if (d.start === undefined) continue;
       const end = d.start + lengthOf(id);
@@ -469,7 +470,10 @@ export function resolveFilm(input: unknown): Resolution {
         `Times snap to whole frames at ${fps} fps, so the last frame a layer can start on is ${last.toFixed(3)} s. Start it earlier or make the scene longer.`);
         continue;
       }
-      if (end > length + 1e-6) {
+      // A layer that cycles may end on any rest; whether a change is cut is checked
+      // against the hand-over, below, once it is known.
+      if (d.cycles && d.cues) cycling.push({ path: d.path, id, start: d.start, cues: d.cues });
+      else if (end > length + 1e-6) {
         warn(d.path, 'cut-off', `Layer "${id}" finishes at ${end.toFixed(2)} s, ${(end - length).toFixed(2)} s after scene "${sid}" ends.`,
           scene.length !== undefined ? `Raise the scene length to at least ${end.toFixed(2)}, or start the layer earlier.` : 'Start the layer earlier.');
       }
@@ -536,6 +540,15 @@ export function resolveFilm(input: unknown): Resolution {
         if (si === film.scenes.length - 1) warn(op, 'unused', 'The last scene has nothing to hand over to, so "out" is ignored.');
         else if (duration >= length) err(`${op}.duration`, 'too-long', `The hand-over (${duration.toFixed(2)} s) is not shorter than scene "${sid}" (${length.toFixed(2)} s).`);
         else out = { use: t.slug, duration, params };
+      }
+    }
+    // A cycling layer is last seen at the cut: the middle of the hand-over out, or the scene's end.
+    const cutAt = length - (out ? out.duration / 2 : 0);
+    for (const c of cycling) {
+      const cut = c.cues.find((q) => c.start + q.at < cutAt - 1e-6 && c.start + q.at + q.length > cutAt + 1e-6);
+      if (cut) {
+        warn(c.path, 'cut-mid-change', `Scene "${sid}" is last seen at ${cutAt.toFixed(2)} s, in the middle of a change of layer "${c.id}" (${(c.start + cut.at).toFixed(2)}–${(c.start + cut.at + cut.length).toFixed(2)} s).`,
+          'End the scene on a rest: after the change, or before it begins.');
       }
     }
     scenes.push({ id: sid, start: 0, length, end: length, layers, ...(out ? { out } : {}), source: sceneTracks ? { ...scene, tracks: sceneTracks } : scene });

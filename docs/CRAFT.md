@@ -55,7 +55,7 @@ A film feels designed when it keeps one pulse: like moves take like time, rests 
 
 - **One length per kind of move**, whatever primitive draws it: every hand-over one length, every picture change (swap, shift, turn) one length, every rest one length. Lengths of one kind differ by at most a third.
 - **A ladder in beats.** Hand-over 1 beat (2 for a featured turn of the story, once or twice a film). Picture change 1–2 beats. Rest between changes 2–4 beats, never under 1 s. Opening and closing holds 1–2 beats each, 0.8–1.2 s across the loop seam.
-- **Even density.** The rate of change (changes per second) stays within 2× from scene to scene. A wall of tiles swaps one tile at a time, in turn, while the others rest; several tiles at once in one scene, then one picture every three seconds in the next, reads as a lurch.
+- **Even density.** How much of the frame changes a second stays within 2× from scene to scene. A change counts by its share of the frame: a whole picture counts one, a tile a fifth of the frame counts a fifth. A wall of tiles swaps one tile at a time, in turn, while the others rest; several tiles at once in one scene, then one picture every three seconds in the next, reads as a lurch.
 - **Vary on purpose only**, at a phrase boundary: an accelerando into a reveal, halving each time (8 → 4 → 2 → 1 beats) and then holding at least 8; a longer hold, 1.5–2×, on the end card.
 
 **Seams, not sections.**

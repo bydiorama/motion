@@ -101,6 +101,8 @@ export interface Cue {
   length: number;
   /** Which part changes (a tile, a row), when several change on their own clocks. Rests are measured per lane. */
   lane?: number;
+  /** Share of the frame that changes, 0–1: a tile a quarter of the frame is 0.25. Left out, the whole frame. */
+  share?: number;
 }
 
 /** A problem a primitive finds in its own props and params, beyond their types and ranges. */
@@ -126,6 +128,12 @@ export interface Primitive {
    * never reads as a move. Left out, the whole run counts as one move.
    */
   cues?(props: Record<string, unknown>, params: Record<string, unknown>, ctx: PureCtx): Cue[];
+  /**
+   * The layer runs in rounds with no natural end (a living wall): its duration is
+   * one full round, and a scene may end it on any rest between changes. A scene
+   * that ends it in the middle of a change is still reported.
+   */
+  cycles?: boolean;
 }
 
 export interface TransitionPrimitive {

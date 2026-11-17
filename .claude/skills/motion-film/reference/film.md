@@ -88,6 +88,7 @@ Every issue has `code`, `path`, `message` and usually `hint`. `motion validate -
 | `never-in-view` | In a scene with a moving camera, the camera never reaches the layer | Move the layer onto the camera's path, or the camera to it |
 | `loop-seam` | The last frame does not lead into the first | End moves where the film began; for footage use `continues` |
 | `cut-off` | The scene ends before the layer finishes | Lengthen the scene or shorten the layer |
+| `cut-mid-change` | A layer that cycles (a bento wall) is ended in the middle of a change; ending it on a rest is fine | End the scene after the change, or before it begins |
 | `exit-early`, `exit-before-enter` | The exit starts before the entrance ends | Move the exit's `at` later |
 | `too-long` | The text cannot be read in the time it stays | Shorten the text or hold it longer |
 | `needs-tempo` | A time in beats in a film without `tempo` | Add `"tempo": {"bpm": …}`, or write seconds |

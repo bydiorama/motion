@@ -29,6 +29,8 @@ export interface PaceMove {
   length: number;
   /** Changes that share a lane rest between each other. */
   lane?: string;
+  /** Share of the frame a change changes, 0–1. */
+  share?: number;
 }
 
 export interface ScenePace {
@@ -44,6 +46,8 @@ export interface ScenePace {
   /** Share of the scene's time something is moving, 0–1. */
   moving: number;
   changes: number;
+  /** How much of the frame changes a second: each change counts by the share of the frame it changes. */
+  rate: number;
   /** Shortest and longest rest between changes in this scene, seconds. */
   rest?: [number, number];
 }
@@ -97,12 +101,18 @@ export function movesOf(t: Timeline): PaceMove[] {
   t.scenes.forEach((s, i) => {
     const next = t.scenes[i + 1];
     if (s.out && next && s.out.duration > 0) out.push({ kind: 'hand-over', scene: s.id, use: s.out.use, start: next.start, length: s.out.duration });
+    // A scene is seen from the middle of the hand-over in to the middle of the one out:
+    // a change wholly outside that window is never on screen and does not count.
+    const prev = t.scenes[i - 1];
+    const from = s.start + (prev?.out ? prev.out.duration / 2 : 0);
+    const to = s.start + s.length - (s.out && next ? s.out.duration / 2 : 0);
+    const seen = (start: number, length: number) => start < to - 1e-6 && start + length > from + 1e-6;
     for (const l of s.layers) {
       const at = s.start + l.start;
       if (l.enter && l.enter.duration > 0) out.push({ kind: 'enter', scene: s.id, layer: l.id, use: l.use, start: s.start + l.enter.start, length: l.enter.duration });
       if (l.exit && l.exit.duration > 0) out.push({ kind: 'exit', scene: s.id, layer: l.id, use: l.use, start: s.start + l.exit.start, length: l.exit.duration });
       if (l.cues) {
-        for (const c of l.cues) out.push({ kind: 'change', scene: s.id, layer: l.id, use: l.use, start: at + c.at, length: c.length, lane: `${s.id}/${l.id}/${c.lane ?? 0}` });
+        for (const c of l.cues) if (seen(at + c.at, c.length)) out.push({ kind: 'change', scene: s.id, layer: l.id, use: l.use, start: at + c.at, length: c.length, lane: `${s.id}/${l.id}/${c.lane ?? 0}`, ...(c.share !== undefined ? { share: c.share } : {}) });
       } else if (l.duration > 0) out.push({ kind: 'run', scene: s.id, layer: l.id, use: l.use, start: at, length: Math.min(l.duration, s.length - l.start) });
     }
   });
@@ -164,6 +174,7 @@ export function pace(t: Timeline): Pace {
       id: s.id, start: s.start, end: s.end, length: s.length, in: inn, out, alone: Math.max(0, s.length - inn - out),
       moving: s.length > 0 ? covered(motionSpans(own), s.start, s.end) / s.length : 0,
       changes: own.filter((m) => m.kind === 'change' && m.scene === s.id).length,
+      rate: s.length > 0 ? own.filter((m) => m.kind === 'change' && m.scene === s.id).reduce((a, m) => a + (m.share ?? 1), 0) / s.length : 0,
       ...(rests.length ? { rest: [Math.min(...rests), Math.max(...rests)] as [number, number] } : {}),
     };
   });
@@ -207,13 +218,13 @@ export function pace(t: Timeline): Pace {
         `Keep it within half a picture's time (${fmt(shot * PACE.shotShare)}): one beat, where a picture is held for two or more.`);
     }
   });
-  const rates = scenes.filter((sc) => sc.changes > 0).map((sc) => [sc.id, sc.changes / sc.length] as const);
+  const rates = scenes.filter((sc) => sc.changes > 0).map((sc) => [sc.id, sc.rate] as const);
   if (rates.length > 1) {
     const lo = rates.reduce((a, b) => (b[1] < a[1] ? b : a)), hi = rates.reduce((a, b) => (b[1] > a[1] ? b : a));
     if (hi[1] > lo[1] * PACE.density) {
       warn(`scenes.${hi[0]}`, 'uneven-density',
-        `Scene "${hi[0]}" changes ${hi[1].toFixed(2)} times a second, "${lo[0]}" ${lo[1].toFixed(2)}: the film lurches between busy and slow.`,
-        'Keep the rate of change within twice from scene to scene. A wall of tiles swaps one tile a beat, in turn, with the others resting; not several at once.');
+        `Scene "${hi[0]}" changes ${Math.round(hi[1] * 100)}% of the frame a second, "${lo[0]}" ${Math.round(lo[1] * 100)}%: the film lurches between busy and slow.`,
+        'Keep the rate of change within twice from scene to scene. A change counts by how much of the frame it changes: a tile a fifth of the frame counts a fifth. Swap fewer tiles at once, or rest the busier scene longer.');
     }
   }
 
@@ -319,9 +330,9 @@ export function describePace(t: Timeline, p: Pace): string {
   if (p.tempo) lines.push(`tempo ${p.tempo.bpm} bpm, ${p.tempo.bar} beats a bar: beat ${fmt(p.tempo.beat)}, bar ${fmt(p.tempo.barLength)}; film ${fmt(p.duration)} = ${+(p.duration / p.tempo.barLength).toFixed(2)} bars`);
   else lines.push(`no tempo: film ${fmt(p.duration)}. Add "tempo": {"bpm": …} to count it in beats.`);
   lines.push(`moving ${Math.round(p.moving * 100)}% of the time`, '');
-  lines.push(`${'scene'.padEnd(14)} ${'length'.padStart(8)} ${'in'.padStart(6)} ${'out'.padStart(6)} ${'alone'.padStart(7)} ${'moving'.padStart(7)} changes  rests`);
+  lines.push(`${'scene'.padEnd(14)} ${'length'.padStart(8)} ${'in'.padStart(6)} ${'out'.padStart(6)} ${'alone'.padStart(7)} ${'moving'.padStart(7)} changes ${'frame/s'.padStart(7)}  rests`);
   for (const s of p.scenes) {
-    lines.push(`${s.id.padEnd(14)} ${s.length.toFixed(2).padStart(8)} ${s.in.toFixed(2).padStart(6)} ${s.out.toFixed(2).padStart(6)} ${s.alone.toFixed(2).padStart(7)} ${`${Math.round(s.moving * 100)}%`.padStart(7)} ${String(s.changes).padStart(7)}  ${s.rest ? `${s.rest[0].toFixed(2)}–${s.rest[1].toFixed(2)} s` : ''}`);
+    lines.push(`${s.id.padEnd(14)} ${s.length.toFixed(2).padStart(8)} ${s.in.toFixed(2).padStart(6)} ${s.out.toFixed(2).padStart(6)} ${s.alone.toFixed(2).padStart(7)} ${`${Math.round(s.moving * 100)}%`.padStart(7)} ${String(s.changes).padStart(7)} ${`${Math.round(s.rate * 100)}%`.padStart(7)}  ${s.rest ? `${s.rest[0].toFixed(2)}–${s.rest[1].toFixed(2)} s` : ''}`);
   }
   const kinds: [MoveKind, string][] = [['hand-over', 'hand-overs'], ['change', 'changes'], ['enter', 'enters'], ['exit', 'exits']];
   lines.push('');

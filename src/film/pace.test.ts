@@ -104,3 +104,38 @@ test('on a tempo, cuts land on bars and moves on the half-beat', () => {
   assert.ok(!clean.includes('loop-bars'), clean.join());
   assert.ok(clean.includes('off-beat'));
 });
+
+const wall = (extra: object = {}) => ({
+  id: 'wall', use: 'scene/bento-grid',
+  props: { areas: 'a b / c d', items: ['1.png', '2.png', '3.png', '4.png', '5.png', '6.png', '7.png', '8.png'], counts: [2, 2, 2, 2] },
+  params: { hold: '2.5b', swap_time: '1.5b', offset: '0.5b', stagger: 0, ...extra },
+});
+
+test('changes after a scene is cut away do not count, and a cycling wall may end on a rest', () => {
+  // The wall runs two rounds (9.6 s) but the scene cuts it after one, on a rest.
+  const r = resolveFilm(film([
+    { id: 'a', length: '4.75b', layers: [wall()], out: { use: 'transition/blur-dissolve', duration: '1.5b' } },
+    { id: 'b', length: '4bars', layers: [] },
+  ], { tempo: { bpm: 100 } }));
+  assert.ok(r.timeline, JSON.stringify(r.issues));
+  assert.ok(!r.issues.some((i) => i.code === 'cut-off' || i.code === 'cut-mid-change'), JSON.stringify(r.issues));
+  const p = pace(r.timeline!);
+  // Four tiles swap once before the cut; the second round is never seen.
+  assert.equal(p.scenes.find((s) => s.id === 'a')!.changes, 4);
+
+  const mid = resolveFilm(film([{ id: 'a', length: '3.5b', layers: [wall()] }], { tempo: { bpm: 100 } }));
+  assert.ok(mid.issues.some((i) => i.code === 'cut-mid-change'), JSON.stringify(mid.issues));
+});
+
+test('a wall that swaps a tile at a time is no busier than a scene of whole pictures', () => {
+  // Six tiles, one swapping every two beats: a sixth of the frame at a time.
+  const tiles = { id: 'wall', use: 'scene/bento-grid', props: { areas: 'a b / c d / e f', items: Array.from({ length: 12 }, (_, i) => `${i}.png`), counts: [2, 2, 2, 2, 2, 2] }, params: { width: 100, gap: 0, hold: '10.5b', swap_time: '1.5b', offset: '2b', stagger: 0 } };
+  const r = resolveFilm(film([
+    { id: 'a', length: '3bars', layers: [tiles], out: { use: 'transition/blur-dissolve', duration: '1b' } },
+    { id: 'b', length: '3bars', layers: [strips({ hold: '2.5b', shift: '1.5b' })] },
+  ], { tempo: { bpm: 100 } }));
+  const p = pace(r.timeline!);
+  const wall = p.scenes.find((s) => s.id === 'a')!;
+  assert.ok(Math.abs(wall.rate - (wall.changes / 6) / wall.length) < 1e-3, JSON.stringify(wall));
+  assert.ok(!p.issues.some((i) => i.code === 'uneven-density'), JSON.stringify(p.issues));
+});
