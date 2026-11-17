@@ -27,3 +27,9 @@ test('a placed layer may be as wide as its anchor leaves room for', () => {
   assert.equal(placedRoom({ x: 70, anchor: 'right' }), 70);
   assert.equal(placedRoom({ x: 98, anchor: 'left' }), 20);
 });
+
+test('a slot move is cut off at its own box, by the px it has travelled', () => {
+  assert.equal(clipFor({ clip: [0, 0, 0, 0], yShare: 0, slot: 24 }), 'inset(0.000% 0.000% 24.00px 0.000%)');
+  assert.equal(clipFor({ clip: [0, 0, 0, 0], yShare: 0, slot: -10 }), 'inset(10.00px 0.000% 0.000% 0.000%)');
+  assert.equal(clipFor({ clip: [0, 0, 0, 0], yShare: 0, slot: 0 }), '');
+});

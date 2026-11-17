@@ -39,6 +39,16 @@ export function filmSchema(c: Catalog) {
         description: 'One pulse for the whole film: times may then be written in beats and bars, and `motion pace` checks the grid.',
         properties: { bpm: { type: 'number', minimum: 40, maximum: 240 }, bar: { type: 'integer', minimum: 2, maximum: 12 } },
       },
+      audio: {
+        type: 'object', required: ['src'], additionalProperties: false,
+        description: 'A soundtrack: film time 0 plays the file from `from` seconds. The studio plays it with the playhead; render lays it under the video.',
+        properties: {
+          src: { type: 'string', description: 'Sound file, relative to the film' },
+          from: { type: 'number', minimum: 0, description: 'Seconds into the file that film time 0 plays: one of its downbeats' },
+          gain: { type: 'number', minimum: -30, maximum: 6, description: 'Level in dB' },
+          fade_in: { type: 'number', minimum: 0, maximum: 10 }, fade_out: { type: 'number', minimum: 0, maximum: 10 },
+        },
+      },
       theme: { type: 'object', additionalProperties: false, properties: { scheme: { enum: ['light', 'dark'] }, accent: { type: 'string' }, onAccent: { type: 'string' }, ui: { enum: ['zero', 'graphite', 'hockney'] }, vars: { type: 'object', additionalProperties: { type: 'string' } } } },
       scenes: {
         type: 'array', minItems: 1,

@@ -1034,6 +1034,11 @@
       "status": "specified"
     },
     {
+      "slug": "fx/pan-across",
+      "summary": "The camera travels along a picture wider or taller than its frame.",
+      "status": "draft"
+    },
+    {
       "slug": "fx/path-draw",
       "summary": "Lines draw themselves along their paths, then the shapes fill.",
       "status": "specified"
@@ -1291,6 +1296,11 @@
     {
       "slug": "transition/step-wipe",
       "summary": "Stepped bars sweep across the frame.",
+      "status": "draft"
+    },
+    {
+      "slug": "transition/strip-wipe",
+      "summary": "The next scene arrives row by row, each row led by a field of colour.",
       "status": "draft"
     },
     {

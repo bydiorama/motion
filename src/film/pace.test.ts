@@ -104,3 +104,90 @@ test('on a tempo, cuts land on bars and moves on the half-beat', () => {
   assert.ok(!clean.includes('loop-bars'), clean.join());
   assert.ok(clean.includes('off-beat'));
 });
+
+const wall = (extra: object = {}) => ({
+  id: 'wall', use: 'scene/bento-grid',
+  props: { areas: 'a b / c d', items: ['1.png', '2.png', '3.png', '4.png', '5.png', '6.png', '7.png', '8.png'], counts: [2, 2, 2, 2] },
+  params: { hold: '2.5b', swap_time: '1.5b', offset: '0.5b', stagger: 0, ...extra },
+});
+
+test('changes after a scene is cut away do not count, and a cycling wall may end on a rest', () => {
+  // The wall runs two rounds (9.6 s) but the scene cuts it after one, on a rest.
+  const r = resolveFilm(film([
+    { id: 'a', length: '4.75b', layers: [wall()], out: { use: 'transition/blur-dissolve', duration: '1.5b' } },
+    { id: 'b', length: '4bars', layers: [] },
+  ], { tempo: { bpm: 100 } }));
+  assert.ok(r.timeline, JSON.stringify(r.issues));
+  assert.ok(!r.issues.some((i) => i.code === 'cut-off' || i.code === 'cut-mid-change'), JSON.stringify(r.issues));
+  const p = pace(r.timeline!);
+  // Four tiles swap once before the cut; the second round is never seen.
+  assert.equal(p.scenes.find((s) => s.id === 'a')!.changes, 4);
+
+  const mid = resolveFilm(film([{ id: 'a', length: '3.5b', layers: [wall()] }], { tempo: { bpm: 100 } }));
+  assert.ok(mid.issues.some((i) => i.code === 'cut-mid-change'), JSON.stringify(mid.issues));
+});
+
+test('a wall that swaps a tile at a time is no busier than a scene of whole pictures', () => {
+  // Six tiles, one swapping every two beats: a sixth of the frame at a time.
+  const tiles = { id: 'wall', use: 'scene/bento-grid', props: { areas: 'a b / c d / e f', items: Array.from({ length: 12 }, (_, i) => `${i}.png`), counts: [2, 2, 2, 2, 2, 2] }, params: { width: 100, gap: 0, hold: '10.5b', swap_time: '1.5b', offset: '2b', stagger: 0 } };
+  const r = resolveFilm(film([
+    { id: 'a', length: '3bars', layers: [tiles], out: { use: 'transition/blur-dissolve', duration: '1b' } },
+    { id: 'b', length: '3bars', layers: [strips({ hold: '2.5b', shift: '1.5b' })] },
+  ], { tempo: { bpm: 100 } }));
+  const p = pace(r.timeline!);
+  const wall = p.scenes.find((s) => s.id === 'a')!;
+  assert.ok(Math.abs(wall.rate - (wall.changes / 6) / wall.length) < 1e-3, JSON.stringify(wall));
+  assert.ok(!p.issues.some((i) => i.code === 'uneven-density'), JSON.stringify(p.issues));
+});
+
+const still = (id: string, length: string, extra: object = {}) => ({
+  id, length, layers: [{ id: 'pic', use: 'fx/slow-push', props: { src: 'a.png' }, params: { width: 1080, height: 1920, duration: 30 } }], ...extra,
+});
+
+test('a plain cut may land on any beat; a hand-over still lands on a bar line', () => {
+  const tempo = { tempo: { bpm: 100, bar: 4 } };
+  const cuts = codesOf(film([still('a', '4b'), still('b', '2b'), still('c', '3b'), still('d', '3b')], tempo));
+  assert.ok(!cuts.includes('off-grid'), String(cuts));
+  const handed = codesOf(film([still('a', '3b', { out: { use: 'transition/strip-wipe', duration: '1b' } }), still('b', '4b')], tempo));
+  assert.ok(handed.includes('off-grid'), String(handed));
+});
+
+test('drift keeps a film of held pictures from reading as stalled, never as restless', () => {
+  const codes = codesOf(film([still('a', '4b', { layers: [
+    { id: 'pic', use: 'fx/slow-push', props: { src: 'a.png' }, params: { width: 1080, height: 1920, duration: 30 } },
+    { id: 'logo', use: 'el/box', at: '1b', enter: { move: 'mask-up', duration: '0.5b' } },
+  ] }), still('b', '4b')], { tempo: { bpm: 100, bar: 4 } }));
+  assert.ok(!codes.includes('stalled') && !codes.includes('restless'), String(codes));
+});
+
+test('a pan that crosses the stage in big steps is reported as judder', () => {
+  const pan = (duration: number) => film([{ id: 'a', length: duration, layers: [
+    { id: 'wide', use: 'fx/pan-across', props: { src: 'w.png' }, params: { aspect: 1.82, from: 0, to: 100, duration } },
+  ] }], { fps: 30 });
+  assert.ok(codesOf(pan(1.2)).includes('judder'));
+  assert.ok(!codesOf(pan(8)).includes('judder'));
+});
+
+test('five shots in a row of one length tick like a metronome', () => {
+  const even = codesOf(film(['a', 'b', 'c', 'd', 'e'].map((id) => still(id, '2b')), { tempo: { bpm: 100, bar: 4 } }));
+  assert.ok(even.includes('even-cuts'), String(even));
+  const varied = codesOf(film([still('a', '4b'), still('b', '2b'), still('c', '2b'), still('d', '4b'), still('e', '2b')], { tempo: { bpm: 100, bar: 4 } }));
+  assert.ok(!varied.includes('even-cuts'), String(varied));
+});
+
+test('a soundtrack sets its own tempo: a beat between frames is not warned', () => {
+  const codes = (extra: object) => resolveFilm(film([{ id: 'a', length: '4b', layers: [{ id: 'b', use: 'el/box' }] }], { tempo: { bpm: 101.41 }, ...extra })).issues.map((i) => i.code);
+  assert.ok(codes({}).includes('beat-off-frame'));
+  assert.ok(!codes({ audio: { src: 'track.mp3', from: 51.18 } }).includes('beat-off-frame'));
+  const bad = resolveFilm(film([{ id: 'a', length: 1, layers: [{ id: 'b', use: 'el/box' }] }], { audio: { src: 'x.mp3', gain: 20 } })).issues.map((i) => i.path);
+  assert.ok(bad.includes('audio.gain'));
+});
+
+test('scenes on a beat between frames are laid end to end in exact time, so cuts do not drift', () => {
+  const scenes = Array.from({ length: 10 }, (_, i) => ({ id: `s${i}`, length: '2b', layers: [{ id: 'b', use: 'el/box' }] }));
+  const t = resolveFilm(film(scenes, { tempo: { bpm: 101.41, bar: 4 }, audio: { src: 'track.mp3' } })).timeline!;
+  const beat = 60 / 101.41;
+  // Each cut is within half a frame of its beat, however many scenes come before it.
+  t.scenes.forEach((s, i) => assert.ok(Math.abs(s.start - i * 2 * beat) <= 0.5 / 60 + 1e-9, `${s.id} at ${s.start}`));
+  assert.ok(Math.abs(t.duration - 20 * beat) <= 0.5 / 60 + 1e-9, String(t.duration));
+});

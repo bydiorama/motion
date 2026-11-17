@@ -19,6 +19,13 @@ const ratioOf = (r: unknown): number => {
 };
 /** Header and footer of a post, each as a share of its width. */
 const BAR = 0.14;
+
+/** A slide's size on a W×H stage: `width` of it, or smaller so the whole post fits 92% of its height. */
+export function slideSize(p: Record<string, unknown>, W: number, H: number): { w: number; h: number } {
+  const ratio = ratioOf(p.ratio), bars = str(p.chrome) !== 'none' ? 2 * BAR : 0;
+  const w = Math.min((num(p.width) / 100) * W, (0.92 * H) / (1 / ratio + bars));
+  return { w, h: w / ratio };
+}
 const PUSH = 0.05;
 
 /**
@@ -63,10 +70,13 @@ export const postCarousel: Primitive = {
     if (n < 2) return hold;
     return p.loop === true ? n * P : hold + (n - 1) * P;
   },
-  cues(props, p) {
+  cues(props, p, ctx) {
     const n = list(props.slides).length, hold = num(p.hold), turn = num(p.turn);
     const steps = n < 2 ? 0 : p.loop === true ? n : n - 1;
-    return Array.from({ length: steps }, (_, m) => ({ at: hold + m * (hold + turn), length: turn }));
+    // A turn changes the slide in front and the strips beside it: about one and a half slides of the frame.
+    const [W, H] = ctx.size, { w, h } = slideSize(p, W, H);
+    const share = +Math.min(1, (1.5 * w * h) / (W * H)).toFixed(4);
+    return Array.from({ length: steps }, (_, m) => ({ at: hold + m * (hold + turn), length: turn, share }));
   },
   check(props, p) {
     const issues: PrimitiveIssue[] = [];
@@ -80,10 +90,8 @@ export const postCarousel: Primitive = {
     const [W, H] = ctx.size;
     const slides = list(props.slides), n = slides.length;
     const chrome = str(p.chrome) !== 'none', ratio = ratioOf(p.ratio), loop = p.loop === true;
-    // A slide is `width` of the stage, or smaller so the whole post fits 92% of the stage height.
-    const bars = chrome ? 2 * BAR : 0;
-    const w = Math.min((num(p.width) / 100) * W, (0.92 * H) / (1 / ratio + bars));
-    const h = w / ratio, bar = chrome ? BAR * w : 0, gap = 0.035 * w, R = 0.035 * w, u = w / 1000;
+    const { w, h } = slideSize(p, W, H);
+    const bar = chrome ? BAR * w : 0, gap = 0.035 * w, R = 0.035 * w, u = w / 1000;
     const hold = num(p.hold), turn = Math.max(0.01, num(p.turn)), P = hold + turn, angle = num(p.angle);
     const ease = ctx.ease(ctx.tokens.ease_move);
 

@@ -12,6 +12,7 @@
 // renderer and this library's own `motion render` accept the same page.
 import type { Film, Tune } from '../film/types.ts';
 import { mount, type LayerBox, type Mounted, type MountOptions } from './mount.ts';
+import { createSoundtrack } from './soundtrack.ts';
 
 declare global {
   interface Window {
@@ -31,6 +32,7 @@ export interface PageOptions extends Pick<MountOptions, 'slots' | 'frames'> {
   /** Called once the film is mounted and it is not a render: where a player or the studio attaches. */
   onInteractive?: (mounted: Mounted) => void;
 }
+
 
 export const isRender = (): boolean => location.hash === '#render';
 
@@ -70,7 +72,8 @@ export function createPlayer(mounted: Mounted, opts: { autoplay?: boolean } = {}
   const poster = mounted.film.poster ?? mounted.duration;
   let time = reduced ? poster : 0, playing = false, last = 0, raf = 0;
   const listeners: ((t: number) => void)[] = [];
-  const draw = () => { mounted.seek(time); for (const fn of listeners) fn(time); };
+  const sound = mounted.timeline.audio ? createSoundtrack(mounted.timeline.audio) : undefined;
+  const draw = () => { mounted.seek(time); sound?.sync(time, playing); for (const fn of listeners) fn(time); };
   const frame = (now: number) => {
     if (!playing) return;
     time += (now - last) / 1000;

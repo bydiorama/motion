@@ -26,13 +26,15 @@ export type Tracks = Partial<Record<TrackProp, Key[]>>;
  *  mask-up, mask-down: slides out from under its own edge, without fading (a line reveal).
  *  wipe-*: an edge travels across the layer and uncovers it, without moving it.
  *  swing: turns in on a horizontal hinge, in perspective.
+ *  slot-up: rises `amount` px into its own box, cut off at the box's bottom edge, no
+ *    fade: a picture settling into a slot that was already there.
  */
 export type MoveName =
   | 'fade' | 'rise' | 'drop' | 'scale' | 'blur' | 'slide-left' | 'slide-right'
-  | 'zoom' | 'pop' | 'focus' | 'mask-up' | 'mask-down' | 'wipe-up' | 'wipe-down' | 'wipe-left' | 'wipe-right' | 'swing';
+  | 'zoom' | 'pop' | 'focus' | 'mask-up' | 'mask-down' | 'wipe-up' | 'wipe-down' | 'wipe-left' | 'wipe-right' | 'swing' | 'slot-up';
 export const MOVE_NAMES: readonly MoveName[] = [
   'fade', 'rise', 'drop', 'scale', 'blur', 'slide-left', 'slide-right',
-  'zoom', 'pop', 'focus', 'mask-up', 'mask-down', 'wipe-up', 'wipe-down', 'wipe-left', 'wipe-right', 'swing',
+  'zoom', 'pop', 'focus', 'mask-up', 'mask-down', 'wipe-up', 'wipe-down', 'wipe-left', 'wipe-right', 'swing', 'slot-up',
 ];
 
 export interface Move {
@@ -191,8 +193,26 @@ export interface Film {
    * ("2b", "1bar") and `motion pace` checks cuts and changes against the grid.
    */
   tempo?: { bpm: number; bar?: number };
+  /**
+   * A soundtrack: film time 0 plays the file from `from` seconds. The studio plays it
+   * in step with the playhead and `render` lays it under the video. With music, set
+   * `tempo` to the track's own and `from` on one of its downbeats.
+   */
+  audio?: FilmAudio;
   theme?: Theme;
   scenes: Scene[];
+}
+
+export interface FilmAudio {
+  /** Path to the file, relative to the film, like any picture. */
+  src: string;
+  /** Seconds into the file that film time 0 plays. */
+  from?: number;
+  /** Level in dB, -30 to 6. */
+  gain?: number;
+  /** Seconds the sound fades in at the start and out at the end. A loop keeps them short, so the seam does not dip. */
+  fade_in?: number;
+  fade_out?: number;
 }
 
 // ---- tuning: the person's file -------------------------------------------------
@@ -241,6 +261,8 @@ export interface ResolvedLayer {
   exit?: ResolvedMove;
   /** Changes inside the primitive's own run (a picture swap, a turn), from the layer start. */
   cues?: Cue[];
+  /** Fastest travel of the layer's picture across the stage, px a second, when the primitive reports it. */
+  speed?: number;
   source: Layer;
 }
 
@@ -273,4 +295,5 @@ export interface Timeline {
   scenes: ResolvedScene[];
   tempo?: Tempo;
   loop?: boolean;
+  audio?: Required<FilmAudio>;
 }

@@ -66,6 +66,14 @@ export function dealItems(nItems: number, nTiles: number, counts: readonly numbe
   return out;
 }
 
+/** The share of a `W`×`H` stage each tile covers, in tile order. */
+export function tileShares(areas: string, width: number, gap: number, [W, H]: [number, number]): number[] {
+  const { tiles, cols, rows } = tilesOf(areas);
+  const gw = (width / 100) * W, gh = Math.max(H * 0.1, H - (W - gw));
+  const cw = (gw - gap * (cols - 1)) / Math.max(1, cols), ch = (gh - gap * (rows - 1)) / Math.max(1, rows);
+  return tiles.map((t) => ((t.cols * cw + (t.cols - 1) * gap) * (t.rows * ch + (t.rows - 1) * gap)) / (W * H));
+}
+
 /**
  * When the first swap of each cycling tile starts, in seconds: inside the first
  * hold, a phase of `offset` apart in reading order, the last tile at the end of
@@ -174,6 +182,7 @@ export const bentoGrid: Primitive = {
     const most = Math.max(0, ...dealt.map((d) => d.length));
     return enter + (most > 1 ? most * (num(p.hold) + num(p.swap_time)) : num(p.hold));
   },
+  cycles: true,
   cues(props, p, ctx) {
     const { tiles } = tilesOf(str(props.areas));
     const dealt = dealItems(list(props.items).length, tiles.length, nums(props.counts));
@@ -183,9 +192,12 @@ export const bentoGrid: Primitive = {
     if (most < 2) return [];
     const total = enter + most * P;
     const order = dealt.map((d, i) => (d.length > 1 ? i : -1)).filter((i) => i >= 0);
+    // A tile swapping changes only its own part of the frame.
+    const shares = tileShares(str(props.areas), num(p.width), num(p.gap), ctx.size);
     return firstSwaps(order.length, enter, hold, num(p.offset)).flatMap((a, lane) => {
       const out = [];
-      for (let t = a; t + swap <= total + 1e-6; t += P) out.push({ at: t, length: swap, lane });
+      const share = +shares[order[lane]!]!.toFixed(4);
+      for (let t = a; t + swap <= total + 1e-6; t += P) out.push({ at: t, length: swap, lane, share });
       return out;
     });
   },

@@ -27,6 +27,16 @@ params:
     min: -30
     max: 30
     unit: '% of frame'
+  focus_x:
+    default: 50
+    min: 0
+    max: 100
+    unit: '% of picture'
+  focus_y:
+    default: 50
+    min: 0
+    max: 100
+    unit: '% of picture'
   duration:
     default: 4
     min: 0.5
@@ -34,6 +44,7 @@ params:
     unit: s
 related:
 - fx/depth-drift
+- fx/pan-across
 - scene/hero-object
 since: 0.5.0
 ---
@@ -48,3 +59,5 @@ A photograph fills a frame that does not move. Inside it the picture grows or sh
 - 4–14% of scale over the hold. More reads as a zoom and competes with the scene's hero move.
 - The picture always covers its frame; the pan never shows an edge.
 - Push in on a subject, pull out on a place. In a row of pictures, keep one direction.
+- Set the focus on the subject (`focus_x`, `focus_y`) when the frame is narrower than the picture: the crop is taken around it and the push grows from it, so a face or a mark off centre stays in frame.
+- In a cut of single pictures, use a gentle start and stop (`sine.inOut`) over the shot instead: the camera move belongs to the shot, not to the film.

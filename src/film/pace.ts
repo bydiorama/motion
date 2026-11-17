@@ -10,12 +10,18 @@
 //    A film whose swaps take 0.6 s here and 1 s there feels fast, then slow.
 //  - Rests between changes are even and long enough to see a picture (1 s or more).
 //  - Most of a film is held, not moving: about a third moving reads as calm and alive.
-//  - With a tempo: scene changes land on the first beat of a bar, other moves on the
-//    beat or half-beat, and lengths are whole half-beats; a loop is whole bars.
+//  - Drift (a slow push, a pan) keeps a held picture alive: it counts against a film
+//    that stalls, never towards one that is restless. A pan that crosses the screen
+//    in big steps strobes (judder).
+//  - Shots cut to the same length, one after another, tick like a metronome:
+//    alternate long and short.
+//  - With a tempo: a hand-over lands on the first beat of a bar, a plain cut on any
+//    beat, other moves on the beat or half-beat, and lengths are whole half-beats; a
+//    loop is whole bars.
 import { beatLength, offGrid, type Tempo } from './tempo.ts';
 import type { Issue, ResolvedScene, Timeline } from './types.ts';
 
-export type MoveKind = 'hand-over' | 'change' | 'enter' | 'exit' | 'run';
+export type MoveKind = 'hand-over' | 'change' | 'enter' | 'exit' | 'run' | 'drift';
 
 export interface PaceMove {
   kind: MoveKind;
@@ -29,6 +35,8 @@ export interface PaceMove {
   length: number;
   /** Changes that share a lane rest between each other. */
   lane?: string;
+  /** Share of the frame a change changes, 0–1. */
+  share?: number;
 }
 
 export interface ScenePace {
@@ -44,6 +52,8 @@ export interface ScenePace {
   /** Share of the scene's time something is moving, 0–1. */
   moving: number;
   changes: number;
+  /** How much of the frame changes a second: each change counts by the share of the frame it changes. */
+  rate: number;
   /** Shortest and longest rest between changes in this scene, seconds. */
   rest?: [number, number];
 }
@@ -55,6 +65,8 @@ export interface Pace {
   scenes: ScenePace[];
   /** Share of the film something is moving, 0–1. */
   moving: number;
+  /** Share of the film something moves or drifts, 0–1. */
+  drifting: number;
   issues: Issue[];
 }
 
@@ -77,6 +89,10 @@ export const PACE = {
   shotShare: 1 / 2,
   /** Changes per second may differ by at most this ratio from scene to scene. */
   density: 2,
+  /** Fastest a picture may cross the stage, as a share of its shorter side per frame, before it strobes. */
+  judder: 1 / 40,
+  /** This many shots in a row cut to one length read as a metronome. */
+  evenCuts: 5,
 };
 
 const fmt = (s: number) => `${s.toFixed(2)} s`;
@@ -97,12 +113,21 @@ export function movesOf(t: Timeline): PaceMove[] {
   t.scenes.forEach((s, i) => {
     const next = t.scenes[i + 1];
     if (s.out && next && s.out.duration > 0) out.push({ kind: 'hand-over', scene: s.id, use: s.out.use, start: next.start, length: s.out.duration });
+    // A scene is seen from the middle of the hand-over in to the middle of the one out:
+    // a change wholly outside that window is never on screen and does not count.
+    const prev = t.scenes[i - 1];
+    const from = s.start + (prev?.out ? prev.out.duration / 2 : 0);
+    const to = s.start + s.length - (s.out && next ? s.out.duration / 2 : 0);
+    const seen = (start: number, length: number) => start < to - 1e-6 && start + length > from + 1e-6;
     for (const l of s.layers) {
       const at = s.start + l.start;
       if (l.enter && l.enter.duration > 0) out.push({ kind: 'enter', scene: s.id, layer: l.id, use: l.use, start: s.start + l.enter.start, length: l.enter.duration });
       if (l.exit && l.exit.duration > 0) out.push({ kind: 'exit', scene: s.id, layer: l.id, use: l.use, start: s.start + l.exit.start, length: l.exit.duration });
-      if (l.cues) {
-        for (const c of l.cues) out.push({ kind: 'change', scene: s.id, layer: l.id, use: l.use, start: at + c.at, length: c.length, lane: `${s.id}/${l.id}/${c.lane ?? 0}` });
+      if (l.cues && !l.cues.length) {
+        // Ambient drift (a slow push, a pan): alive, but never a move of its own.
+        if (l.duration > 0) out.push({ kind: 'drift', scene: s.id, layer: l.id, use: l.use, start: at, length: Math.min(l.duration, s.length - l.start) });
+      } else if (l.cues) {
+        for (const c of l.cues) if (seen(at + c.at, c.length)) out.push({ kind: 'change', scene: s.id, layer: l.id, use: l.use, start: at + c.at, length: c.length, lane: `${s.id}/${l.id}/${c.lane ?? 0}`, ...(c.share !== undefined ? { share: c.share } : {}) });
       } else if (l.duration > 0) out.push({ kind: 'run', scene: s.id, layer: l.id, use: l.use, start: at, length: Math.min(l.duration, s.length - l.start) });
     }
   });
@@ -149,7 +174,9 @@ function byUse(ms: readonly PaceMove[]): string {
 export function pace(t: Timeline): Pace {
   const issues: Issue[] = [];
   const warn = (path: string, code: string, message: string, hint?: string) => issues.push({ level: 'warning', code, path, message, ...(hint ? { hint } : {}) });
-  const moves = movesOf(t);
+  const all = movesOf(t);
+  // Drift is not a move: every check below reads the moves alone; only "stalled" counts drift.
+  const moves = all.filter((m) => m.kind !== 'drift');
   const beat = t.tempo ? beatLength(t.tempo) : undefined;
   const tempo = t.tempo && beat ? { ...t.tempo, beat, barLength: beat * t.tempo.bar } : undefined;
   const inBeats = (s: number) => (beat ? ` (${+(s / beat).toFixed(2)} beats)` : '');
@@ -164,6 +191,7 @@ export function pace(t: Timeline): Pace {
       id: s.id, start: s.start, end: s.end, length: s.length, in: inn, out, alone: Math.max(0, s.length - inn - out),
       moving: s.length > 0 ? covered(motionSpans(own), s.start, s.end) / s.length : 0,
       changes: own.filter((m) => m.kind === 'change' && m.scene === s.id).length,
+      rate: s.length > 0 ? own.filter((m) => m.kind === 'change' && m.scene === s.id).reduce((a, m) => a + (m.share ?? 1), 0) / s.length : 0,
       ...(rests.length ? { rest: [Math.min(...rests), Math.max(...rests)] as [number, number] } : {}),
     };
   });
@@ -207,13 +235,13 @@ export function pace(t: Timeline): Pace {
         `Keep it within half a picture's time (${fmt(shot * PACE.shotShare)}): one beat, where a picture is held for two or more.`);
     }
   });
-  const rates = scenes.filter((sc) => sc.changes > 0).map((sc) => [sc.id, sc.changes / sc.length] as const);
+  const rates = scenes.filter((sc) => sc.changes > 0).map((sc) => [sc.id, sc.rate] as const);
   if (rates.length > 1) {
     const lo = rates.reduce((a, b) => (b[1] < a[1] ? b : a)), hi = rates.reduce((a, b) => (b[1] > a[1] ? b : a));
     if (hi[1] > lo[1] * PACE.density) {
       warn(`scenes.${hi[0]}`, 'uneven-density',
-        `Scene "${hi[0]}" changes ${hi[1].toFixed(2)} times a second, "${lo[0]}" ${lo[1].toFixed(2)}: the film lurches between busy and slow.`,
-        'Keep the rate of change within twice from scene to scene. A wall of tiles swaps one tile a beat, in turn, with the others resting; not several at once.');
+        `Scene "${hi[0]}" changes ${Math.round(hi[1] * 100)}% of the frame a second, "${lo[0]}" ${Math.round(lo[1] * 100)}%: the film lurches between busy and slow.`,
+        'Keep the rate of change within twice from scene to scene. A change counts by how much of the frame it changes: a tile a fifth of the frame counts a fifth. Swap fewer tiles at once, or rest the busier scene longer.');
     }
   }
 
@@ -242,11 +270,43 @@ export function pace(t: Timeline): Pace {
       'Rest the same time between every change in the film; let only the opening and closing holds differ.');
   }
   const moving = t.duration > 0 ? covered(motionSpans(moves), 0, t.duration) / t.duration : 0;
+  const alive = t.duration > 0 ? covered(motionSpans(all), 0, t.duration) / t.duration : 0;
   if (moves.length && moving > PACE.moving[1]) {
     warn('scenes', 'restless', `Something moves ${Math.round(moving * 100)}% of the time. With so little held, nothing reads.`,
       'Aim for about a third in motion: longer rests, fewer parts changing at once, or changes that share a moment instead of following each other.');
-  } else if (moves.length && moving < PACE.moving[0]) {
+  } else if (moves.length && alive < PACE.moving[0]) {
     warn('scenes', 'stalled', `Only ${Math.round(moving * 100)}% of the film is in motion; the rest waits.`, 'Shorten the holds, or keep a slow drift under them.');
+  }
+
+  // ---- judder: a picture crossing the stage in steps too big to read as motion ------
+  const stepMax = Math.min(...t.size) * PACE.judder;
+  for (const s of t.scenes) {
+    for (const l of s.layers) {
+      if (l.speed === undefined) continue;
+      const step = l.speed / t.fps;
+      if (step > stepMax + 1e-6) {
+        warn(`scenes.${s.id}.layers.${l.id}`, 'judder',
+          `"${l.id}" crosses the stage at up to ${Math.round(l.speed)} px a second, ${Math.round(step)} px a frame at ${t.fps} fps: it strobes instead of gliding.`,
+          `Keep it under ${Math.round(stepMax)} px a frame (${Math.round(stepMax * t.fps)} px a second): travel less of the picture, or give it longer.`);
+      }
+    }
+  }
+
+  // ---- even cuts: a run of shots of one length ticks like a metronome --------------
+  const cutAt = (i: number) => {
+    const s = t.scenes[i]!, prev = t.scenes[i - 1];
+    return i === 0 ? 0 : s.start + (prev?.out?.duration ?? 0) / 2;
+  };
+  const shots = t.scenes.map((s, i) => ({ id: s.id, length: (i + 1 < t.scenes.length ? cutAt(i + 1) : t.duration) - cutAt(i) }));
+  for (let i = 0, run = 1; i < shots.length; i++) {
+    const same = i + 1 < shots.length && Math.abs(shots[i + 1]!.length - shots[i]!.length) < 1 / t.fps + 1e-6;
+    if (same) { run++; continue; }
+    if (run >= PACE.evenCuts) {
+      const first = shots[i - run + 1]!;
+      warn(`scenes.${first.id}`, 'even-cuts', `${run} shots in a row, from "${first.id}" to "${shots[i]!.id}", each last ${fmt(shots[i]!.length)}${inBeats(shots[i]!.length)}: the cut ticks like a metronome.`,
+        'Alternate long and short: let a sweeping shot run twice as long as the quick ones around it, so the eye rests before each burst.');
+    }
+    run = 1;
   }
 
   // ---- the grid --------------------------------------------------------------------
@@ -260,10 +320,13 @@ export function pace(t: Timeline): Pace {
       if (i === 0) return;
       const prev = t.scenes[i - 1]!;
       const d = prev.out?.duration ?? 0, cut = s.start + d / 2;
-      if (offGrid(cut, tempo.barLength) > tol) {
+      // A hand-over is a turn of the film: it lands on a bar line. A plain cut is the
+      // edit's own pulse: any beat will do.
+      const unit = d > 0 ? tempo.barLength : tempo.beat;
+      if (offGrid(cut, unit) > tol) {
         warn(prev.out ? `scenes.${prev.id}.out` : `scenes.${prev.id}`, 'off-grid',
-          `The cut into "${s.id}" lands at ${fmt(cut)}, ${where(cut)}. Scene changes land on the first beat of a bar.`,
-          `${d ? 'The cut is the middle of the hand-over. ' : ''}Make "${prev.id}" a whole number of bars from the last cut.`);
+          `The cut into "${s.id}" lands at ${fmt(cut)}, ${where(cut)}. ${d ? 'A hand-over lands on the first beat of a bar.' : 'A plain cut lands on a beat.'}`,
+          d ? `The cut is the middle of the hand-over. Make "${prev.id}" a whole number of bars from the last cut.` : `Make "${prev.id}" a whole number of beats from the last cut.`);
       }
     });
     const bySceneOff = new Map<string, PaceMove[]>();
@@ -286,10 +349,10 @@ export function pace(t: Timeline): Pace {
     }
   }
 
-  return { duration: t.duration, ...(tempo ? { tempo } : {}), moves, scenes, moving, issues };
+  return { duration: t.duration, ...(tempo ? { tempo } : {}), moves: all, scenes, moving, drifting: alive, issues };
 }
 
-/** One row per scene, one cell per beat (or quarter second): ≈ hand-over, █ change, ▒ other move, · still. */
+/** One row per scene, one cell per beat (or quarter second): ≈ hand-over, █ change, ▒ other move, ~ drift, · still. */
 export function rhythmChart(t: Timeline, p: Pace): string[] {
   const cell = p.tempo ? p.tempo.beat : 0.25, per = p.tempo ? p.tempo.bar : 4;
   const cells = Math.ceil(t.duration / cell - 1e-6);
@@ -305,7 +368,8 @@ export function rhythmChart(t: Timeline, p: Pace): string[] {
       const ms = p.moves.filter(on);
       if (ms.some((m) => m.kind === 'hand-over' && (m.scene === s.id || m.scene === before?.id))) out += '≈';
       else if (ms.some((m) => m.scene === s.id && m.kind === 'change')) out += '█';
-      else if (ms.some((m) => m.scene === s.id)) out += '▒';
+      else if (ms.some((m) => m.scene === s.id && m.kind !== 'drift')) out += '▒';
+      else if (ms.some((m) => m.scene === s.id)) out += '~';
       else out += '·';
     }
     return `${s.id.padEnd(width)} ${out}|`;
@@ -318,10 +382,10 @@ export function describePace(t: Timeline, p: Pace): string {
   const b = (s: number) => (p.tempo ? `${+(s / p.tempo.beat).toFixed(2)}b` : '');
   if (p.tempo) lines.push(`tempo ${p.tempo.bpm} bpm, ${p.tempo.bar} beats a bar: beat ${fmt(p.tempo.beat)}, bar ${fmt(p.tempo.barLength)}; film ${fmt(p.duration)} = ${+(p.duration / p.tempo.barLength).toFixed(2)} bars`);
   else lines.push(`no tempo: film ${fmt(p.duration)}. Add "tempo": {"bpm": …} to count it in beats.`);
-  lines.push(`moving ${Math.round(p.moving * 100)}% of the time`, '');
-  lines.push(`${'scene'.padEnd(14)} ${'length'.padStart(8)} ${'in'.padStart(6)} ${'out'.padStart(6)} ${'alone'.padStart(7)} ${'moving'.padStart(7)} changes  rests`);
+  lines.push(`moving ${Math.round(p.moving * 100)}% of the time, drifting or moving ${Math.round(p.drifting * 100)}%`, '');
+  lines.push(`${'scene'.padEnd(14)} ${'length'.padStart(8)} ${'in'.padStart(6)} ${'out'.padStart(6)} ${'alone'.padStart(7)} ${'moving'.padStart(7)} changes ${'frame/s'.padStart(7)}  rests`);
   for (const s of p.scenes) {
-    lines.push(`${s.id.padEnd(14)} ${s.length.toFixed(2).padStart(8)} ${s.in.toFixed(2).padStart(6)} ${s.out.toFixed(2).padStart(6)} ${s.alone.toFixed(2).padStart(7)} ${`${Math.round(s.moving * 100)}%`.padStart(7)} ${String(s.changes).padStart(7)}  ${s.rest ? `${s.rest[0].toFixed(2)}–${s.rest[1].toFixed(2)} s` : ''}`);
+    lines.push(`${s.id.padEnd(14)} ${s.length.toFixed(2).padStart(8)} ${s.in.toFixed(2).padStart(6)} ${s.out.toFixed(2).padStart(6)} ${s.alone.toFixed(2).padStart(7)} ${`${Math.round(s.moving * 100)}%`.padStart(7)} ${String(s.changes).padStart(7)} ${`${Math.round(s.rate * 100)}%`.padStart(7)}  ${s.rest ? `${s.rest[0].toFixed(2)}–${s.rest[1].toFixed(2)} s` : ''}`);
   }
   const kinds: [MoveKind, string][] = [['hand-over', 'hand-overs'], ['change', 'changes'], ['enter', 'enters'], ['exit', 'exits']];
   lines.push('');
@@ -331,7 +395,7 @@ export function describePace(t: Timeline, p: Pace): string {
     const lens = [...new Set(ms.map((m) => `${m.length.toFixed(2)} s${p.tempo ? ` ${b(m.length)}` : ''}`))];
     lines.push(`${label.padEnd(11)} ${ms.length} × ${lens.join(', ')}`);
   }
-  lines.push('', `rhythm (one cell per ${p.tempo ? 'beat' : '0.25 s'}, | every ${p.tempo ? 'bar' : 'second'}; ≈ hand-over, █ change, ▒ other move, · still)`);
+  lines.push('', `rhythm (one cell per ${p.tempo ? 'beat' : '0.25 s'}, | every ${p.tempo ? 'bar' : 'second'}; ≈ hand-over, █ change, ▒ other move, ~ drift, · still)`);
   lines.push(...rhythmChart(t, p));
   return lines.join('\n');
 }

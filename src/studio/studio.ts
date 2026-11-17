@@ -13,6 +13,7 @@
 import { createDialKit, createDialRoot, createDialTimeline, createDialTimelineRoot, DialStore } from 'dialkit/vanilla';
 import dialCss from 'dialkit/vanilla/styles.css';
 import { FilmError, mount, type Mounted } from '../dom/mount.ts';
+import { createSoundtrack, type Soundtrack } from '../dom/soundtrack.ts';
 import { STAGE_CSS } from '../dom/stage.css.ts';
 import { fade } from './fade.ts';
 import { applyTune } from '../film/tune.ts';
@@ -299,6 +300,16 @@ export function createStudio(options: StudioOptions) {
     labelTabs();
   }
 
+  // ---- soundtrack: follows the playhead; rebuilt when the film's audio changes -------------
+  let sound: { key: string; track: Soundtrack } | undefined;
+  function soundtrack(): Soundtrack | undefined {
+    const a = mounted?.timeline.audio, key = a ? JSON.stringify(a) : '';
+    if (sound?.key === key) return sound.track;
+    sound?.track.dispose();
+    sound = a ? { key, track: createSoundtrack(a) } : undefined;
+    return sound?.track;
+  }
+
   // ---- transport --------------------------------------------------------------------------
   function goTo(t: number) { dock?.pause(); dock?.seek(t); }
   function toggle() {
@@ -348,6 +359,7 @@ export function createStudio(options: StudioOptions) {
       time = v.time;
       if (v.playing !== playing) showPlaying((playing = v.playing));
       draw();
+      soundtrack()?.sync(v.time, v.playing);
       if (syncing || !clipsMoved(v as unknown as Record<string, Clip>)) return;
       // A clip is being dragged: wait for the pointer to lift, then retime the film once.
       if (dragging) clipEditPending = true; else retime(v as unknown as Record<string, Clip>);

@@ -66,7 +66,8 @@ The grid can open from the centre outwards, tile by tile, or be there from the f
 
 - One idea per tile; the brand mark holds still in its own tile while the others cycle around it.
 - Swaps ease in and out and take 0.5–0.9 s; an item rests at least 1.2 s before its tile swaps again.
-- Phase the tiles 0.2–0.5 s apart: every tile at once reads as a slide change, not as a living grid.
+- Phase the tiles 0.2–0.5 s apart: every tile at once reads as a slide change, not as a living grid. Beside scenes of whole pictures, calm it further: one tile at a time, the next starting as the last lands.
+- To open and close a film on the same wall, split one wall across the loop: the closing scene shows the swaps that lead into the opening frame, each tile ending on the item the opening starts with, a whole period after its last swap.
 - At most two or three swap moves in one grid. A move belongs to its tile for the whole film.
 - Never a dip through an empty tile: the old item stays whole until the new one covers it.
 - For a loop, set `stagger` to 0 and give each tile a number of items that divides the largest; a scene as long as the layer's duration then ends on its first frame.

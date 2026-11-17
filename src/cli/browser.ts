@@ -35,10 +35,10 @@ export async function launch(executable?: string): Promise<Browser> {
   }
 }
 
-export async function open(film: string, opts: { css?: string[]; scale?: number; size: [number, number]; timeline?: Timeline; browser?: string }): Promise<Session> {
+export async function open(film: string, opts: { css?: string[]; scale?: number; size: [number, number]; timeline?: Timeline; browser?: string; noTune?: boolean }): Promise<Session> {
   // Footage is pulled before the page opens, so every frame of it is exact.
   const frames = opts.timeline ? await prepareFrames(film, opts.timeline, opts.scale ?? 1, (m) => process.stderr.write(`${m}\n`)) : {};
-  const preview = await serve({ film, frames, ...(opts.css ? { css: opts.css } : {}) });
+  const preview = await serve({ film, frames, ...(opts.css ? { css: opts.css } : {}), ...(opts.noTune ? { noTune: true } : {}) });
   let browser: Browser | undefined;
   try {
     // --browser or MOTION_CHROMIUM point at a Chromium binary when Playwright's own download is not there.
