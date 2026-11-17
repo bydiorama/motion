@@ -63,6 +63,11 @@ export const postCarousel: Primitive = {
     if (n < 2) return hold;
     return p.loop === true ? n * P : hold + (n - 1) * P;
   },
+  cues(props, p) {
+    const n = list(props.slides).length, hold = num(p.hold), turn = num(p.turn);
+    const steps = n < 2 ? 0 : p.loop === true ? n : n - 1;
+    return Array.from({ length: steps }, (_, m) => ({ at: hold + m * (hold + turn), length: turn }));
+  },
   check(props, p) {
     const issues: PrimitiveIssue[] = [];
     const n = list(props.slides).length;
@@ -88,8 +93,9 @@ export const postCarousel: Primitive = {
     row.style.cssText = `position:absolute;left:0;top:${bar}px;width:${w}px;height:${h}px;perspective:${(2.5 * w).toFixed(0)}px;transform-style:preserve-3d`;
     const cards = slides.map((s) => {
       const card = doc.createElement('div');
-      card.style.cssText = `position:absolute;inset:0;overflow:hidden;background:var(--m-bg-surface);border-radius:${chrome ? 0 : R}px;`
-        + `backface-visibility:hidden;font-size:${(64 * u).toFixed(2)}px;box-shadow:0 ${24 * u}px ${60 * u}px rgba(0,0,0,.28)`;
+      // Bare posters take the stage's card radius and shadow when it sets them (--m-card-radius, --m-card-shadow).
+      card.style.cssText = `position:absolute;inset:0;overflow:hidden;background:var(--m-bg-surface);border-radius:${chrome ? '0' : `var(--m-card-radius, ${R}px)`};`
+        + `backface-visibility:hidden;font-size:${(64 * u).toFixed(2)}px;box-shadow:var(--m-card-shadow, 0 ${24 * u}px ${60 * u}px rgba(0,0,0,.28))`;
       const inner = doc.createElement('div');
       inner.style.cssText = 'position:absolute;inset:0;display:grid;place-items:center;transform-origin:50% 50%';
       fillItem(inner, s);

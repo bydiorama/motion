@@ -19,7 +19,9 @@
         "transition/cover-reveal",
         "rig/layer-stack",
         "scene/bento-grid",
-        "scene/post-carousel"
+        "scene/post-carousel",
+        "scene/strip-cycle",
+        "transition/band-sweep"
       ],
       "avoids": [
         "texture/dither",
@@ -28,7 +30,8 @@
       ],
       "formats": [
         "16:9",
-        "4:5"
+        "4:5",
+        "9:16"
       ],
       "duration": {
         "min": 40,
@@ -360,6 +363,7 @@
           "content": "The palette fills the frame",
           "primitives": [
             "transition/cover-reveal",
+            "transition/band-sweep",
             "fx/mosaic-fill",
             "transition/light-dark-flip"
           ]
@@ -380,6 +384,8 @@
           "share": 16,
           "content": "The identity on the surfaces it will live on",
           "primitives": [
+            "scene/strip-cycle",
+            "scene/bento-grid",
             "scene/mosaic",
             "rig/rolodex"
           ]
@@ -1158,6 +1164,11 @@
       "status": "draft"
     },
     {
+      "slug": "scene/strip-cycle",
+      "summary": "Pictures change strip by strip across a ruled grid, each change led by a field of colour.",
+      "status": "draft"
+    },
+    {
       "slug": "scene/zoomed-ui",
       "summary": "One interface component enlarged to fill the frame.",
       "status": "specified"
@@ -1196,6 +1207,11 @@
       "slug": "texture/signal-field",
       "summary": "Points jitter like static, then fall into a calm dot grid from the centre out.",
       "status": "specified"
+    },
+    {
+      "slug": "transition/band-sweep",
+      "summary": "Bands of colour run across the frame at angles, swell to cover the cut, then run on.",
+      "status": "draft"
     },
     {
       "slug": "transition/beat-cut",

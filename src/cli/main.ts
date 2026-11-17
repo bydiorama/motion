@@ -9,6 +9,7 @@ import { pathToFileURL } from 'node:url';
 import { buildCatalog } from '../catalog.ts';
 import { describeTimeline, resolveFilm, type Resolution } from '../film/resolve.ts';
 import { applyTune, bake } from '../film/tune.ts';
+import { describePace, pace } from '../film/pace.ts';
 import type { Issue, Timeline } from '../film/types.ts';
 import { open, type Session } from './browser.ts';
 import { capture } from './capture.ts';
@@ -31,6 +32,8 @@ Write and check
   make <script.mjs> [--out f.json]  Run a script that returns a film; check it and write the JSON
   validate <film...> [--json]       Check films without a browser
   inspect <film> [--json]           The resolved timeline: where every scene and layer lands
+  pace <film> [--json]              The rhythm: hand-overs against scenes, lengths of changes and rests,
+                                    share in motion, and with a tempo, the beat grid
   notes <film> [--json]             The person's open notes, with where each one points
 
 Look
@@ -195,6 +198,8 @@ function validate(args: Args) {
   const files = args._.slice(1);
   if (!files.length) throw new Error('Name one or more film files.');
   const results = files.map((f) => load(f, args));
+  // The rhythm checks are warnings: a film that stumbles still plays.
+  for (const r of results) if (r.res.timeline) r.res.issues.push(...pace(r.res.timeline).issues);
   if (args.flags.json) print(results.map((r) => ({ file: r.file, ok: r.res.ok, issues: r.res.issues })));
   else for (const r of results) {
     r.res.issues.forEach((i) => console.log(line(i)));
@@ -219,6 +224,17 @@ function inspect(args: Args) {
     console.log(describeTimeline(t));
     if (l.res.issues.length) { console.log(''); l.res.issues.forEach((i) => console.log(line(i))); }
   }
+}
+
+function paceCmd(args: Args) {
+  const l = load(need(args), args), json = !!args.flags.json;
+  const t = timelineOrExit(l, json);
+  const p = pace(t);
+  if (json) return print({ ok: true, file: l.file, ...p, issues: [...l.res.issues, ...p.issues] });
+  console.log(describePace(t, p));
+  const all = [...l.res.issues.filter((i) => i.level === 'error'), ...p.issues];
+  console.log(all.length ? '' : '\nThe rhythm checks pass.');
+  all.forEach((i) => console.log(line(i)));
 }
 
 function notes(args: Args) {
@@ -548,6 +564,7 @@ export async function main(argv: string[]) {
   if (cmd === 'capture') return captureCmd(args);
   if (cmd === 'validate') return validate(args);
   if (cmd === 'inspect') return inspect(args);
+  if (cmd === 'pace') return paceCmd(args);
   if (cmd === 'notes') return notes(args);
   if (cmd === 'preview') return preview(args);
   if (cmd === 'stills') return stills(args);

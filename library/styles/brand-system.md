@@ -27,6 +27,8 @@ uses:
 - rig/layer-stack
 - scene/bento-grid
 - scene/post-carousel
+- scene/strip-cycle
+- transition/band-sweep
 avoids:
 - texture/dither
 - transition/torn-edge
@@ -34,6 +36,7 @@ avoids:
 formats:
 - '16:9'
 - '4:5'
+- '9:16'
 duration:
   min: 40
   max: 90

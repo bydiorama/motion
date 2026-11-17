@@ -91,13 +91,14 @@ export function moveLayer(slug: string, id = 'move', text?: string): Layer | und
       }, params: { width: 84, hold: 1.25, swap_time: 0.5, offset: 0.2, stagger: 0 } };
     }
     case 'scene/post-carousel': return { id, use: slug, props: { slides: [PICTURE, PAGE[1]!, PAGE[0]!], handle: 'atlas' }, params: { width: 30, hold: 0.8, turn: 0.6, loop: true } };
+    case 'scene/strip-cycle': return { id, use: slug, props: { images: [PICTURE, PAGE[0]!], fills: ['accent', 'inverse'] }, params: { rows: 6, hold: 0.6, shift: 0.7, stagger: 0.05, empty: 'both' } };
     case 'fx/pin-drop': return { id, use: slug, props: { points: [28, 70, 70, 55], labels: ['Found', 'Here'] }, params: { size: 28, stem: 220 } };
     default: return undefined;
   }
 }
 
 /** Moves that fill the stage and loop, so their thumbnails get a set length and no padding. */
-const FULL_STAGE = new Set(['scene/marquee-wall', 'scene/bento-grid', 'texture/halftone-field', 'texture/gradient-drift', 'texture/grain', 'fx/grid-ripple', 'ui/cursor-click', 'texture/signal-field', 'fx/pin-drop']);
+const FULL_STAGE = new Set(['scene/marquee-wall', 'scene/bento-grid', 'texture/halftone-field', 'texture/gradient-drift', 'texture/grain', 'fx/grid-ripple', 'ui/cursor-click', 'texture/signal-field', 'fx/pin-drop', 'scene/strip-cycle']);
 
 const handover = (slug: string): number => { const d = TRANSITIONS[slug]?.duration; return typeof d === 'number' ? d : 0.8; };
 

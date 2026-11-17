@@ -174,6 +174,21 @@ export const bentoGrid: Primitive = {
     const most = Math.max(0, ...dealt.map((d) => d.length));
     return enter + (most > 1 ? most * (num(p.hold) + num(p.swap_time)) : num(p.hold));
   },
+  cues(props, p, ctx) {
+    const { tiles } = tilesOf(str(props.areas));
+    const dealt = dealItems(list(props.items).length, tiles.length, nums(props.counts));
+    const hold = num(p.hold), swap = num(p.swap_time), P = hold + swap, stagger = num(p.stagger);
+    const enter = stagger > 0 ? Math.max(0, tiles.length - 1) * stagger + ctx.tokens.duration.slow : 0;
+    const most = Math.max(0, ...dealt.map((d) => d.length));
+    if (most < 2) return [];
+    const total = enter + most * P;
+    const order = dealt.map((d, i) => (d.length > 1 ? i : -1)).filter((i) => i >= 0);
+    return firstSwaps(order.length, enter, hold, num(p.offset)).flatMap((a, lane) => {
+      const out = [];
+      for (let t = a; t + swap <= total + 1e-6; t += P) out.push({ at: t, length: swap, lane });
+      return out;
+    });
+  },
   check(props) {
     const issues: PrimitiveIssue[] = [];
     const { tiles, problem } = tilesOf(str(props.areas));

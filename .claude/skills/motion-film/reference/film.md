@@ -15,7 +15,8 @@
 | `seed` | Integer for anything random. Same seed, same film. |
 | `narrative`, `style` | Library slugs the film follows. Informational. |
 | `tokens` | Overrides of the timing tokens: `duration.{instant,fast,base,slow}`, `stagger.{tight,base,loose}`, `hold`, `hold_end`, `beat`, `ease_enter`, `ease_exit`, `ease_move`, `ease_loop`, and `transitions` (`standard` or `calm`: calm gives every transition quiet defaults, for editorial films). Refer to them as `"$duration.base"`. |
-| `theme` | `ui` (`zero`, `graphite` or `hockney`: a bundled bydiorama/ui theme with Aspekta and its colour roles; `zero` is Diorama's own), `scheme` (`light`/`dark`), `accent` (CSS colour), `onAccent`, `vars` (raw CSS variables). |
+| `tempo` | `{ "bpm": 120, "bar": 4 }`: one pulse for the whole film. Every time may then be written in beats or bars: `"2b"`, `"0.5b"`, `"1bar"`, `"2bars"`, in `at`, offsets (`"title.end + 1b"`), `length`, `hold`, move and hand-over durations, params in seconds and track keys. Change the bpm and the film follows in proportion. Pick one whose beat is a whole number of frames (at 60 fps: 100, 120, 144, 150); `validate` warns otherwise. `motion pace` checks the film against it. |
+| `theme` | `ui` (`zero`, `graphite` or `hockney`: a bundled bydiorama/ui theme with Aspekta and its colour roles; `zero` is Diorama's own), `scheme` (`light`/`dark`), `accent` (CSS colour), `onAccent`, `vars` (raw CSS variables; e.g. `--m-band-1` … `--m-band-6` colour `transition/band-sweep`, `--m-card-radius` squares tiles and bare posters, `--m-card-shadow` sets or removes their shadow). |
 | `scenes` | In order. Each runs after the previous, overlapping by its `out` transition. |
 
 ## Scene
@@ -25,8 +26,8 @@
 | `id` | Lowercase with dashes. Overrides and notes point at it. |
 | `intent` | One line: what this scene must make the viewer understand. |
 | `layers` | What is on screen. Without `place`, layers stack in the scene's `layout`. |
-| `length` | Seconds. Usually left out: the scene lasts until its last layer ends, plus `hold`. |
-| `hold` | Seconds of stillness at the end, or `"$hold_end"`. |
+| `length` | Seconds, or beats (`"4bars"`). Usually left out: the scene lasts until its last layer ends, plus `hold`. |
+| `hold` | Seconds of stillness at the end, `"$hold_end"`, or beats (`"2b"`). |
 | `background` | `base`, `surface`, `sunken`, `accent`, `inverse`, or any CSS colour. |
 | `scheme` | Flip one scene to `dark` or `light`. |
 | `layout` | `align`, `justify` (`start`/`center`/`end`/`between`), `gap` and `padding` in px. |
@@ -43,7 +44,7 @@
 | `use` | A slug from `catalog.json`. `el/text`, `el/box`, `el/image`, `el/video` (a stretch of a video file), `el/frames` (a numbered run of stills played as footage: a recorded scroll, frames already cut from a film; it can run backwards), `el/html`, `el/slot` for plain elements. |
 | `props` | Content. Required props are marked in the catalog. |
 | `params` | Motion values, each inside its catalog range. |
-| `at` | Start, in seconds from the scene start, or relative: `"other.start"`, `"other.end - 0.1"`, `"scene.end - 1"`. |
+| `at` | Start, in seconds from the scene start, or relative: `"other.start"`, `"other.end - 0.1"`, `"scene.end - 1"`. With a tempo: `"4b"`, `"other.end + 1b"`. |
 | `enter` | `"rise"`, or `{ "move": "rise", "duration": "$duration.base", "ease": "expo.out", "amount": 24 }`. Moves: `fade`, `rise`, `drop`, `scale`, `blur`, `slide-left`, `slide-right`, `zoom` (scales down from slightly large), `pop` (spring from small), `focus` (sharpens from a blur), `mask-up`/`mask-down` (rises through its own edge, no fade), `wipe-up`/`wipe-down`/`wipe-left`/`wipe-right` (uncovered by a clip, no fade), `swing` (hinges in on X). Masks, wipes and `pop` bring their own eases when you give none. |
 | `exit` | Same, plus `at` for when it starts. Default: it ends with the scene. |
 | `style` | `size` (`hero`, `headline`, `title`, `body`, `caption`), `color` (see `colors` in the catalog), `font` (`display`, `body`, `mono`), `weight`, `align`, `width` (% of stage width: the most a line may run before it wraps), `css` (last resort). |
@@ -53,7 +54,7 @@
 
 ## Tracks
 
-`x`, `y` (px), `scale`, `rotate`, `rotateX`, `rotateY`, `skew` (deg), `opacity`, `blur` (px). Each is a list of `[seconds, value]` or `[seconds, value, ease]`; the ease shapes the move arriving at that key.
+`x`, `y` (px), `scale`, `rotate`, `rotateX`, `rotateY`, `skew` (deg), `opacity`, `blur` (px). Each is a list of `[time, value]` or `[time, value, ease]`, time in seconds or, with a tempo, beats (`["2b", -40, "back.out"]`); the ease shapes the move arriving at that key.
 
 ```json
 "tracks": { "scale": [[0, 1], [4, 1.06, "sine.inOut"]] }
@@ -89,4 +90,10 @@ Every issue has `code`, `path`, `message` and usually `hint`. `motion validate -
 | `cut-off` | The scene ends before the layer finishes | Lengthen the scene or shorten the layer |
 | `exit-early`, `exit-before-enter` | The exit starts before the entrance ends | Move the exit's `at` later |
 | `too-long` | The text cannot be read in the time it stays | Shorten the text or hold it longer |
+| `needs-tempo` | A time in beats in a film without `tempo` | Add `"tempo": {"bpm": …}`, or write seconds |
+| `beat-off-frame` | The beat is not a whole number of frames, so beats drift | Take one of the tempos the hint lists |
+| `handover-long`, `handover-crowds`, `handover-vs-picture` | A transition outweighs a scene, or is as long as one of its pictures | Hand over in a quarter of the shorter scene and within half a picture's time; usually one beat |
+| `uneven-handovers`, `uneven-changes`, `uneven-rests`, `uneven-density` | Like moves take different times; one scene changes far more often than another | One length for every hand-over, one for every change, one rest; within 2× changes per second across scenes |
+| `short-rest`, `restless`, `stalled` | Pictures rest under 1 s; the film moves more than 60% or under 20% of the time | Longer rests, fewer things changing at once; or shorter holds |
+| `off-grid`, `off-beat`, `loop-bars` | With a tempo: a cut not on a bar line, a move off the half-beat, a loop not whole bars | Write the times in beats; make scenes whole bars cut to cut (the cut is the middle of a hand-over) |
 | `duplicate-id`, `bad-id` | Ids repeat, or are not lowercase with dashes starting with a letter (`1953-043` is not an id) | Take the id the hint offers; tell the person if overrides pointed at the old id |

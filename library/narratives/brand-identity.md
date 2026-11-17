@@ -40,6 +40,7 @@ beats:
   content: The palette fills the frame
   primitives:
   - transition/cover-reveal
+  - transition/band-sweep
   - fx/mosaic-fill
   - transition/light-dark-flip
 - name: system
@@ -54,6 +55,8 @@ beats:
   share: 16
   content: The identity on the surfaces it will live on
   primitives:
+  - scene/strip-cycle
+  - scene/bento-grid
   - scene/mosaic
   - rig/rolodex
 - name: end

@@ -50,6 +50,26 @@
     "tokens": {
       "type": "object"
     },
+    "tempo": {
+      "type": "object",
+      "required": [
+        "bpm"
+      ],
+      "additionalProperties": false,
+      "description": "One pulse for the whole film: times may then be written in beats and bars, and `motion pace` checks the grid.",
+      "properties": {
+        "bpm": {
+          "type": "number",
+          "minimum": 40,
+          "maximum": 240
+        },
+        "bar": {
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 12
+        }
+      }
+    },
     "theme": {
       "type": "object",
       "additionalProperties": false,
@@ -97,8 +117,17 @@
             "pattern": "^[a-z][a-z0-9-]*$"
           },
           "length": {
-            "type": "number",
-            "exclusiveMinimum": 0
+            "anyOf": [
+              {
+                "type": "number",
+                "exclusiveMinimum": 0
+              },
+              {
+                "type": "string",
+                "pattern": "^\\s*\\d+(\\.\\d+)?\\s*(b|beats?|bars?)\\s*$",
+                "description": "Beats or bars at the film tempo, e.g. \"2b\" or \"1bar\""
+              }
+            ]
           },
           "hold": {
             "anyOf": [
@@ -109,6 +138,11 @@
               {
                 "type": "string",
                 "pattern": "^\\$"
+              },
+              {
+                "type": "string",
+                "pattern": "^\\s*\\d+(\\.\\d+)?\\s*(b|beats?|bars?)\\s*$",
+                "description": "Beats or bars at the film tempo, e.g. \"2b\" or \"1bar\""
               }
             ]
           },
@@ -170,7 +204,8 @@
                 "items": {
                   "type": "array",
                   "minItems": 2,
-                  "maxItems": 3
+                  "maxItems": 3,
+                  "description": "[time, value] or [time, value, ease]; time in seconds or beats (\"2b\")"
                 }
               },
               "y": {
@@ -178,7 +213,8 @@
                 "items": {
                   "type": "array",
                   "minItems": 2,
-                  "maxItems": 3
+                  "maxItems": 3,
+                  "description": "[time, value] or [time, value, ease]; time in seconds or beats (\"2b\")"
                 }
               },
               "scale": {
@@ -186,7 +222,8 @@
                 "items": {
                   "type": "array",
                   "minItems": 2,
-                  "maxItems": 3
+                  "maxItems": 3,
+                  "description": "[time, value] or [time, value, ease]; time in seconds or beats (\"2b\")"
                 }
               },
               "rotate": {
@@ -194,7 +231,8 @@
                 "items": {
                   "type": "array",
                   "minItems": 2,
-                  "maxItems": 3
+                  "maxItems": 3,
+                  "description": "[time, value] or [time, value, ease]; time in seconds or beats (\"2b\")"
                 }
               },
               "opacity": {
@@ -202,7 +240,8 @@
                 "items": {
                   "type": "array",
                   "minItems": 2,
-                  "maxItems": 3
+                  "maxItems": 3,
+                  "description": "[time, value] or [time, value, ease]; time in seconds or beats (\"2b\")"
                 }
               },
               "blur": {
@@ -210,7 +249,8 @@
                 "items": {
                   "type": "array",
                   "minItems": 2,
-                  "maxItems": 3
+                  "maxItems": 3,
+                  "description": "[time, value] or [time, value, ease]; time in seconds or beats (\"2b\")"
                 }
               },
               "rotateX": {
@@ -218,7 +258,8 @@
                 "items": {
                   "type": "array",
                   "minItems": 2,
-                  "maxItems": 3
+                  "maxItems": 3,
+                  "description": "[time, value] or [time, value, ease]; time in seconds or beats (\"2b\")"
                 }
               },
               "rotateY": {
@@ -226,7 +267,8 @@
                 "items": {
                   "type": "array",
                   "minItems": 2,
-                  "maxItems": 3
+                  "maxItems": 3,
+                  "description": "[time, value] or [time, value, ease]; time in seconds or beats (\"2b\")"
                 }
               },
               "skew": {
@@ -234,7 +276,8 @@
                 "items": {
                   "type": "array",
                   "minItems": 2,
-                  "maxItems": 3
+                  "maxItems": 3,
+                  "description": "[time, value] or [time, value, ease]; time in seconds or beats (\"2b\")"
                 }
               }
             }
@@ -301,7 +344,8 @@
                   "transition/camera-travel",
                   "transition/whip-pan",
                   "transition/signal-wipe",
-                  "transition/fly-past"
+                  "transition/fly-past",
+                  "transition/band-sweep"
                 ]
               },
               "duration": {
@@ -313,6 +357,11 @@
                   {
                     "type": "string",
                     "pattern": "^\\$"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^\\s*\\d+(\\.\\d+)?\\s*(b|beats?|bars?)\\s*$",
+                    "description": "Beats or bars at the film tempo, e.g. \"2b\" or \"1bar\""
                   }
                 ]
               },
@@ -381,7 +430,8 @@
                     "fx/slow-push",
                     "ui/page-scroll",
                     "scene/bento-grid",
-                    "scene/post-carousel"
+                    "scene/post-carousel",
+                    "scene/strip-cycle"
                   ]
                 },
                 "props": {
@@ -398,7 +448,7 @@
                     },
                     {
                       "type": "string",
-                      "description": "e.g. \"headline.end + 0.2\" or \"scene.end - 1\""
+                      "description": "e.g. \"headline.end + 0.2\", \"scene.end - 1\", \"title.end + 1b\" or, with a tempo, \"4b\""
                     }
                   ]
                 },
@@ -544,6 +594,11 @@
                             {
                               "type": "string",
                               "pattern": "^\\$"
+                            },
+                            {
+                              "type": "string",
+                              "pattern": "^\\s*\\d+(\\.\\d+)?\\s*(b|beats?|bars?)\\s*$",
+                              "description": "Beats or bars at the film tempo, e.g. \"2b\" or \"1bar\""
                             }
                           ]
                         },
@@ -692,6 +747,11 @@
                             {
                               "type": "string",
                               "pattern": "^\\$"
+                            },
+                            {
+                              "type": "string",
+                              "pattern": "^\\s*\\d+(\\.\\d+)?\\s*(b|beats?|bars?)\\s*$",
+                              "description": "Beats or bars at the film tempo, e.g. \"2b\" or \"1bar\""
                             }
                           ]
                         },
@@ -784,7 +844,7 @@
                             },
                             {
                               "type": "string",
-                              "description": "e.g. \"headline.end + 0.2\" or \"scene.end - 1\""
+                              "description": "e.g. \"headline.end + 0.2\", \"scene.end - 1\", \"title.end + 1b\" or, with a tempo, \"4b\""
                             }
                           ]
                         }
@@ -801,7 +861,8 @@
                       "items": {
                         "type": "array",
                         "minItems": 2,
-                        "maxItems": 3
+                        "maxItems": 3,
+                        "description": "[time, value] or [time, value, ease]; time in seconds or beats (\"2b\")"
                       }
                     },
                     "y": {
@@ -809,7 +870,8 @@
                       "items": {
                         "type": "array",
                         "minItems": 2,
-                        "maxItems": 3
+                        "maxItems": 3,
+                        "description": "[time, value] or [time, value, ease]; time in seconds or beats (\"2b\")"
                       }
                     },
                     "scale": {
@@ -817,7 +879,8 @@
                       "items": {
                         "type": "array",
                         "minItems": 2,
-                        "maxItems": 3
+                        "maxItems": 3,
+                        "description": "[time, value] or [time, value, ease]; time in seconds or beats (\"2b\")"
                       }
                     },
                     "rotate": {
@@ -825,7 +888,8 @@
                       "items": {
                         "type": "array",
                         "minItems": 2,
-                        "maxItems": 3
+                        "maxItems": 3,
+                        "description": "[time, value] or [time, value, ease]; time in seconds or beats (\"2b\")"
                       }
                     },
                     "opacity": {
@@ -833,7 +897,8 @@
                       "items": {
                         "type": "array",
                         "minItems": 2,
-                        "maxItems": 3
+                        "maxItems": 3,
+                        "description": "[time, value] or [time, value, ease]; time in seconds or beats (\"2b\")"
                       }
                     },
                     "blur": {
@@ -841,7 +906,8 @@
                       "items": {
                         "type": "array",
                         "minItems": 2,
-                        "maxItems": 3
+                        "maxItems": 3,
+                        "description": "[time, value] or [time, value, ease]; time in seconds or beats (\"2b\")"
                       }
                     },
                     "rotateX": {
@@ -849,7 +915,8 @@
                       "items": {
                         "type": "array",
                         "minItems": 2,
-                        "maxItems": 3
+                        "maxItems": 3,
+                        "description": "[time, value] or [time, value, ease]; time in seconds or beats (\"2b\")"
                       }
                     },
                     "rotateY": {
@@ -857,7 +924,8 @@
                       "items": {
                         "type": "array",
                         "minItems": 2,
-                        "maxItems": 3
+                        "maxItems": 3,
+                        "description": "[time, value] or [time, value, ease]; time in seconds or beats (\"2b\")"
                       }
                     },
                     "skew": {
@@ -865,7 +933,8 @@
                       "items": {
                         "type": "array",
                         "minItems": 2,
-                        "maxItems": 3
+                        "maxItems": 3,
+                        "description": "[time, value] or [time, value, ease]; time in seconds or beats (\"2b\")"
                       }
                     }
                   }

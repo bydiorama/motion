@@ -4,12 +4,14 @@
 import { EASE_NAMES, isEaseSpec, type EaseSpec } from '../core/ease.ts';
 import { PRIMITIVES, TRANSITIONS } from '../primitives/index.ts';
 import { UI_THEME_NAMES } from './types.ts';
-import type { ParamSpec, PureCtx } from '../primitives/types.ts';
+import type { Cue, ParamSpec, PureCtx } from '../primitives/types.ts';
+import type { Key } from '../core/track.ts';
 import { isTokenRef, mergeTokens, readToken, tokenPaths, type Tokens } from '../tokens.ts';
+import { beatsToSeconds, framesPerBeat, isBeats, wholeFrameTempos, type Tempo } from './tempo.ts';
 import {
   ANCHORS, MOVE_NAMES, SURFACES, TEXT_SIZES, TONES, TRACK_PROPS,
   type ExitMove, type Film, type Issue, type Layer, type Move, type MoveName, type ResolvedLayer,
-  type ResolvedMove, type ResolvedScene, type Scene, type TimeRef, type Timeline,
+  type ResolvedMove, type ResolvedScene, type Scene, type TimeRef, type Timeline, type Tracks,
 } from './types.ts';
 
 export interface Resolution {
@@ -42,7 +44,7 @@ function idHint(id: unknown, what: 'scene' | 'layer', fallback: string): string 
 const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
-const FILM_KEYS = ['$schema', 'motion', 'title', 'size', 'fps', 'seed', 'poster', 'loop', 'narrative', 'style', 'tokens', 'theme', 'scenes'];
+const FILM_KEYS = ['$schema', 'motion', 'title', 'size', 'fps', 'seed', 'poster', 'loop', 'narrative', 'style', 'tokens', 'tempo', 'theme', 'scenes'];
 const SCENE_KEYS = ['id', 'length', 'hold', 'background', 'scheme', 'layout', 'layers', 'tracks', 'follow', 'out', 'uses', 'intent'];
 /** Primitives whose instance has a tip a camera can follow. */
 export const FOLLOWABLE = ['fx/path-draw'];
@@ -140,6 +142,30 @@ export function resolveFilm(input: unknown): Resolution {
   if (tokens.transitions !== 'standard' && tokens.transitions !== 'calm') err('tokens.transitions', 'bad-value', 'transitions is "standard" or "calm".', 'Calm swaps every transition\'s defaults for its quiet preset.');
   const fps = film.fps ?? tokens.fps;
   if (!Number.isInteger(fps) || fps <= 0) err('fps', 'bad-fps', 'fps is a whole number above zero.');
+  let tempo: Tempo | undefined;
+  if (film.tempo !== undefined) {
+    const tp = film.tempo as unknown;
+    if (!isObject(tp) || !isNum(tp.bpm)) err('tempo', 'bad-tempo', 'tempo is { bpm, bar }: beats per minute, and beats in a bar (4 if left out).', 'For example {"bpm": 120, "bar": 4}.');
+    else {
+      unknownKeys(tp, ['bpm', 'bar'], 'tempo');
+      const bar = tp.bar === undefined ? 4 : tp.bar;
+      if (tp.bpm < 40 || tp.bpm > 240) err('tempo.bpm', 'bad-value', 'bpm is 40 to 240.', 'Medium swing is 120–150; a calm film 80–100.');
+      else if (!Number.isInteger(bar) || (bar as number) < 2 || (bar as number) > 12) err('tempo.bar', 'bad-value', 'bar is a whole number of beats, 2 to 12.');
+      else {
+        tempo = { bpm: tp.bpm, bar: bar as number };
+        const fpb = Number.isInteger(fps) && fps > 0 ? framesPerBeat(tempo, fps) : 1;
+        if (Math.abs(fpb - Math.round(fpb)) > 1e-6) {
+          warn('tempo.bpm', 'beat-off-frame', `At ${fps} fps a beat of ${tempo.bpm} bpm is ${fpb.toFixed(2)} frames, so beats fall between frames and drift.`,
+            `Tempos with a whole number of frames per beat near it: ${wholeFrameTempos(tempo.bpm, fps).join(', ')} bpm.`);
+        }
+      }
+    }
+  }
+  /** Seconds for a beat length such as "2b" or "1bar"; reports a missing tempo. */
+  const beats = (v: string, path: string): number | undefined => {
+    if (!tempo) { err(path, 'needs-tempo', `"${v}" is in beats, but the film has no tempo.`, 'Add "tempo": {"bpm": 120} to the film, or write seconds.'); return undefined; }
+    return beatsToSeconds(v, tempo);
+  };
   if (film.theme !== undefined) {
     if (!isObject(film.theme)) err('theme', 'bad-theme', 'theme is { scheme, vars }.');
     else {
@@ -164,13 +190,14 @@ export function resolveFilm(input: unknown): Resolution {
 
   /** A number, or a `$token` that holds one. */
   const seconds = (v: unknown, path: string, what: string): number | undefined => {
+    if (isBeats(v)) return beats(v, path);
     const value = isTokenRef(v) ? readToken(tokens, v) : v;
     if (isTokenRef(v) && value === undefined) {
       const known = tokenPaths(tokens).map((p) => `$${p}`), near = nearest(v, known);
       err(path, 'unknown-token', `There is no token "${v}".`, near ? `Did you mean "${near}"?` : undefined);
       return undefined;
     }
-    if (!isNum(value) || value < 0) { err(path, 'bad-time', `${what} is a number of seconds, zero or more, or a $token.`); return undefined; }
+    if (!isNum(value) || value < 0) { err(path, 'bad-time', `${what} is a number of seconds, zero or more, a $token, or beats such as "2b" or "1bar".`); return undefined; }
     return value;
   };
   const checkEase = (v: unknown, path: string): EaseSpec | undefined => {
@@ -183,9 +210,11 @@ export function resolveFilm(input: unknown): Resolution {
     }
     return value;
   };
-  const checkTracks = (tracks: unknown, path: string) => {
-    if (tracks === undefined) return;
-    if (!isObject(tracks)) { err(path, 'bad-tracks', 'tracks is an object of keyframe lists by property.'); return; }
+  /** Checks tracks and returns them with every key time in seconds (beats converted). */
+  const checkTracks = (tracks: unknown, path: string): Tracks | undefined => {
+    if (tracks === undefined) return undefined;
+    if (!isObject(tracks)) { err(path, 'bad-tracks', 'tracks is an object of keyframe lists by property.'); return undefined; }
+    const out: Record<string, Key[]> = {};
     for (const [prop, keys] of Object.entries(tracks)) {
       const p = `${path}.${prop}`;
       if (!(TRACK_PROPS as readonly string[]).includes(prop)) {
@@ -194,11 +223,14 @@ export function resolveFilm(input: unknown): Resolution {
         continue;
       }
       if (!Array.isArray(keys) || keys.length === 0) { err(p, 'bad-track', 'A track is a list of [seconds, value] keys.'); continue; }
-      keys.forEach((key, i) => {
-        if (!Array.isArray(key) || !isNum(key[0]) || !isNum(key[1])) err(`${p}.${i}`, 'bad-key', 'A key is [seconds, value] or [seconds, value, ease].');
-        else if (key[2] !== undefined) checkEase(key[2], `${p}.${i}`);
+      out[prop] = keys.map((key, i) => {
+        const at = Array.isArray(key) && isBeats(key[0]) ? beats(key[0], `${p}.${i}`) : Array.isArray(key) ? key[0] : undefined;
+        if (!Array.isArray(key) || !isNum(at) || !isNum(key[1])) { err(`${p}.${i}`, 'bad-key', 'A key is [time, value] or [time, value, ease]; time in seconds or beats ("2b").'); return key as Key; }
+        if (key[2] !== undefined) checkEase(key[2], `${p}.${i}`);
+        return (key.length > 2 ? [at, key[1], key[2]] : [at, key[1]]) as Key;
       });
     }
+    return out as Tracks;
   };
   const checkParams = (given: unknown, specs: Record<string, ParamSpec>, path: string, owner: string): Record<string, unknown> => {
     const out: Record<string, unknown> = {};
@@ -216,7 +248,9 @@ export function resolveFilm(input: unknown): Resolution {
           near ? `Did you mean "${near}"?` : names.length ? `Params: ${oneOf(names)}.` : `${owner} has no params.`);
         continue;
       }
-      const value = isTokenRef(raw) ? readToken(tokens, raw) : raw;
+      if (isBeats(raw) && !(spec.type === 'number' && spec.unit === 's')) { err(p, 'bad-param', `${name} is not a time, so it cannot be in beats.`); continue; }
+      const value = isBeats(raw) ? beats(raw, p) : isTokenRef(raw) ? readToken(tokens, raw) : raw;
+      if (isBeats(raw) && value === undefined) continue;
       if (isTokenRef(raw) && value === undefined) { err(p, 'unknown-token', `There is no token "${raw}".`); continue; }
       if (spec.type === 'number') {
         if (!isNum(value)) { err(p, 'bad-param', `${name} is a number${spec.unit ? ` (${spec.unit})` : ''}.`); continue; }
@@ -250,11 +284,11 @@ export function resolveFilm(input: unknown): Resolution {
       if (!isObject(scene.layout)) err(`${sp}.layout`, 'bad-layout', 'layout is { align, justify, gap, padding }.');
       else unknownKeys(scene.layout as Record<string, unknown>, ['align', 'justify', 'gap', 'padding'], `${sp}.layout`);
     }
-    checkTracks(scene.tracks, `${sp}.tracks`);
+    const sceneTracks = checkTracks(scene.tracks, `${sp}.tracks`);
     if (!Array.isArray(scene.layers)) { err(`${sp}.layers`, 'no-layers', 'A scene has a list of layers. It may be empty.'); return; }
 
     // ---- layers: content and params -------------------------------------------
-    interface Draft { layer: Layer; path: string; duration: number; params: Record<string, unknown>; props: Record<string, unknown>; start?: number }
+    interface Draft { layer: Layer; path: string; duration: number; params: Record<string, unknown>; props: Record<string, unknown>; cues?: Cue[]; start?: number }
     const drafts = new Map<string, Draft>();
     scene.layers.forEach((layer: Layer, li) => {
       const lid = isObject(layer) && typeof layer.id === 'string' ? layer.id : String(li);
@@ -317,7 +351,7 @@ export function resolveFilm(input: unknown): Resolution {
         if (!isObject(pl) || !isNum(pl.x) || !isNum(pl.y)) err(`${lp}.place`, 'bad-place', 'place is { x, y } in percent of the stage, with an optional anchor.');
         else if (pl.anchor !== undefined && !(ANCHORS as readonly string[]).includes(pl.anchor)) err(`${lp}.place.anchor`, 'bad-value', `anchor is one of: ${oneOf(ANCHORS)}.`);
       }
-      checkTracks(layer.tracks, `${lp}.tracks`);
+      const tracks = checkTracks(layer.tracks, `${lp}.tracks`);
       if (layer.motionBlur !== undefined && typeof layer.motionBlur !== 'boolean' && !(isNum(layer.motionBlur) && layer.motionBlur >= 0 && layer.motionBlur <= 1)) {
         err(`${lp}.motionBlur`, 'bad-value', 'motionBlur is true (a half-frame shutter) or the share of a frame the shutter is open, 0 to 1.');
       }
@@ -328,7 +362,11 @@ export function resolveFilm(input: unknown): Resolution {
       }
       let duration = 0;
       try { duration = prim.duration(props, params, ctx); } catch { /* reported above as a bad prop or param */ }
-      drafts.set(layer.id, { layer, path: lp, duration: Number.isFinite(duration) ? duration : 0, params, props });
+      let cues: Cue[] | undefined;
+      try { cues = prim.cues?.(props, params, ctx); } catch { /* as above */ }
+      // The resolved layer carries its tracks in seconds, so the page never sees a beat.
+      const source = tracks ? { ...layer, tracks } : layer;
+      drafts.set(layer.id, { layer: source, path: lp, duration: Number.isFinite(duration) ? duration : 0, params, props, ...(cues ? { cues } : {}) });
     });
 
     // ---- moves ----------------------------------------------------------------
@@ -356,7 +394,7 @@ export function resolveFilm(input: unknown): Resolution {
     const lengthOf = (id: string) => Math.max(drafts.get(id)!.duration, enters.get(id)?.duration ?? 0);
 
     // ---- layer starts: relative times, resolved in dependency order ------------
-    const REF = /^\s*([a-z][a-z0-9-]*)\.(start|end)\s*(?:([+-])\s*(\d+(?:\.\d+)?))?\s*$/;
+    const REF = /^\s*([a-z][a-z0-9-]*)\.(start|end)\s*(?:([+-])\s*(\d+(?:\.\d+)?\s*(?:b|beats?|bars?)?))?\s*$/;
     const visiting = new Set<string>();
     let sceneLength: number | undefined;
     const timeRef = (ref: TimeRef, path: string, self: string | undefined): number | undefined => {
@@ -364,14 +402,17 @@ export function resolveFilm(input: unknown): Resolution {
         if (ref < 0) { err(path, 'bad-time', 'Times are seconds from the scene start, zero or more.'); return undefined; }
         return ref;
       }
+      if (isBeats(ref)) return beats(ref, path);
       const m = typeof ref === 'string' ? REF.exec(ref) : null;
       if (!m) {
         err(path, 'bad-time', 'A time is seconds from the scene start, or a reference such as "headline.end + 0.2".',
-          'References: "<layer id>.start", "<layer id>.end", "scene.end", each with an optional + or - seconds.');
+          'References: "<layer id>.start", "<layer id>.end", "scene.end", each with an optional + or - seconds or beats ("+ 1b"). With a tempo, "4b" alone is a time too.');
         return undefined;
       }
       const [, target, edge, sign, amount] = m;
-      const offset = amount ? (sign === '-' ? -1 : 1) * Number(amount) : 0;
+      const size = amount === undefined ? 0 : isBeats(amount) ? beats(amount, path) : Number(amount);
+      if (size === undefined) return undefined;
+      const offset = (sign === '-' ? -1 : 1) * size;
       if (target === 'scene') {
         if (edge === 'start') return Math.max(0, offset);
         if (sceneLength === undefined) {
@@ -404,8 +445,9 @@ export function resolveFilm(input: unknown): Resolution {
       return d.start;
     };
     if (scene.length !== undefined) {
-      if (!isNum(scene.length) || scene.length <= 0) err(`${sp}.length`, 'bad-time', 'length is seconds, above zero.');
-      else sceneLength = Math.max(frame, snap(scene.length));
+      const len = isBeats(scene.length) ? beats(scene.length, `${sp}.length`) : scene.length;
+      if (len === undefined) { /* reported */ } else if (!isNum(len) || len <= 0) err(`${sp}.length`, 'bad-time', 'length is seconds above zero, or beats ("8b", "2bars").');
+      else sceneLength = Math.max(frame, snap(len));
     }
     for (const id of drafts.keys()) startOf(id);
     const hold = scene.hold === undefined ? tokens.hold : seconds(scene.hold, `${sp}.hold`, 'hold') ?? tokens.hold;
@@ -443,7 +485,7 @@ export function resolveFilm(input: unknown): Resolution {
         }
       }
       layers.push({
-        id, use: d.layer.use, start: d.start, duration: d.duration, end, props: d.props, params: d.params,
+        id, use: d.layer.use, start: d.start, duration: d.duration, end, props: d.props, params: d.params, ...(d.cues ? { cues: d.cues } : {}),
         ...(enter ? { enter: { ...enter, start: d.start } } : {}), ...(exit ? { exit } : {}), source: d.layer,
       });
     }
@@ -496,7 +538,7 @@ export function resolveFilm(input: unknown): Resolution {
         else out = { use: t.slug, duration, params };
       }
     }
-    scenes.push({ id: sid, start: 0, length, end: length, layers, ...(out ? { out } : {}), source: scene });
+    scenes.push({ id: sid, start: 0, length, end: length, layers, ...(out ? { out } : {}), source: sceneTracks ? { ...scene, tracks: sceneTracks } : scene });
   });
 
   // ---- scene starts: in order, overlapping by each hand-over ------------------
@@ -518,7 +560,7 @@ export function resolveFilm(input: unknown): Resolution {
   if (film.poster !== undefined && (!isNum(film.poster) || film.poster < 0 || film.poster > duration)) {
     err('poster', 'bad-time', `poster is a time inside the film, 0 to ${duration.toFixed(2)} s.`);
   }
-  return done(tokens, { duration, fps, frames: Math.round(duration * fps), size: [size[0], size[1]], scenes });
+  return done(tokens, { duration, fps, frames: Math.round(duration * fps), size: [size[0], size[1]], scenes, ...(tempo ? { tempo } : {}), ...(film.loop ? { loop: true } : {}) });
 }
 
 /**
