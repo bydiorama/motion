@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { clipFor, placedRoom } from './mount.ts';
+import { clipFor, placedMaxWidth, placedRoom, wipeSide } from './mount.ts';
 
 test('a mask leaves room above and below the line, and opens its sides', () => {
   // Entering from below: the window's bottom is pulled back by the travel, its top is padded.
@@ -32,4 +32,23 @@ test('a slot move is cut off at its own box, by the px it has travelled', () => 
   assert.equal(clipFor({ clip: [0, 0, 0, 0], yShare: 0, slot: 24 }), 'inset(0.000% 0.000% 24.00px 0.000%)');
   assert.equal(clipFor({ clip: [0, 0, 0, 0], yShare: 0, slot: -10 }), 'inset(10.00px 0.000% 0.000% 0.000%)');
   assert.equal(clipFor({ clip: [0, 0, 0, 0], yShare: 0, slot: 0 }), '');
+});
+
+test('on a canvas the camera travels, a placed layer may run past the stage edge', () => {
+  assert.equal(placedMaxWidth({ x: 0, anchor: 'top-left' }, false, 1080), '1080px');
+  assert.equal(placedMaxWidth({ x: 50 }, false, 1080), '1080px');
+  assert.equal(placedMaxWidth({ x: 0, anchor: 'top-left' }, true, 1080), 'none');
+});
+
+test('a wipe\'s edge travels the way it is named, in and out', () => {
+  // In: the clip sits ahead of the edge and shrinks. wipe-right uncovers left to right.
+  assert.equal(wipeSide('wipe-right', false), 1);
+  assert.equal(wipeSide('wipe-left', false), 3);
+  assert.equal(wipeSide('wipe-up', false), 0);
+  assert.equal(wipeSide('wipe-down', false), 2);
+  // Out: the clip grows behind the edge. wipe-right covers from the left edge.
+  assert.equal(wipeSide('wipe-right', true), 3);
+  assert.equal(wipeSide('wipe-left', true), 1);
+  assert.equal(wipeSide('wipe-up', true), 2);
+  assert.equal(wipeSide('wipe-down', true), 0);
 });

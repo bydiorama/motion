@@ -130,6 +130,18 @@ interface Pose {
 }
 const rest = (): Pose => ({ x: 0, y: 0, scale: 1, rotate: 0, opacity: 1, blur: 0, rotateX: 0, rotateY: 0, skew: 0, yShare: 0, clip: [0, 0, 0, 0] });
 
+/**
+ * The side a wipe clips, as an index into Pose.clip (top, right, bottom, left). The edge
+ * travels in the named direction: wipe-right uncovers from the left edge rightwards, so on
+ * the way in the clip sits on the right and shrinks; on the way out it grows from the left.
+ */
+export function wipeSide(move: string, leaving: boolean): 0 | 1 | 2 | 3 {
+  const sides: Record<string, [0 | 1 | 2 | 3, 0 | 1 | 2 | 3]> = {
+    'wipe-up': [0, 2], 'wipe-down': [2, 0], 'wipe-left': [3, 1], 'wipe-right': [1, 3],
+  };
+  return sides[move]![leaving ? 1 : 0];
+}
+
 function applyMove(p: Pose, m: ResolvedMove, k: number, leaving: boolean) {
   // `gone` is how far from rest: 1 before an entrance starts and after an exit ends.
   // The overshoot of a springy ease is kept (gone < 0), so things can pass their mark.
@@ -152,10 +164,11 @@ function applyMove(p: Pose, m: ResolvedMove, k: number, leaving: boolean) {
     case 'mask-up': p.yShare += gone * (leaving ? -1 : 1); break;
     case 'mask-down': p.yShare += gone * (leaving ? 1 : -1); break;
     // A wipe's edge travels in the named direction, uncovering or covering.
-    case 'wipe-up': p.clip[leaving ? 2 : 0] = Math.max(p.clip[leaving ? 2 : 0], g); break;
-    case 'wipe-down': p.clip[leaving ? 0 : 2] = Math.max(p.clip[leaving ? 0 : 2], g); break;
-    case 'wipe-left': p.clip[leaving ? 3 : 1] = Math.max(p.clip[leaving ? 3 : 1], g); break;
-    case 'wipe-right': p.clip[leaving ? 1 : 3] = Math.max(p.clip[leaving ? 1 : 3], g); break;
+    case 'wipe-up': case 'wipe-down': case 'wipe-left': case 'wipe-right': {
+      const side = wipeSide(m.move, leaving);
+      p.clip[side] = Math.max(p.clip[side], g);
+      break;
+    }
     case 'swing': p.rotateX += dir * gone * amount; break;
     // Into its slot from below, out of it through the top: the box stays where it is.
     case 'slot-up': { const d = gone * amount * (leaving ? -1 : 1); p.y += d; p.slot = (p.slot ?? 0) + d; break; }
@@ -190,6 +203,14 @@ function writePose(el: HTMLElement, p: Pose, depth: number, smear = '') {
 const MASK_PAD = 'var(--m-mask-pad, 0.3em)';
 
 /** The clip-path for a pose's wipes and masks, or '' when nothing is clipped. */
+/**
+ * The most a placed layer without its own width may run: on a still stage, the room its
+ * anchor leaves; on a canvas the camera travels, no limit, since a rule or a picture
+ * there is meant to run past the stage's edge.
+ */
+export const placedMaxWidth = (place: Parameters<typeof placedRoom>[0], canvas: boolean, stageWidth: number): string =>
+  canvas ? 'none' : `${(placedRoom(place) / 100) * stageWidth}px`;
+
 export function clipFor(p: Pick<Pose, 'clip' | 'yShare' | 'slot'>): string {
   const [t, r, b, l] = p.clip;
   const pct = (v: number) => `${(v * 100).toFixed(3)}%`;
@@ -333,7 +354,7 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
         // Not on a canvas, though: where the scene's camera moves, layers lie beyond the
         // stage on purpose, and the stage's edge is no limit on how wide they are.
         le.style.width = 'max-content';
-        if (st.width === undefined && !canvas) le.style.maxWidth = `${(placedRoom(place) / 100) * W}px`;
+        if (st.width === undefined) le.style.maxWidth = placedMaxWidth(place, canvas, W);
       }
       for (const [k, v] of Object.entries(st.css ?? {})) le.style.setProperty(k, v);
       cam.appendChild(le);
