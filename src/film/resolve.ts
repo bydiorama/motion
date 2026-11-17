@@ -11,7 +11,7 @@ import { beatsToSeconds, framesPerBeat, isBeats, wholeFrameTempos, type Tempo } 
 import {
   ANCHORS, MOVE_NAMES, SURFACES, TEXT_SIZES, TONES, TRACK_PROPS,
   type ExitMove, type Film, type Issue, type Layer, type Move, type MoveName, type ResolvedLayer,
-  type ResolvedMove, type ResolvedScene, type Scene, type TimeRef, type Timeline, type Tracks,
+  type ResolvedMove, type ResolvedScene, type Scene, type TimeRef, type Timeline, type Tracks, type FilmAudio,
 } from './types.ts';
 
 export interface Resolution {
@@ -44,7 +44,7 @@ function idHint(id: unknown, what: 'scene' | 'layer', fallback: string): string 
 const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v);
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
-const FILM_KEYS = ['$schema', 'motion', 'title', 'size', 'fps', 'seed', 'poster', 'loop', 'narrative', 'style', 'tokens', 'tempo', 'theme', 'scenes'];
+const FILM_KEYS = ['$schema', 'motion', 'title', 'size', 'fps', 'seed', 'poster', 'loop', 'narrative', 'style', 'tokens', 'tempo', 'audio', 'theme', 'scenes'];
 const SCENE_KEYS = ['id', 'length', 'hold', 'background', 'scheme', 'layout', 'layers', 'tracks', 'follow', 'out', 'uses', 'intent'];
 /** Primitives whose instance has a tip a camera can follow. */
 export const FOLLOWABLE = ['fx/path-draw'];
@@ -155,11 +155,27 @@ export function resolveFilm(input: unknown): Resolution {
       else {
         tempo = { bpm: tp.bpm, bar: bar as number };
         const fpb = Number.isInteger(fps) && fps > 0 ? framesPerBeat(tempo, fps) : 1;
-        if (Math.abs(fpb - Math.round(fpb)) > 1e-6) {
+        // A soundtrack sets its own tempo: every time is snapped to the nearest frame
+        // (within half a frame of the beat), so only a film free to choose is warned.
+        if (Math.abs(fpb - Math.round(fpb)) > 1e-6 && film.audio === undefined) {
           warn('tempo.bpm', 'beat-off-frame', `At ${fps} fps a beat of ${tempo.bpm} bpm is ${fpb.toFixed(2)} frames, so beats fall between frames and drift.`,
             `Tempos with a whole number of frames per beat near it: ${wholeFrameTempos(tempo.bpm, fps).join(', ')} bpm.`);
         }
       }
+    }
+  }
+  let audio: Required<FilmAudio> | undefined;
+  if (film.audio !== undefined) {
+    const a = film.audio as unknown;
+    if (!isObject(a) || typeof a.src !== 'string' || !a.src) err('audio', 'bad-audio', 'audio is { src, from, gain, fade_in, fade_out }: a sound file relative to the film, and where in it the film starts.', 'For example {"src": "music/track.mp3", "from": 51.18}.');
+    else {
+      unknownKeys(a, ['src', 'from', 'gain', 'fade_in', 'fade_out'], 'audio');
+      const n = (k: string, d: number, lo: number, hi: number, why: string) => {
+        const v = a[k] === undefined ? d : a[k];
+        if (!isNum(v) || v < lo || v > hi) { err(`audio.${k}`, 'bad-value', `${k} is ${why}, ${lo} to ${hi}.`); return d; }
+        return v;
+      };
+      audio = { src: a.src, from: n('from', 0, 0, 36000, 'seconds into the file'), gain: n('gain', 0, -30, 6, 'a level in dB'), fade_in: n('fade_in', 0, 0, 10, 'seconds'), fade_out: n('fade_out', 0, 0, 10, 'seconds') };
     }
   }
   /** Seconds for a beat length such as "2b" or "1bar"; reports a missing tempo. */
@@ -271,6 +287,10 @@ export function resolveFilm(input: unknown): Resolution {
 
   const sceneIds = new Set<string>();
   const scenes: ResolvedScene[] = [];
+  // Each scene's length and hand-over before snapping to frames. Scenes are laid end to
+  // end in exact time and only their edges are snapped, so a beat that falls between
+  // frames (a soundtrack's tempo) does not drift further off with every cut.
+  const exact = new Map<string, { length: number; out: number }>();
 
   film.scenes.forEach((scene: Scene, si) => {
     const sid = isObject(scene) && typeof scene.id === 'string' ? scene.id : String(si);
@@ -399,7 +419,7 @@ export function resolveFilm(input: unknown): Resolution {
     // ---- layer starts: relative times, resolved in dependency order ------------
     const REF = /^\s*([a-z][a-z0-9-]*)\.(start|end)\s*(?:([+-])\s*(\d+(?:\.\d+)?\s*(?:b|beats?|bars?)?))?\s*$/;
     const visiting = new Set<string>();
-    let sceneLength: number | undefined;
+    let sceneLength: number | undefined, exactLength: number | undefined;
     const timeRef = (ref: TimeRef, path: string, self: string | undefined): number | undefined => {
       if (isNum(ref)) {
         if (ref < 0) { err(path, 'bad-time', 'Times are seconds from the scene start, zero or more.'); return undefined; }
@@ -450,7 +470,7 @@ export function resolveFilm(input: unknown): Resolution {
     if (scene.length !== undefined) {
       const len = isBeats(scene.length) ? beats(scene.length, `${sp}.length`) : scene.length;
       if (len === undefined) { /* reported */ } else if (!isNum(len) || len <= 0) err(`${sp}.length`, 'bad-time', 'length is seconds above zero, or beats ("8b", "2bars").');
-      else sceneLength = Math.max(frame, snap(len));
+      else { sceneLength = Math.max(frame, snap(len)); exactLength = Math.max(frame, len); }
     }
     for (const id of drafts.keys()) startOf(id);
     const hold = scene.hold === undefined ? tokens.hold : seconds(scene.hold, `${sp}.hold`, 'hold') ?? tokens.hold;
@@ -520,7 +540,7 @@ export function resolveFilm(input: unknown): Resolution {
     }
 
     // ---- hand-over to the next scene ------------------------------------------
-    let out: ResolvedScene['out'];
+    let out: ResolvedScene['out'], exactOut = 0;
     if (scene.out !== undefined) {
       const op = `${sp}.out`;
       const t = isObject(scene.out) && typeof scene.out.use === 'string' ? TRANSITIONS[scene.out.use] : undefined;
@@ -542,7 +562,7 @@ export function resolveFilm(input: unknown): Resolution {
         const duration = snap(isNum(params.duration) ? params.duration : 0);
         if (si === film.scenes.length - 1) warn(op, 'unused', 'The last scene has nothing to hand over to, so "out" is ignored.');
         else if (duration >= length) err(`${op}.duration`, 'too-long', `The hand-over (${duration.toFixed(2)} s) is not shorter than scene "${sid}" (${length.toFixed(2)} s).`);
-        else out = { use: t.slug, duration, params };
+        else { out = { use: t.slug, duration, params }; exactOut = isNum(params.duration) ? params.duration : 0; }
       }
     }
     // A cycling layer is last seen at the cut: the middle of the hand-over out, or the scene's end.
@@ -554,6 +574,7 @@ export function resolveFilm(input: unknown): Resolution {
           'End the scene on a rest: after the change, or before it begins.');
       }
     }
+    exact.set(sid, { length: exactLength ?? length, out: exactOut });
     scenes.push({ id: sid, start: 0, length, end: length, layers, ...(out ? { out } : {}), source: sceneTracks ? { ...scene, tracks: sceneTracks } : scene });
   });
 
@@ -565,18 +586,19 @@ export function resolveFilm(input: unknown): Resolution {
       if (prev.out.duration >= s.length) {
         err(`scenes.${prev.id}.out.duration`, 'too-long', `The hand-over (${prev.out.duration.toFixed(2)} s) is not shorter than the next scene "${s.id}" (${s.length.toFixed(2)} s).`);
       }
-      cursor -= prev.out.duration;
+      cursor -= exact.get(prev.id)?.out ?? prev.out.duration;
     }
     s.start = snap(cursor);
-    s.end = snap(s.start + s.length);
-    cursor = s.end;
+    cursor += exact.get(s.id)?.length ?? s.length;
+    s.end = snap(cursor);
+    s.length = s.end - s.start;
   });
   linkFootage(scenes, frame, err);
   const duration = snap(cursor);
   if (film.poster !== undefined && (!isNum(film.poster) || film.poster < 0 || film.poster > duration)) {
     err('poster', 'bad-time', `poster is a time inside the film, 0 to ${duration.toFixed(2)} s.`);
   }
-  return done(tokens, { duration, fps, frames: Math.round(duration * fps), size: [size[0], size[1]], scenes, ...(tempo ? { tempo } : {}), ...(film.loop ? { loop: true } : {}) });
+  return done(tokens, { duration, fps, frames: Math.round(duration * fps), size: [size[0], size[1]], scenes, ...(tempo ? { tempo } : {}), ...(film.loop ? { loop: true } : {}), ...(audio ? { audio } : {}) });
 }
 
 /**

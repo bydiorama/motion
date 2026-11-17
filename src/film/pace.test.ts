@@ -174,3 +174,20 @@ test('five shots in a row of one length tick like a metronome', () => {
   const varied = codesOf(film([still('a', '4b'), still('b', '2b'), still('c', '2b'), still('d', '4b'), still('e', '2b')], { tempo: { bpm: 100, bar: 4 } }));
   assert.ok(!varied.includes('even-cuts'), String(varied));
 });
+
+test('a soundtrack sets its own tempo: a beat between frames is not warned', () => {
+  const codes = (extra: object) => resolveFilm(film([{ id: 'a', length: '4b', layers: [{ id: 'b', use: 'el/box' }] }], { tempo: { bpm: 101.41 }, ...extra })).issues.map((i) => i.code);
+  assert.ok(codes({}).includes('beat-off-frame'));
+  assert.ok(!codes({ audio: { src: 'track.mp3', from: 51.18 } }).includes('beat-off-frame'));
+  const bad = resolveFilm(film([{ id: 'a', length: 1, layers: [{ id: 'b', use: 'el/box' }] }], { audio: { src: 'x.mp3', gain: 20 } })).issues.map((i) => i.path);
+  assert.ok(bad.includes('audio.gain'));
+});
+
+test('scenes on a beat between frames are laid end to end in exact time, so cuts do not drift', () => {
+  const scenes = Array.from({ length: 10 }, (_, i) => ({ id: `s${i}`, length: '2b', layers: [{ id: 'b', use: 'el/box' }] }));
+  const t = resolveFilm(film(scenes, { tempo: { bpm: 101.41, bar: 4 }, audio: { src: 'track.mp3' } })).timeline!;
+  const beat = 60 / 101.41;
+  // Each cut is within half a frame of its beat, however many scenes come before it.
+  t.scenes.forEach((s, i) => assert.ok(Math.abs(s.start - i * 2 * beat) <= 0.5 / 60 + 1e-9, `${s.id} at ${s.start}`));
+  assert.ok(Math.abs(t.duration - 20 * beat) <= 0.5 / 60 + 1e-9, String(t.duration));
+});

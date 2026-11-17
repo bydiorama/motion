@@ -469,9 +469,18 @@ async function render(args: Args) {
   fs.mkdirSync(path.dirname(out), { recursive: true });
   const [w, h] = [t.size[0] - (t.size[0] % 2), t.size[1] - (t.size[1] % 2)]; // H.264 4:2:0 needs even sides
   const s = await open(file, { css: args.css, size: t.size, scale, timeline: t, ...browserOpt(args), ...(args.flags['no-tune'] ? { noTune: true } : {}) });
-  const ff = spawn('ffmpeg', ['-v', 'error', '-y', '-f', 'image2pipe', '-framerate', String(t.fps), '-vcodec', 'mjpeg', '-i', 'pipe:0',
+  // The soundtrack, cut to the film: from its `from`, as long as the film, faded and levelled.
+  const a = t.audio, sound = a ? path.resolve(path.dirname(path.resolve(file)), a.src) : undefined;
+  if (sound && !fs.existsSync(sound)) { console.error(`audio.src: ${a!.src} not found next to the film.`); process.exit(1); }
+  const audioIn = a && sound ? ['-ss', String(a.from), '-t', String(t.duration), '-i', sound] : [];
+  const audioOut = a && sound ? [
+    '-map', '0:v', '-map', '1:a', '-c:a', 'aac', '-b:a', '256k',
+    // A few milliseconds of fade even when none is asked for, so the cut ends never click.
+    '-af', [`volume=${a.gain}dB`, `afade=t=in:st=0:d=${Math.max(0.005, a.fade_in)}`, `afade=t=out:st=${Math.max(0, t.duration - Math.max(0.005, a.fade_out)).toFixed(4)}:d=${Math.max(0.005, a.fade_out)}`, `apad=whole_dur=${t.duration}`].join(','),
+  ] : ['-an'];
+  const ff = spawn('ffmpeg', ['-v', 'error', '-y', '-f', 'image2pipe', '-framerate', String(t.fps), '-vcodec', 'mjpeg', '-i', 'pipe:0', ...audioIn,
     '-vf', `scale=${w}:${h}:flags=lanczos+accurate_rnd+full_chroma_int:in_color_matrix=bt601:in_range=pc:out_color_matrix=bt709:out_range=tv,format=yuv420p`,
-    '-c:v', 'libx264', '-preset', 'slow', '-crf', crf, '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-movflags', '+faststart', '-an', out]);
+    '-c:v', 'libx264', '-preset', 'slow', '-crf', crf, '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-movflags', '+faststart', ...audioOut, '-t', String(t.duration), out]);
   let ffErr = '';
   ff.stderr.on('data', (d: Buffer) => { ffErr += d.toString(); });
   const closed = once(ff, 'close');

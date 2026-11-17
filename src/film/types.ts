@@ -193,8 +193,26 @@ export interface Film {
    * ("2b", "1bar") and `motion pace` checks cuts and changes against the grid.
    */
   tempo?: { bpm: number; bar?: number };
+  /**
+   * A soundtrack: film time 0 plays the file from `from` seconds. The studio plays it
+   * in step with the playhead and `render` lays it under the video. With music, set
+   * `tempo` to the track's own and `from` on one of its downbeats.
+   */
+  audio?: FilmAudio;
   theme?: Theme;
   scenes: Scene[];
+}
+
+export interface FilmAudio {
+  /** Path to the file, relative to the film, like any picture. */
+  src: string;
+  /** Seconds into the file that film time 0 plays. */
+  from?: number;
+  /** Level in dB, -30 to 6. */
+  gain?: number;
+  /** Seconds the sound fades in at the start and out at the end. A loop keeps them short, so the seam does not dip. */
+  fade_in?: number;
+  fade_out?: number;
 }
 
 // ---- tuning: the person's file -------------------------------------------------
@@ -277,4 +295,5 @@ export interface Timeline {
   scenes: ResolvedScene[];
   tempo?: Tempo;
   loop?: boolean;
+  audio?: Required<FilmAudio>;
 }

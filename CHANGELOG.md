@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Soundtracks: a film's `audio` (`src`, `from`, `gain`, `fade_in`, `fade_out`) plays the file from `from` seconds at film time 0. The studio and the page player follow the playhead with it; `render` cuts it to the film and lays it under the video (AAC), de-clicked at both ends. With a soundtrack the music sets the tempo, so `beat-off-frame` is not warned. The preview server serves audio files.
+- Scenes are laid end to end in exact time and only their edges are snapped to frames, so on a beat that falls between frames the cuts stay within half a frame of their beats instead of drifting a frame further with every scene.
 - Move `slot-up`: a layer rises `amount` px (48 by default) into its own box, cut off at the box's bottom edge, with no fade, on `cubic.out`: a framed picture settling into a slot that was already there. `mask-up` travels the layer's whole height.
 - `fx/pan-across`: the camera travels along a picture wider (or taller) than its frame, filling it the other way, on `sine.inOut`. It reports its fastest speed, so `pace` can warn before it strobes.
 - Primitive contract: optional `speed(props, params, ctx)`, the fastest a layer's picture crosses the stage in px a second. `pace` warns `judder` when a frame-to-frame step is over a fortieth of the stage's shorter side.

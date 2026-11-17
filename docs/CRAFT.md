@@ -48,6 +48,7 @@ A film feels designed when it keeps one pulse: like moves take like time, rests 
 
 - **Set one tempo and count in beats.** `"tempo": {"bpm": 120}`, then every time is beats or bars (`"2b"`, `"1bar"`). A beat is 60 / bpm seconds. Change the bpm and the whole film retimes in proportion.
 - **A beat is a whole number of frames**: fps × 60 / bpm is an integer. At 60 fps: 100, 120, 144, 150 bpm; at 30: 100, 120, 150; at 25: 100, 125, 150.
+- **With music, the track sets the tempo.** Measure its bpm and downbeats, then take a stretch of whole bars that starts on a hit and ends where the next one lands, so a loop wraps on the beat. Put the turns of the film (the hand-overs) on the track's section changes and the plain cuts on its accents; let a gap or a break in the music fall under a held colour or a cut, never mid-move.
 - **Choose the tempo by feel, or by the music.** Calm and editorial: 80–100. Most identity and product films: 110–130. Social and energetic: 130–150. Faster than about 160, changes come every 0.4 s and nothing reads. A film cut to a genre takes its range: jazz runs from ballads (60–80) through medium swing (120–150) to bebop (over 200).
 - **Bars and phrases.** 4 beats a bar, 4 bars a phrase. Hand-overs land on the first beat of a bar, and a section lasts whole bars cut to cut; a plain cut inside a section lands on any beat. Smaller moves land on the beat or the half-beat, and last whole half-beats. At 120 bpm: a beat 0.5 s, a bar 2 s, a phrase 8 s; a 16 s loop is 8 bars.
 
