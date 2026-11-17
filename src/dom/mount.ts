@@ -125,6 +125,8 @@ interface Pose {
   yShare: number;
   /** Clipped share of each side, 0..1: top, right, bottom, left. */
   clip: [number, number, number, number];
+  /** Px a slot move has carried the layer down (positive) or up (negative), clipped at its box. */
+  slot?: number;
 }
 const rest = (): Pose => ({ x: 0, y: 0, scale: 1, rotate: 0, opacity: 1, blur: 0, rotateX: 0, rotateY: 0, skew: 0, yShare: 0, clip: [0, 0, 0, 0] });
 
@@ -135,7 +137,7 @@ function applyMove(p: Pose, m: ResolvedMove, k: number, leaving: boolean) {
   const g = Math.max(0, Math.min(1, gone));
   const amount = m.amount ?? 0;
   const dir = leaving ? -1 : 1;
-  const fades = !m.move.startsWith('mask-') && !m.move.startsWith('wipe-');
+  const fades = !m.move.startsWith('mask-') && !m.move.startsWith('wipe-') && m.move !== 'slot-up';
   if (fades) p.opacity *= m.move === 'pop' || m.move === 'swing' ? 1 - Math.min(1, g * 2.5) : 1 - g;
   switch (m.move) {
     case 'rise': p.y += dir * gone * amount; break;
@@ -155,13 +157,15 @@ function applyMove(p: Pose, m: ResolvedMove, k: number, leaving: boolean) {
     case 'wipe-left': p.clip[leaving ? 3 : 1] = Math.max(p.clip[leaving ? 3 : 1], g); break;
     case 'wipe-right': p.clip[leaving ? 1 : 3] = Math.max(p.clip[leaving ? 1 : 3], g); break;
     case 'swing': p.rotateX += dir * gone * amount; break;
+    // Into its slot from below, out of it through the top: the box stays where it is.
+    case 'slot-up': { const d = gone * amount * (leaving ? -1 : 1); p.y += d; p.slot = (p.slot ?? 0) + d; break; }
     default: break;
   }
 }
 
 function writePose(el: HTMLElement, p: Pose, depth: number, smear = '') {
   const flat = p.rotateX === 0 && p.rotateY === 0;
-  const still = p.x === 0 && p.y === 0 && p.scale === 1 && p.rotate === 0 && p.skew === 0 && p.yShare === 0 && flat;
+  const still = p.x === 0 && p.y === 0 && p.scale === 1 && p.rotate === 0 && p.skew === 0 && p.yShare === 0 && !p.slot && flat;
   const parts: string[] = [];
   if (!flat) parts.push(`perspective(${depth}px)`);
   // A mask travels its own height plus the room above and below it, so the
@@ -186,9 +190,15 @@ function writePose(el: HTMLElement, p: Pose, depth: number, smear = '') {
 const MASK_PAD = 'var(--m-mask-pad, 0.3em)';
 
 /** The clip-path for a pose's wipes and masks, or '' when nothing is clipped. */
-export function clipFor(p: Pick<Pose, 'clip' | 'yShare'>): string {
+export function clipFor(p: Pick<Pose, 'clip' | 'yShare' | 'slot'>): string {
   const [t, r, b, l] = p.clip;
   const pct = (v: number) => `${(v * 100).toFixed(3)}%`;
+  const slot = p.slot ?? 0;
+  if (Math.abs(p.yShare) < 1e-6 && Math.abs(slot) > 1e-3) {
+    // A slot move: the layer has travelled `slot` px; what passed the box's edge is cut off.
+    const px = (wipe: number, by: number) => (by > 0 ? (wipe > 0.0001 ? `max(${pct(wipe)}, ${by.toFixed(2)}px)` : `${by.toFixed(2)}px`) : pct(wipe));
+    return `inset(${px(t, -slot)} ${pct(r)} ${px(b, slot)} ${pct(l)})`;
+  }
   if (Math.abs(p.yShare) < 1e-6) {
     // Wipes clip at the box itself: their edge is the move.
     return t + r + b + l > 0.0001 ? `inset(${pct(t)} ${pct(r)} ${pct(b)} ${pct(l)})` : '';

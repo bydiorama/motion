@@ -82,6 +82,7 @@ export function moveLayer(slug: string, id = 'move', text?: string): Layer | und
     case 'rig/layer-stack': return { id, use: slug, props: { items: ['Base', 'Rules', 'Parts', 'Uses'], name: 'One layer' }, params: { width: 46, gap: 150, start: 0.5, travel: 0.7 } };
     case 'rig/browser-window': return { id, use: slug, props: { lift: [36, 54, 28, 38] }, params: { width: 90, move: 0.9 } };
     case 'fx/slow-push': return { id, use: slug, props: { src: PICTURE }, params: { width: 1040, height: 780, radius: 24, from: 1, to: 1.16, pan_x: -6, duration: 3 } };
+    case 'fx/pan-across': return { id, use: slug, props: { src: PICTURE }, params: { width: 560, height: 780, aspect: 800 / 600, from: 10, to: 90, duration: 3 } };
     case 'ui/page-scroll': return { id, use: slug, props: { srcs: PAGE, stops: [45] }, params: { width: 1000, height: 820, radius: 24, duration: 2.6, rest: 0.5, delay: 0.3 } };
     case 'scene/bento-grid': {
       const word = (s: string) => `<b style="font:700 calc(var(--m-u) * 6)/1 var(--m-font-display);color:var(--m-text-primary)">${s}</b>`;

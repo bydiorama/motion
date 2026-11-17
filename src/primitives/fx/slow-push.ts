@@ -27,8 +27,10 @@ export const slowPush: Primitive = {
     to: { type: 'number', default: 1, min: 1, max: 1.6, step: 0.01, unit: '×', label: 'Scale at the end' },
     pan_x: { type: 'number', default: 0, min: -30, max: 30, step: 0.5, unit: '% of frame', label: 'Sideways travel over the move', pad: { name: 'pan', axis: 'x' } },
     pan_y: { type: 'number', default: 0, min: -30, max: 30, step: 0.5, unit: '% of frame', label: 'Vertical travel over the move', pad: { name: 'pan', axis: 'y' } },
+    focus_x: { type: 'number', default: 50, min: 0, max: 100, step: 1, unit: '% of picture', label: 'Point of the picture to keep in frame, across', pad: { name: 'focus', axis: 'x' } },
+    focus_y: { type: 'number', default: 50, min: 0, max: 100, step: 1, unit: '% of picture', label: 'Point of the picture to keep in frame, down', pad: { name: 'focus', axis: 'y' } },
     duration: { type: 'number', default: 4, min: 0.5, max: 30, step: 0.1, unit: 's', label: 'Length of the move' },
-    ease: { type: 'ease', default: 'linear', label: 'Curve of the move; linear reads as drift' },
+    ease: { type: 'ease', default: 'linear', label: 'Curve of the move; linear reads as drift, sine.inOut as a camera that starts and settles' },
   },
   // Footage and ambient drift are not moves: the pace check skips them.
   cues: () => [],
@@ -39,7 +41,10 @@ export const slowPush: Primitive = {
     img.alt = str(props.alt);
     img.decoding = 'sync';
     el.style.cssText += `;width:${num(p.width)}px;height:${num(p.height)}px;border-radius:${num(p.radius)}px;overflow:hidden`;
-    img.style.cssText = 'display:block;width:100%;height:100%;object-fit:cover;will-change:transform';
+    // The focus is where the crop is taken from and where the push grows from, so a
+    // subject off centre stays in frame as the picture fills a narrower frame.
+    const focus = `${num(p.focus_x, 50)}% ${num(p.focus_y, 50)}%`;
+    img.style.cssText = `display:block;width:100%;height:100%;object-fit:cover;object-position:${focus};transform-origin:${focus};will-change:transform`;
     el.appendChild(img);
     const ease = ctx.ease(p.ease as never), d = num(p.duration, 4);
     const q = { from: num(p.from, 1.08), to: num(p.to, 1), pan_x: num(p.pan_x), pan_y: num(p.pan_y) };

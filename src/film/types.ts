@@ -26,13 +26,15 @@ export type Tracks = Partial<Record<TrackProp, Key[]>>;
  *  mask-up, mask-down: slides out from under its own edge, without fading (a line reveal).
  *  wipe-*: an edge travels across the layer and uncovers it, without moving it.
  *  swing: turns in on a horizontal hinge, in perspective.
+ *  slot-up: rises `amount` px into its own box, cut off at the box's bottom edge, no
+ *    fade: a picture settling into a slot that was already there.
  */
 export type MoveName =
   | 'fade' | 'rise' | 'drop' | 'scale' | 'blur' | 'slide-left' | 'slide-right'
-  | 'zoom' | 'pop' | 'focus' | 'mask-up' | 'mask-down' | 'wipe-up' | 'wipe-down' | 'wipe-left' | 'wipe-right' | 'swing';
+  | 'zoom' | 'pop' | 'focus' | 'mask-up' | 'mask-down' | 'wipe-up' | 'wipe-down' | 'wipe-left' | 'wipe-right' | 'swing' | 'slot-up';
 export const MOVE_NAMES: readonly MoveName[] = [
   'fade', 'rise', 'drop', 'scale', 'blur', 'slide-left', 'slide-right',
-  'zoom', 'pop', 'focus', 'mask-up', 'mask-down', 'wipe-up', 'wipe-down', 'wipe-left', 'wipe-right', 'swing',
+  'zoom', 'pop', 'focus', 'mask-up', 'mask-down', 'wipe-up', 'wipe-down', 'wipe-left', 'wipe-right', 'swing', 'slot-up',
 ];
 
 export interface Move {
@@ -241,6 +243,8 @@ export interface ResolvedLayer {
   exit?: ResolvedMove;
   /** Changes inside the primitive's own run (a picture swap, a turn), from the layer start. */
   cues?: Cue[];
+  /** Fastest travel of the layer's picture across the stage, px a second, when the primitive reports it. */
+  speed?: number;
   source: Layer;
 }
 

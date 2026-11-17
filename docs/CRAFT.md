@@ -49,7 +49,7 @@ A film feels designed when it keeps one pulse: like moves take like time, rests 
 - **Set one tempo and count in beats.** `"tempo": {"bpm": 120}`, then every time is beats or bars (`"2b"`, `"1bar"`). A beat is 60 / bpm seconds. Change the bpm and the whole film retimes in proportion.
 - **A beat is a whole number of frames**: fps × 60 / bpm is an integer. At 60 fps: 100, 120, 144, 150 bpm; at 30: 100, 120, 150; at 25: 100, 125, 150.
 - **Choose the tempo by feel, or by the music.** Calm and editorial: 80–100. Most identity and product films: 110–130. Social and energetic: 130–150. Faster than about 160, changes come every 0.4 s and nothing reads. A film cut to a genre takes its range: jazz runs from ballads (60–80) through medium swing (120–150) to bebop (over 200).
-- **Bars and phrases.** 4 beats a bar, 4 bars a phrase. Scene changes land on the first beat of a bar, and a section lasts whole bars cut to cut. Smaller moves land on the beat or the half-beat, and last whole half-beats. At 120 bpm: a beat 0.5 s, a bar 2 s, a phrase 8 s; a 16 s loop is 8 bars.
+- **Bars and phrases.** 4 beats a bar, 4 bars a phrase. Hand-overs land on the first beat of a bar, and a section lasts whole bars cut to cut; a plain cut inside a section lands on any beat. Smaller moves land on the beat or the half-beat, and last whole half-beats. At 120 bpm: a beat 0.5 s, a bar 2 s, a phrase 8 s; a 16 s loop is 8 bars.
 
 **Like moves take like time.**
 
@@ -57,6 +57,13 @@ A film feels designed when it keeps one pulse: like moves take like time, rests 
 - **A ladder in beats.** Hand-over 1 beat (2 for a featured turn of the story, once or twice a film). Picture change 1–2 beats. Rest between changes 2–4 beats, never under 1 s. Opening and closing holds 1–2 beats each, 0.8–1.2 s across the loop seam.
 - **Even density.** How much of the frame changes a second stays within 2× from scene to scene. A change counts by its share of the frame: a whole picture counts one, a tile a fifth of the frame counts a fifth. A wall of tiles swaps one tile at a time, in turn, while the others rest; several tiles at once in one scene, then one picture every three seconds in the next, reads as a lurch.
 - **Vary on purpose only**, at a phrase boundary: an accelerando into a reveal, halving each time (8 → 4 → 2 → 1 beats) and then holding at least 8; a longer hold, 1.5–2×, on the end card.
+
+**Cut, mostly.**
+
+- **One picture to a frame, and cut between them.** A film of single pictures, each filling the frame, cut on the beat, reads as edited; a wall of small pictures, or a transition at every seam, reads as a template. Use a wall to establish, then cut.
+- **Alternate long and short.** A sweeping shot (a pan, a feed, a camera move) runs about twice as long as the quick shots around it: 4 beats against 2 at 100 bpm. Two or three quick shots between long ones give the eye a rest before each burst. Five shots in a row of one length tick like a metronome.
+- **Quick shots: 1.2–1.4 s; long shots: 2–2.5 s.** Under 1.2 s, a picture is seen but not read.
+- **Transitions only at the turns.** A signature wipe into the run of cuts and out of it, plain cuts in between. Change the frame colour on every framed shot, in the palette's order, so even plain cuts feel deliberate.
 
 **Seams, not sections.**
 
@@ -67,7 +74,7 @@ A film feels designed when it keeps one pulse: like moves take like time, rests 
 
 **Held, not moving.**
 
-- **About a third of a film is in motion**, two thirds held or drifting. Over 60% in motion, nothing reads; under 20%, it waits. A wall of tiles on their own clocks counts as its busiest tile.
+- **About a third of a film is in motion**, two thirds held or drifting. Over 60% in motion, nothing reads; under 20%, with nothing drifting either, it waits. Drift (a slow push, a pan) keeps a held picture alive without counting as a move. A wall of tiles on their own clocks counts as its busiest tile.
 - **A picture needs time.** Its gist registers in a tenth of a second, but it is remembered after 1–2 s: rest a full-frame picture at least 1 s plus 0.3 s per thing to see in it; a poster or key visual in a social cut 1.5–2 s; the end card 2.5–3 s.
 
 **Story before rhythm.** Rhythm serves the story, not the other way round. Each scene answers one question and leads to the next by "therefore" or "but", never "and then". An identity film goes from the system (the device, then its colours and type) to its applications, from small to large, into the world, and back to the mark. A series of posts or posters is shown in one format per section (one after another, a feed, a carousel, a grid that builds), never mixed within a phrase.
@@ -118,7 +125,8 @@ The video scale is longer than an interface's, because nobody is waiting on it.
 - **One accent per scene.** The accent colour marks the one thing that matters.
 - **Safe areas.** In 16:9, keep text 5% inside every edge. In 9:16 (1080 × 1920), keep text within x 60–940 and y 250–1500: interface chrome covers the rest.
 - **Nothing is dead still.** Under every hold, a slow drift: scale 1.03 → 1 over the scene, or a few degrees of rotation, on a linear curve.
-- **A still photograph drifts inside its frame** (`fx/slow-push`): 4–14% of scale over the time it can be seen, linear, the frame's edge fixed. In a row of pictures, one direction.
+- **A still photograph drifts inside its frame** (`fx/slow-push`): 4–14% of scale over the time it can be seen, linear, the frame's edge fixed. In a row of pictures, one direction. In a cut of single pictures, the push belongs to the shot: 4–8% on `sine.inOut`, with its focus on the subject.
+- **Choose the shot by the picture.** Before choosing, make a contact sheet of every picture with the frame's crop drawn on it. A photograph survives the crop: fill the frame (`fx/slow-push`, focus on the subject). A picture full of lettering does not: frame it at its own ratio across the full width, on a field of the identity's colour, and let it rise into its slot (`slot-up`, about 48 px in half a beat). A picture much wider than the frame: let the camera travel along it (`fx/pan-across`). Never crop through a word.
 - **Show a page whole before it becomes an object.** A site reads as a site when it nearly fills the frame and scrolls (`ui/page-scroll`): one or two rests on whole sections, 0.6–0.9 s each, a hold on the last one, and long legs slower than you think: a scroll that covers several screens wants about 2 s. Only then pull back to the wall, the device or the perspective.
 - **A wall keeps moving.** Once a grid of cards is open, neighbouring columns drift in opposite directions, 60–90 px over the hold, and the wall stays on screen for at least 1.5 s after the last card has landed.
 
@@ -136,6 +144,7 @@ What makes 3D look shot rather than assembled.
 - **A route of stations keeps an even, unhurried pace.** When the camera visits a row of like stations, every leg takes the same time (about 1.1–1.3 s for a frame's height of travel) on `cubic.inOut`, with a rest of about 0.5 s at each. Shortening the legs to build pace, or a steeper curve such as `quart.inOut`, reads as hectic by the third station. A station never shows in the frame of the one before it.
 - **Or the route flows.** The same route as one flowing move: every leg takes the same time (about 1.4 s for a frame's height) on a curve that leaves and arrives with no jolt (velocity as sin²), and the camera rests at each station for only a fraction of a second, 0.25–0.3 s. Passing the stations without stopping (slowing to about 0.4 of the mean speed) also works, but a brief rest lets each one register. Sideways sway turns round at the stations, so it eases through them on a cosine. Labels start 0.4–0.5 s before the station is centred, so they have landed by the time it is.
 - **Many become one by landing, not by fading.** When several things are shown to be one (`rig/layer-stack`), they travel onto a base that never moves, lowest first, 0.1–0.2 s apart; each dissolves into what it lands on, and the accent arrives once, when the last has landed. Labels in a turned world face the camera and stay level.
+- **A pan never strobes.** At its fastest, a picture crosses at most a fortieth of the frame's shorter side a frame (27 px at 1080 wide); at 30 fps that is half the speed it may take at 60. `fx/pan-across` reports its speed and `pace` warns (`judder`).
 - **Shared rhythm.** A family of pulses (ripples, glows) shares one phase, so they are the same size at every instant.
 - **Open from black.** A dark film fades in its first texture over 0.6–0.8 s before anything settles; the type starts with it.
 
@@ -157,11 +166,22 @@ What makes 3D look shot rather than assembled.
 | `transition/signal-wipe` | 0.4–0.7 s | A cut drawn by accent light; for dark films. |
 | `transition/fly-past` | 0.8–1.4 s | Out of a scene made of panels or tiles, to what lies beneath. |
 | `transition/band-sweep` | 0.6–1.1 s | Turns of the story in an identity film; bands in the identity's own colours. One or two beats, within half a picture's time. |
+| `transition/strip-wipe` | 0.6–1 s | An identity built on a ruled grid: its rows run across in colour. `cover` with `alternate` for a signature wipe into and out of a run of cuts. |
 
 - **Content stays still while the edge moves** in a wipe, so it reads as a cut, not a slide.
 - **Swap only while covered.** A cover or curtain changes the scene while the frame is fully covered.
 - **Anticipation before speed.** A whip or a throw pulls back 3–5° for about 0.15 s first.
 - **Changes between logo states are hard cuts**, not crossfades.
+
+- **The signature transition comes from the identity.** Take its own shape, a ruled row, a band, a cut corner, and make it the wipe; a stock transition says nothing about whose film it is.
+
+**From identity to motion.** Before choosing a single move, read the identity for:
+
+1. **Its grid.** The unit the layouts are built on (a ruled row, a column, a module). Text, marks and wipes sit on it: a 1920 px tall frame of 8 rows has a row every 240 px.
+2. **Its signature shape.** The device a viewer would recognise without the logo. It becomes the transition and the way things arrive.
+3. **Its mark's structure.** How the logo is built (lines of type, a symbol and a word, a monogram). It builds in that order, each part from its own space.
+4. **Its colours.** Measured from the designs, not guessed. They become the frame colours behind framed pictures and the colour of the wipe, in a fixed order.
+5. **Its curves.** Arrivals fast then slow (`cubic.out`), cameras starting and settling (`sine.inOut`), wipes symmetric (`cubic.inOut`). Nothing moves at a constant speed except drift.
 
 ## 9. Logo reveals
 

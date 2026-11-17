@@ -19,6 +19,8 @@ export interface ServerOptions {
   film: string; css?: string[]; port?: number; watch?: boolean;
   /** Footage frames for el/video layers, by "<scene>/<layer>", served at /api/frames. */
   frames?: Record<string, FrameSequence>;
+  /** Serve no tuning, as if the tune file were empty: stills, checks and renders of the film as written. */
+  noTune?: boolean;
 }
 export interface Preview { url: string; close(): Promise<void> }
 
@@ -82,7 +84,7 @@ export async function serve(options: ServerOptions): Promise<Preview> {
     if (p === '/page.js') return file(res, page);
     if (p === '/api/film') return file(res, filmPath);
     if (p === '/api/frames') return send(res, 200, MIME['.json']!, JSON.stringify(options.frames ?? {}));
-    if (p === '/api/tune' && req.method === 'GET') return send(res, 200, MIME['.json']!, JSON.stringify(readTune(filmPath)));
+    if (p === '/api/tune' && req.method === 'GET') return send(res, 200, MIME['.json']!, JSON.stringify(options.noTune ? { set: {}, notes: [] } : readTune(filmPath)));
     if (p === '/api/tune' && req.method === 'PUT') {
       const chunks: Buffer[] = [];
       req.on('data', (c: Buffer) => chunks.push(c));

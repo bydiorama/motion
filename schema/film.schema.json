@@ -345,7 +345,8 @@
                   "transition/whip-pan",
                   "transition/signal-wipe",
                   "transition/fly-past",
-                  "transition/band-sweep"
+                  "transition/band-sweep",
+                  "transition/strip-wipe"
                 ]
               },
               "duration": {
@@ -428,6 +429,7 @@
                     "fx/pin-drop",
                     "scene/grid-wall",
                     "fx/slow-push",
+                    "fx/pan-across",
                     "ui/page-scroll",
                     "scene/bento-grid",
                     "scene/post-carousel",
@@ -554,7 +556,8 @@
                         "wipe-down",
                         "wipe-left",
                         "wipe-right",
-                        "swing"
+                        "swing",
+                        "slot-up"
                       ]
                     },
                     {
@@ -582,7 +585,8 @@
                             "wipe-down",
                             "wipe-left",
                             "wipe-right",
-                            "swing"
+                            "swing",
+                            "slot-up"
                           ]
                         },
                         "duration": {
@@ -707,7 +711,8 @@
                         "wipe-down",
                         "wipe-left",
                         "wipe-right",
-                        "swing"
+                        "swing",
+                        "slot-up"
                       ]
                     },
                     {
@@ -735,7 +740,8 @@
                             "wipe-down",
                             "wipe-left",
                             "wipe-right",
-                            "swing"
+                            "swing",
+                            "slot-up"
                           ]
                         },
                         "duration": {

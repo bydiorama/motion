@@ -139,3 +139,38 @@ test('a wall that swaps a tile at a time is no busier than a scene of whole pict
   assert.ok(Math.abs(wall.rate - (wall.changes / 6) / wall.length) < 1e-3, JSON.stringify(wall));
   assert.ok(!p.issues.some((i) => i.code === 'uneven-density'), JSON.stringify(p.issues));
 });
+
+const still = (id: string, length: string, extra: object = {}) => ({
+  id, length, layers: [{ id: 'pic', use: 'fx/slow-push', props: { src: 'a.png' }, params: { width: 1080, height: 1920, duration: 30 } }], ...extra,
+});
+
+test('a plain cut may land on any beat; a hand-over still lands on a bar line', () => {
+  const tempo = { tempo: { bpm: 100, bar: 4 } };
+  const cuts = codesOf(film([still('a', '4b'), still('b', '2b'), still('c', '3b'), still('d', '3b')], tempo));
+  assert.ok(!cuts.includes('off-grid'), String(cuts));
+  const handed = codesOf(film([still('a', '3b', { out: { use: 'transition/strip-wipe', duration: '1b' } }), still('b', '4b')], tempo));
+  assert.ok(handed.includes('off-grid'), String(handed));
+});
+
+test('drift keeps a film of held pictures from reading as stalled, never as restless', () => {
+  const codes = codesOf(film([still('a', '4b', { layers: [
+    { id: 'pic', use: 'fx/slow-push', props: { src: 'a.png' }, params: { width: 1080, height: 1920, duration: 30 } },
+    { id: 'logo', use: 'el/box', at: '1b', enter: { move: 'mask-up', duration: '0.5b' } },
+  ] }), still('b', '4b')], { tempo: { bpm: 100, bar: 4 } }));
+  assert.ok(!codes.includes('stalled') && !codes.includes('restless'), String(codes));
+});
+
+test('a pan that crosses the stage in big steps is reported as judder', () => {
+  const pan = (duration: number) => film([{ id: 'a', length: duration, layers: [
+    { id: 'wide', use: 'fx/pan-across', props: { src: 'w.png' }, params: { aspect: 1.82, from: 0, to: 100, duration } },
+  ] }], { fps: 30 });
+  assert.ok(codesOf(pan(1.2)).includes('judder'));
+  assert.ok(!codesOf(pan(8)).includes('judder'));
+});
+
+test('five shots in a row of one length tick like a metronome', () => {
+  const even = codesOf(film(['a', 'b', 'c', 'd', 'e'].map((id) => still(id, '2b')), { tempo: { bpm: 100, bar: 4 } }));
+  assert.ok(even.includes('even-cuts'), String(even));
+  const varied = codesOf(film([still('a', '4b'), still('b', '2b'), still('c', '2b'), still('d', '4b'), still('e', '2b')], { tempo: { bpm: 100, bar: 4 } }));
+  assert.ok(!varied.includes('even-cuts'), String(varied));
+});

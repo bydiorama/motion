@@ -134,6 +134,12 @@ export interface Primitive {
    * that ends it in the middle of a change is still reported.
    */
   cycles?: boolean;
+  /**
+   * Optional, pure: the fastest the layer's picture travels across the stage, in px a
+   * second (a pan along a wide picture). The pace check warns when a frame-to-frame
+   * step is large enough to strobe.
+   */
+  speed?(props: Record<string, unknown>, params: Record<string, unknown>, ctx: PureCtx): number;
 }
 
 export interface TransitionPrimitive {

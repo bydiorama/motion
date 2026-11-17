@@ -53,12 +53,13 @@ const STYLE_KEYS = ['size', 'color', 'font', 'weight', 'align', 'width', 'css'];
 
 const MOVE_AMOUNT: Record<MoveName, number> = {
   fade: 0, rise: 40, drop: 40, scale: 0.08, blur: 16, 'slide-left': 120, 'slide-right': 120,
-  zoom: 0.12, pop: 0.5, focus: 24, 'mask-up': 0, 'mask-down': 0, 'wipe-up': 0, 'wipe-down': 0, 'wipe-left': 0, 'wipe-right': 0, swing: 70,
+  zoom: 0.12, pop: 0.5, focus: 24, 'mask-up': 0, 'mask-down': 0, 'wipe-up': 0, 'wipe-down': 0, 'wipe-left': 0, 'wipe-right': 0, swing: 70, 'slot-up': 48,
 };
 /** Moves that read best with their own curve when the film does not give one. */
 const MOVE_EASE: Partial<Record<MoveName, { enter: EaseSpec; exit: EaseSpec }>> = {
   pop: { enter: { spring: { duration: 0.5, bounce: 0.35 } }, exit: 'back.in' },
   'mask-up': { enter: 'expressive.out', exit: 'expressive.in' },
+  'slot-up': { enter: 'cubic.out', exit: 'cubic.in' },
   'mask-down': { enter: 'expressive.out', exit: 'expressive.in' },
   'wipe-up': { enter: 'quart.inOut', exit: 'quart.inOut' },
   'wipe-down': { enter: 'quart.inOut', exit: 'quart.inOut' },
@@ -288,7 +289,7 @@ export function resolveFilm(input: unknown): Resolution {
     if (!Array.isArray(scene.layers)) { err(`${sp}.layers`, 'no-layers', 'A scene has a list of layers. It may be empty.'); return; }
 
     // ---- layers: content and params -------------------------------------------
-    interface Draft { layer: Layer; path: string; duration: number; params: Record<string, unknown>; props: Record<string, unknown>; cues?: Cue[]; cycles?: boolean; start?: number }
+    interface Draft { layer: Layer; path: string; duration: number; params: Record<string, unknown>; props: Record<string, unknown>; cues?: Cue[]; cycles?: boolean; speed?: number; start?: number }
     const drafts = new Map<string, Draft>();
     scene.layers.forEach((layer: Layer, li) => {
       const lid = isObject(layer) && typeof layer.id === 'string' ? layer.id : String(li);
@@ -364,9 +365,11 @@ export function resolveFilm(input: unknown): Resolution {
       try { duration = prim.duration(props, params, ctx); } catch { /* reported above as a bad prop or param */ }
       let cues: Cue[] | undefined;
       try { cues = prim.cues?.(props, params, ctx); } catch { /* as above */ }
+      let speed: number | undefined;
+      try { speed = prim.speed?.(props, params, ctx); } catch { /* as above */ }
       // The resolved layer carries its tracks in seconds, so the page never sees a beat.
       const source = tracks ? { ...layer, tracks } : layer;
-      drafts.set(layer.id, { layer: source, path: lp, duration: Number.isFinite(duration) ? duration : 0, params, props, ...(cues ? { cues } : {}), ...(prim.cycles ? { cycles: true } : {}) });
+      drafts.set(layer.id, { layer: source, path: lp, duration: Number.isFinite(duration) ? duration : 0, params, props, ...(cues ? { cues } : {}), ...(prim.cycles ? { cycles: true } : {}), ...(speed !== undefined && Number.isFinite(speed) ? { speed } : {}) });
     });
 
     // ---- moves ----------------------------------------------------------------
@@ -489,7 +492,7 @@ export function resolveFilm(input: unknown): Resolution {
         }
       }
       layers.push({
-        id, use: d.layer.use, start: d.start, duration: d.duration, end, props: d.props, params: d.params, ...(d.cues ? { cues: d.cues } : {}),
+        id, use: d.layer.use, start: d.start, duration: d.duration, end, props: d.props, params: d.params, ...(d.cues ? { cues: d.cues } : {}), ...(d.speed !== undefined ? { speed: d.speed } : {}),
         ...(enter ? { enter: { ...enter, start: d.start } } : {}), ...(exit ? { exit } : {}), source: d.layer,
       });
     }
