@@ -21,7 +21,7 @@ export function filmSchema(c: Catalog) {
   const move = (exit: boolean) => ({
     anyOf: [{ enum: c.moves }, {
       type: 'object', required: ['move'], additionalProperties: false,
-      properties: { move: { enum: c.moves }, duration: seconds, ease, amount: { type: 'number' }, ...(exit ? { at: timeRef } : {}) },
+      properties: { move: { enum: c.moves }, duration: seconds, ease, amount: { type: 'number' }, angle: { type: 'number', description: 'For wipe and slide: degrees, 0 rightwards, 90 downwards.' }, ...(exit ? { at: timeRef } : {}) },
     }],
   });
   return {
@@ -85,6 +85,10 @@ export function filmSchema(c: Catalog) {
                   },
                   place: { type: 'object', required: ['x', 'y'], additionalProperties: false, properties: { x: { type: 'number' }, y: { type: 'number' }, anchor: { enum: c.anchors }, unit: { enum: ['%', 'px'], description: '% of the stage (default), or px of the scene\'s artboard.' } } },
                   enter: move(false), exit: move(true), tracks,
+                  parallax: {
+                    description: 'Depth against the camera: 1 travels with the scene, above 1 nearer and faster, 0 holds still. Or { depth, home }.',
+                    anyOf: [{ type: 'number', minimum: 0, maximum: 10 }, { type: 'object', required: ['depth'], additionalProperties: false, properties: { depth: { type: 'number', minimum: 0, maximum: 10 }, home: timeRef } }],
+                  },
                   motionBlur: { anyOf: [{ type: 'boolean' }, { type: 'number', minimum: 0, maximum: 1 }] },
                 },
               },

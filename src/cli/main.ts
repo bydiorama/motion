@@ -10,6 +10,8 @@ import { buildCatalog } from '../catalog.ts';
 import { describeTimeline, resolveFilm, type Resolution } from '../film/resolve.ts';
 import { applyTune, bake } from '../film/tune.ts';
 import { describePace, pace } from '../film/pace.ts';
+import { sceneFromDesign, type Design } from '../build/design.ts';
+import { analyseBeats, loopWindows, offDownbeat, seams, type BeatAnalysis } from '../film/beats.ts';
 import type { Issue, Timeline } from '../film/types.ts';
 import { open, type Session } from './browser.ts';
 import { capture } from './capture.ts';
@@ -31,7 +33,11 @@ Write and check
   catalog [--json|--write|--check]  What a film may use: primitives, params, tokens, eases
   make <script.mjs> [--out f.json]  Run a script that returns a film; check it and write the JSON
   validate <film...> [--json]       Check films without a browser
+  import <design.json> [--id scene] [--step 0.5b] [--fit cover] [--align 0,50] [--out scene.json]
+                                    A scene that builds a layout from its exported parts, on its artboard
   inspect <film> [--json]           The resolved timeline: where every scene and layer lands
+  beats <audio|film> [--bars n] [--bar 4] [--json]   A soundtrack's tempo, downbeats and the
+                                    stretches that loop; for a film, its tempo, audio.from and seam
   pace <film> [--json]              The rhythm: hand-overs against scenes, lengths of changes and rests,
                                     share in motion, and with a tempo, the beat grid
   notes <film> [--json]             The person's open notes, with where each one points
@@ -224,6 +230,82 @@ function inspect(args: Args) {
     console.log(describeTimeline(t));
     if (l.res.issues.length) { console.log(''); l.res.issues.forEach((i) => console.log(line(i))); }
   }
+}
+
+/** Decodes an audio file to mono samples with ffmpeg. */
+async function decode(file: string, rate: number): Promise<Float32Array> {
+  const ff = spawn('ffmpeg', ['-v', 'error', '-i', file, '-ac', '1', '-ar', String(rate), '-f', 'f32le', 'pipe:1']);
+  const chunks: Buffer[] = [];
+  let err = '';
+  ff.stdout.on('data', (c: Buffer) => chunks.push(c));
+  ff.stderr.on('data', (c: Buffer) => { err += c; });
+  const [code] = await once(ff, 'close');
+  if (code !== 0) throw new Error(`ffmpeg could not read ${file}: ${err.trim()}`);
+  const buf = Buffer.concat(chunks);
+  return new Float32Array(buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.length - (buf.length % 4)));
+}
+
+async function beatsCmd(args: Args) {
+  const target = need(args), json = !!args.flags.json, RATE = 22050;
+  const isFilm = target.endsWith('.json');
+  const film = isFilm ? readFilm(target) : undefined;
+  if (film && !film.audio) throw new Error(`${target} has no audio. Name an audio file, or give the film a soundtrack.`);
+  const sound = film ? path.resolve(path.dirname(path.resolve(target)), film.audio!.src) : target;
+  if (!fs.existsSync(sound)) throw new Error(`${sound} not found.`);
+  const bar = Number(args.flags.bar ?? film?.tempo?.bar ?? 4);
+  const samples = await decode(sound, RATE);
+  const a: BeatAnalysis = analyseBeats(samples, RATE, { bar });
+  const barLen = a.beat * a.bar;
+  // The film, measured against its music.
+  let filmReport: Record<string, unknown> | undefined;
+  let bars = args.flags.bars !== undefined ? Number(args.flags.bars) : undefined;
+  if (film) {
+    const t = timelineOrExit(load(target, args), json);
+    const from = film.audio!.from ?? 0, off = offDownbeat(a, from);
+    const beatOff = Math.round(((from - a.downbeat) / a.beat) % a.bar + a.bar) % a.bar;
+    const filmBars = t.duration / barLen;
+    bars ??= Math.round(filmBars);
+    const seam = t.loop ? seams(samples, RATE, a)(from, from + t.duration) : undefined;
+    filmReport = {
+      tempo: film.tempo?.bpm, measured: a.bpm, tempoOff: film.tempo ? Math.round((film.tempo.bpm - a.bpm) * 100) / 100 : undefined,
+      from, offBeat: Math.round((((from - a.downbeat) % a.beat) + a.beat * 1.5) % a.beat * 1000 - a.beat * 500) / 1000, barBeat: beatOff + 1,
+      nearestDownbeat: Math.round((from - off) * 1000) / 1000, bars: Math.round(filmBars * 100) / 100, ...(seam !== undefined ? { seam } : {}),
+    };
+  }
+  const loops = bars ? loopWindows(samples, RATE, a, bars) : [];
+  if (json) return print({ file: sound, ...a, downbeats: undefined, loops, ...(filmReport ? { film: filmReport } : {}) });
+  console.log(`${path.basename(sound)}: ${a.bpm} bpm (a beat ${a.beat.toFixed(4)} s, a bar of ${a.bar} ${barLen.toFixed(3)} s), confidence ${a.confidence.toFixed(2)}${a.confidence < 0.3 ? ': check by ear' : ''}`);
+  console.log(`First downbeat at ${a.downbeat.toFixed(3)} s, then every ${barLen.toFixed(3)} s.`);
+  if (filmReport) {
+    const f = filmReport as { tempo?: number; tempoOff?: number; from: number; offBeat: number; barBeat: number; nearestDownbeat: number; bars: number; seam?: number };
+    console.log(`\nThe film`);
+    console.log(f.tempo === undefined ? `  No tempo: set "tempo": { "bpm": ${a.bpm} }.` : Math.abs(f.tempoOff!) <= 0.02 ? `  tempo ${f.tempo} matches the music.` : `  tempo ${f.tempo} is ${f.tempoOff! > 0 ? 'above' : 'below'} the music's ${a.bpm} by ${Math.abs(f.tempoOff!)} bpm: cuts drift ${(Math.abs(f.tempoOff!) / a.bpm * 100).toFixed(2)}% a beat. Set it to ${a.bpm}.`);
+    const ms = Math.round(f.offBeat * 1000);
+    console.log(`  audio.from ${f.from} is ${Math.abs(ms) <= 5 ? 'on a beat' : `${Math.abs(ms)} ms ${ms > 0 ? 'after' : 'before'} a beat`}, beat ${f.barBeat} of the bar as measured${f.barBeat === 1 ? '' : ` (the nearest downbeat is ${f.nearestDownbeat} s)`}.${Math.abs(ms) > 5 ? ` To put the film's start on the beat: ${Math.round((f.from - f.offBeat) * 1000) / 1000}.` : ''}`);
+    console.log(`  The film runs ${f.bars} bars of the music.${Math.abs(f.bars - Math.round(f.bars)) > 0.02 ? ' A loop that is not whole bars will not loop in the music.' : ''}`);
+    if (f.seam !== undefined) console.log(`  Across its loop the music matches ${f.seam.toFixed(2)} (1 is the same either side of the seam; the best windows below).`);
+  }
+  if (loops.length) {
+    console.log(`\nThe ${bars} bars that loop best (from: set as audio.from)`);
+    for (const w of loops) console.log(`  from ${w.from.toFixed(3)} s to ${w.to.toFixed(3)} s   match ${w.match.toFixed(2)}`);
+  }
+  console.log(`\nThe downbeat is the beat where the harmony turns and the low end hits; when it is ambiguous it may be read a beat or two out. Trust the tempo; check the bar by ear.`);
+}
+
+function importCmd(args: Args) {
+  const file = need(args);
+  const design = readJson<Design>(file);
+  if (!design || !(design.width > 0) || !(design.height > 0) || !Array.isArray(design.layers)) {
+    throw new Error(`${file} is not a design: it needs width, height and layers ([{ name, x, y, width, height, src | fill }], bottom to top).`);
+  }
+  const id = typeof args.flags.id === 'string' ? args.flags.id : path.basename(file).replace(/\.json$/, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'design';
+  const stepFlag = args.flags.step, step = typeof stepFlag === 'string' ? (/^\d+(\.\d+)?$/.test(stepFlag) ? Number(stepFlag) : stepFlag) : undefined;
+  const fit = typeof args.flags.fit === 'string' ? args.flags.fit as 'cover' : undefined;
+  const alignFlag = typeof args.flags.align === 'string' ? args.flags.align.split(',').map(Number) : undefined;
+  if (alignFlag && (alignFlag.length !== 2 || alignFlag.some((v) => !(v >= 0 && v <= 100)))) throw new Error('--align is x,y in % of the stage, e.g. 0,50.');
+  const scene = sceneFromDesign(id, design, { ...(step !== undefined ? { step } : {}), ...(fit ? { fit } : {}), ...(alignFlag ? { align: alignFlag as [number, number] } : {}) });
+  if (typeof args.flags.out === 'string') { writeJson(args.flags.out, scene); console.log(`${args.flags.out} written: scene "${id}", ${scene.layers.length} layers on a ${design.width} × ${design.height} artboard. Add it to a film's scenes.`); }
+  else print(scene);
 }
 
 function paceCmd(args: Args) {
@@ -574,6 +656,8 @@ export async function main(argv: string[]) {
   if (cmd === 'validate') return validate(args);
   if (cmd === 'inspect') return inspect(args);
   if (cmd === 'pace') return paceCmd(args);
+  if (cmd === 'beats') return beatsCmd(args);
+  if (cmd === 'import') return importCmd(args);
   if (cmd === 'notes') return notes(args);
   if (cmd === 'preview') return preview(args);
   if (cmd === 'stills') return stills(args);

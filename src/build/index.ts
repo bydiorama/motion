@@ -16,6 +16,7 @@ import type { Film, Layer, Place, Scene } from '../film/types.ts';
 import { VERSION } from '../version.ts';
 
 export { iso, type IsoFace, type Vec3 } from './iso.ts';
+export { sceneFromDesign, kindOf, readingOrder, type Design, type DesignLayer, type DesignKind, type DesignOptions } from './design.ts';
 
 type Without<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
 

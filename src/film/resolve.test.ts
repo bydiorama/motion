@@ -191,3 +191,27 @@ test('an artboard takes a design size, a fit and an alignment; px placement is c
   // px without an artboard are the stage's own: allowed.
   assert.deepEqual(sc({}), []);
 });
+
+test('parallax takes a depth, or a depth and a home time; it needs a camera that travels', () => {
+  const moving = { tracks: { x: [[0, 0], [2, -400]] } };
+  const sc = (parallax: unknown, extra: object = moving) =>
+    codes(film([{ id: 'a', length: 2, ...extra, layers: [{ id: 'b', use: 'el/box', parallax }] }]));
+  assert.deepEqual(sc(1.3), []);
+  assert.deepEqual(sc({ depth: 0.5, home: 0 }), []);
+  assert.ok(sc(-1).includes('error:bad-value'));
+  assert.ok(sc({ depth: 2, at: 1 }).some((c) => c.endsWith('unknown-key')));
+  assert.ok(sc(1.3, {}).includes('warning:unused'));
+  // Home defaults to the scene's end: the frame the camera arrives at.
+  const r = resolveFilm(film([{ id: 'a', length: 2, ...moving, layers: [{ id: 'b', use: 'el/box', parallax: 1.5 }] }]));
+  assert.deepEqual(r.timeline?.scenes[0]?.layers[0]?.parallax, { depth: 1.5, home: 2 });
+});
+
+test('wipe and slide travel at any angle; other moves keep their own direction', () => {
+  const enter = (e: unknown) => resolveFilm(film([{ id: 'a', length: 2, layers: [{ id: 'b', use: 'el/box', enter: e }] }]));
+  const w = enter({ move: 'wipe', angle: 30, amount: 80 });
+  assert.equal(w.issues.length, 0);
+  assert.deepEqual([w.timeline?.scenes[0]?.layers[0]?.enter?.angle, w.timeline?.scenes[0]?.layers[0]?.enter?.amount], [30, 80]);
+  assert.equal(enter('slide').timeline?.scenes[0]?.layers[0]?.enter?.angle, 0);
+  assert.deepEqual(enter({ move: 'rise', angle: 30 }).issues.map((i) => `${i.level}:${i.code}`), ['warning:unused']);
+  assert.ok(enter({ move: 'wipe', angle: 'up' }).issues.some((i) => i.code === 'bad-value'));
+});

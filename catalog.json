@@ -87,7 +87,9 @@
     "wipe-left",
     "wipe-right",
     "swing",
-    "slot-up"
+    "slot-up",
+    "wipe",
+    "slide"
   ],
   "tracks": [
     "x",

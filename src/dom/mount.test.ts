@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { artboardFit, clipFor, placedMaxWidth, placedRoom, wipeSide } from './mount.ts';
+import { artboardFit, clipFor, cutPolygon, placedMaxWidth, placedRoom, wipeSide } from './mount.ts';
 
 test('a mask leaves room above and below the line, and opens its sides', () => {
   // Entering from below: the window's bottom is pulled back by the travel, its top is padded.
@@ -71,4 +71,20 @@ test('an artboard is scaled to meet the stage as its fit says, and aligned in wh
   assert.equal(artboardFit(phone, { ...slide, fit: 'width' }).scale, 1080 / 1920);
   // Without an artboard of its own, a scene's artboard is the stage: px are stage px.
   assert.deepEqual(artboardFit(phone, { width: 1080, height: 1920 }), { scale: 1, x: 0, y: 0 });
+});
+
+test('an angled wipe cuts the box square to its direction', () => {
+  const none: [number, number, number, number] = [0, 0, 0, 0];
+  const round = (pts: [number, number][]) => pts.map(([x, y]) => [Math.round(x), Math.round(y)]);
+  // At 0 degrees, halfway in, it is wipe-right: the left half shows.
+  assert.deepEqual(round(cutPolygon(200, 100, none, { angle: 0, hidden: 0.5, leaving: false })), [[0, 0], [100, 0], [100, 100], [0, 100]]);
+  // Leaving the same way, the left half has gone.
+  assert.deepEqual(round(cutPolygon(200, 100, none, { angle: 0, hidden: 0.5, leaving: true })), [[100, 0], [200, 0], [200, 100], [100, 100]]);
+  // At 45 degrees on a square, halfway: the triangle above the diagonal from top-right to bottom-left.
+  assert.deepEqual(round(cutPolygon(100, 100, none, { angle: 45, hidden: 0.5, leaving: false })), [[0, 0], [100, 0], [0, 100]]);
+  // Fully hidden: nothing; and the clip says so.
+  assert.equal(cutPolygon(100, 100, none, { angle: 200, hidden: 1, leaving: false }).length, 0);
+  assert.equal(clipFor({ clip: none, yShare: 0, cut: { angle: 10, hidden: 1, leaving: false } }, [100, 100]), 'polygon(0 0, 0 0, 0 0)');
+  // Fully shown: no clip at all.
+  assert.equal(clipFor({ clip: none, yShare: 0, cut: { angle: 10, hidden: 0, leaving: false } }, [100, 100]), '');
 });
