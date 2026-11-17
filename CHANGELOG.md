@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Artboards: a scene's `artboard` (`width`, `height`, `fit`: `cover`, `contain`, `width` or `height`, `align`) is the frame a design was drawn on. Layers placed with `"unit": "px"` are laid out on it in the design's own pixels, with their sizes, tracks and move amounts, and the board is scaled onto the stage; a layer placed in % stays on the stage and keeps its place in the stacking order. Without an artboard, px are stage px. `artboardFit()` is exported. `staggerFrom` builds px layers on an `artboard` too.
 - Soundtracks: a film's `audio` (`src`, `from`, `gain`, `fade_in`, `fade_out`) plays the file from `from` seconds at film time 0. The studio and the page player follow the playhead with it; `render` cuts it to the film and lays it under the video (AAC), de-clicked at both ends. With a soundtrack the music sets the tempo, so `beat-off-frame` is not warned. The preview server serves audio files.
 - Fix: `wipe-left` and `wipe-right` ran the wrong way; like `wipe-up` and `wipe-down`, their edge now travels in the named direction, in and out.
 - Fix: on a scene whose camera moves, a placed layer is no longer capped at the stage width, so a rule or a picture laid across the canvas keeps its size and its wipes clip at its own edges.

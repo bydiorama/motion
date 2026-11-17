@@ -178,3 +178,16 @@ test('theme.ui names one of the bundled bydiorama/ui themes', async () => {
   const bad = resolveFilm(film(one, { theme: { ui: 'neon' } })).issues;
   assert.deepEqual(bad.map((i) => `${i.code}:${i.path}`), ['bad-value:theme.ui']);
 });
+
+test('an artboard takes a design size, a fit and an alignment; px placement is checked', () => {
+  const sc = (extra: object, place: object = { x: 103, y: 327, anchor: 'top-left', unit: 'px' }) =>
+    codes(film([{ id: 'a', length: 2, ...extra, layers: [{ id: 'b', use: 'el/box', place }] }]));
+  assert.deepEqual(sc({ artboard: { width: 1920, height: 1080, fit: 'height', align: [0, 50] } }), []);
+  assert.ok(sc({ artboard: { width: 0, height: 1080 } }).includes('error:bad-value'));
+  assert.ok(sc({ artboard: { width: 1920, height: 1080, fit: 'stretch' } }).includes('error:bad-value'));
+  assert.ok(sc({ artboard: { width: 1920, height: 1080, align: [50] } }).includes('error:bad-value'));
+  assert.ok(sc({ artboard: { width: 1920, height: 1080, scale: 2 } }).some((c) => c.endsWith('unknown-key')));
+  assert.ok(sc({}, { x: 1, y: 1, unit: 'em' }).includes('error:bad-value'));
+  // px without an artboard are the stage's own: allowed.
+  assert.deepEqual(sc({}), []);
+});

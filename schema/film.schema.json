@@ -230,6 +230,45 @@
               }
             }
           },
+          "artboard": {
+            "type": "object",
+            "required": [
+              "width",
+              "height"
+            ],
+            "additionalProperties": false,
+            "description": "A design's frame for layers placed in px: they keep its coordinates and sizes, and it is scaled to the stage as one.",
+            "properties": {
+              "width": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 20000
+              },
+              "height": {
+                "type": "number",
+                "minimum": 1,
+                "maximum": 20000
+              },
+              "fit": {
+                "enum": [
+                  "cover",
+                  "contain",
+                  "width",
+                  "height"
+                ]
+              },
+              "align": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 100
+                },
+                "minItems": 2,
+                "maxItems": 2
+              }
+            }
+          },
           "tracks": {
             "type": "object",
             "additionalProperties": false,
@@ -568,6 +607,13 @@
                         "bottom",
                         "bottom-right"
                       ]
+                    },
+                    "unit": {
+                      "enum": [
+                        "%",
+                        "px"
+                      ],
+                      "description": "% of the stage (default), or px of the scene's artboard."
                     }
                   }
                 },

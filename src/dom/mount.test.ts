@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { clipFor, placedMaxWidth, placedRoom, wipeSide } from './mount.ts';
+import { artboardFit, clipFor, placedMaxWidth, placedRoom, wipeSide } from './mount.ts';
 
 test('a mask leaves room above and below the line, and opens its sides', () => {
   // Entering from below: the window's bottom is pulled back by the travel, its top is padded.
@@ -51,4 +51,24 @@ test('a wipe\'s edge travels the way it is named, in and out', () => {
   assert.equal(wipeSide('wipe-left', true), 1);
   assert.equal(wipeSide('wipe-up', true), 2);
   assert.equal(wipeSide('wipe-down', true), 0);
+});
+
+test('an artboard is scaled to meet the stage as its fit says, and aligned in what is left', () => {
+  const slide = { width: 1920, height: 1080 }, phone: [number, number] = [1080, 1920];
+  // A 16:9 slide covering a 9:16 phone: stage height, its sides fall off evenly.
+  const cover = artboardFit(phone, slide);
+  assert.ok(Math.abs(cover.scale - 1920 / 1080) < 1e-9);
+  assert.equal(cover.y, 0);
+  assert.ok(Math.abs(cover.x - (1080 - 1920 * cover.scale) / 2) < 1e-9);
+  // Contained: stage width, letterboxed top and bottom.
+  const contain = artboardFit(phone, { ...slide, fit: 'contain' });
+  assert.equal(contain.scale, 1080 / 1920);
+  assert.equal(contain.x, 0);
+  assert.ok(Math.abs(contain.y - (1920 - 1080 * contain.scale) / 2) < 1e-9);
+  // Aligned to the left edge instead of centred.
+  assert.equal(artboardFit(phone, { ...slide, align: [0, 50] }).x, 0);
+  // Matching one side regardless of the other.
+  assert.equal(artboardFit(phone, { ...slide, fit: 'width' }).scale, 1080 / 1920);
+  // Without an artboard of its own, a scene's artboard is the stage: px are stage px.
+  assert.deepEqual(artboardFit(phone, { width: 1080, height: 1920 }), { scale: 1, x: 0, y: 0 });
 });

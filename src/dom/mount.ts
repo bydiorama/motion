@@ -4,7 +4,7 @@ import { clamp, progress, resolveEase, type Bezier, type EaseSpec } from '../cor
 import { track } from '../core/track.ts';
 import { resolveFilm } from '../film/resolve.ts';
 import { applyTune } from '../film/tune.ts';
-import type { Film, Issue, ResolvedLayer, ResolvedMove, ResolvedScene, Timeline, Tracks, Tune } from '../film/types.ts';
+import type { Artboard, Film, Issue, ResolvedLayer, ResolvedMove, ResolvedScene, Timeline, Tracks, Tune } from '../film/types.ts';
 import { directionalBlur, streak } from '../primitives/blur.ts';
 import { PRIMITIVES, TRANSITIONS } from '../primitives/index.ts';
 import type { Ctx, FrameSequence, Instance } from '../primitives/types.ts';
@@ -66,7 +66,7 @@ export interface Mounted {
 interface LiveLayer { spec: ResolvedLayer; el: HTMLElement; instance: Instance; tracks: Sampler; ease: { enter?: (x: number) => number; exit?: (x: number) => number }; shutter: number }
 interface LiveScene { spec: ResolvedScene; el: HTMLElement; cam: HTMLElement; layers: LiveLayer[]; tracks: Sampler; handover: boolean; follow?: LiveFollow }
 /** A camera following a layer's tip: the layer, where its box sits in the camera's world, and the settings. */
-interface LiveFollow { layer: LiveLayer; origin: [number, number]; at: [number, number]; lag: number; blend: number }
+interface LiveFollow { layer: LiveLayer; origin: [number, number]; at: [number, number]; lag: number; blend: number; scale: number }
 type Sampler = Partial<Record<keyof Tracks, (t: number) => number>>;
 
 const SURFACE = new Set(['base', 'surface', 'sunken', 'accent', 'inverse']);
@@ -211,6 +211,15 @@ const MASK_PAD = 'var(--m-mask-pad, 0.3em)';
 export const placedMaxWidth = (place: Parameters<typeof placedRoom>[0], canvas: boolean, stageWidth: number): string =>
   canvas ? 'none' : `${(placedRoom(place) / 100) * stageWidth}px`;
 
+/** Where an artboard sits on the stage: its scale, and the stage px of its top-left corner. */
+export function artboardFit(stage: [number, number], board: Pick<Artboard, 'width' | 'height' | 'fit' | 'align'>): { scale: number; x: number; y: number } {
+  const [W, H] = stage, sw = W / board.width, sh = H / board.height;
+  const fit = board.fit ?? 'cover';
+  const scale = fit === 'contain' ? Math.min(sw, sh) : fit === 'width' ? sw : fit === 'height' ? sh : Math.max(sw, sh);
+  const [ax, ay] = board.align ?? [50, 50];
+  return { scale, x: ((W - board.width * scale) * ax) / 100 || 0, y: ((H - board.height * scale) * ay) / 100 || 0 };
+}
+
 export function clipFor(p: Pick<Pose, 'clip' | 'yShare' | 'slot'>): string {
   const [t, r, b, l] = p.clip;
   const pct = (v: number) => `${(v * 100).toFixed(3)}%`;
@@ -330,6 +339,9 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
     stage.appendChild(el);
 
     // A scene whose camera moves is a canvas the camera travels over.
+    const frame = s.artboard ?? { width: W, height: H };
+    const fit = artboardFit([W, H], frame);
+    let board: HTMLElement | undefined;
     const canvas = !!s.follow || (['x', 'y', 'scale', 'rotate', 'rotateX', 'rotateY'] as const).some((k) => (s.tracks?.[k]?.length ?? 0) > 1);
     const layers: LiveLayer[] = spec.layers.map((layer) => {
       const le = doc.createElement('div');
@@ -341,12 +353,14 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
       if (st.font) le.style.fontFamily = `var(--m-font-${st.font})`;
       if (st.weight !== undefined) le.style.fontWeight = String(st.weight);
       if (st.align) le.style.textAlign = st.align;
-      if (st.width !== undefined) le.style.maxWidth = `${(st.width / 100) * W}px`;
       const place = layer.source.place;
+      const onBoard = place?.unit === 'px';
+      // style.width is a share of the stage, or on an artboard, of the artboard.
+      if (st.width !== undefined) le.style.maxWidth = `${(st.width / 100) * (onBoard ? frame.width : W)}px`;
       if (place) {
         le.style.position = 'absolute';
-        le.style.left = `${place.x}%`;
-        le.style.top = `${place.y}%`;
+        le.style.left = `${place.x}${onBoard ? 'px' : '%'}`;
+        le.style.top = `${place.y}${onBoard ? 'px' : '%'}`;
         le.style.translate = ANCHOR[place.anchor ?? 'center']!;
         // An absolute box shrinks to the room right of its `left`, so a centred
         // headline would wrap at half the stage. Size it to its content instead,
@@ -354,10 +368,21 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
         // Not on a canvas, though: where the scene's camera moves, layers lie beyond the
         // stage on purpose, and the stage's edge is no limit on how wide they are.
         le.style.width = 'max-content';
-        if (st.width === undefined) le.style.maxWidth = placedMaxWidth(place, canvas, W);
+        // On an artboard the design sets the sizes, not the stage.
+        if (st.width === undefined) le.style.maxWidth = onBoard ? 'none' : placedMaxWidth(place, canvas, W);
       }
       for (const [k, v] of Object.entries(st.css ?? {})) le.style.setProperty(k, v);
-      cam.appendChild(le);
+      // Layers placed in px sit on the artboard. A run of them shares one; a layer on the
+      // stage in between starts a new one, so they stack in the order they are written.
+      if (onBoard) {
+        if (!board || cam.lastElementChild !== board) {
+          board = doc.createElement('div');
+          board.className = 'm-artboard';
+          board.style.cssText = `position:absolute;left:${fit.x}px;top:${fit.y}px;width:${frame.width}px;height:${frame.height}px;transform-origin:0 0;transform:scale(${fit.scale})`;
+          cam.appendChild(board);
+        }
+        board.appendChild(le);
+      } else cam.appendChild(le);
       const frames = options.frames?.[`${spec.id}/${layer.id}`];
       const instance = PRIMITIVES[layer.use]!.build(le, layer.props, layer.params, frames ? { ...ctx, frames } : ctx);
       return {
@@ -375,6 +400,8 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
       live.follow = {
         layer: target, origin: [(a.left - c.left) / k, (a.top - c.top) / k],
         at: [((f.at?.[0] ?? 50) / 100) * W, ((f.at?.[1] ?? 50) / 100) * H], lag: f.lag ?? 0, blend: f.blend ?? 0.6,
+        // A layer on an artboard draws its tip, and travels, in the design's pixels.
+        scale: target.spec.source.place?.unit === 'px' ? fit.scale : 1,
       };
     }
     return live;
@@ -468,7 +495,7 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
     }
     // The layer's own travel (its enter move, its tracks) carries the tip with it.
     const own = poseAt(l, local);
-    const P: [number, number] = [f.origin[0] + p[0] + own.x, f.origin[1] + p[1] + own.y];
+    const P: [number, number] = [f.origin[0] + f.scale * (p[0] + own.x), f.origin[1] + f.scale * (p[1] + own.y)];
     const C: [number, number] = [W / 2, H / 2], r = (cam.rotate * Math.PI) / 180, s = cam.scale;
     const dx = P[0] - C[0], dy = P[1] - C[1];
     const tx = f.at[0] - C[0] - s * (Math.cos(r) * dx - Math.sin(r) * dy);

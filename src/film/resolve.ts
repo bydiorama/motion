@@ -9,7 +9,7 @@ import type { Key } from '../core/track.ts';
 import { isTokenRef, mergeTokens, readToken, tokenPaths, type Tokens } from '../tokens.ts';
 import { beatsToSeconds, framesPerBeat, isBeats, wholeFrameTempos, type Tempo } from './tempo.ts';
 import {
-  ANCHORS, MOVE_NAMES, SURFACES, TEXT_SIZES, TONES, TRACK_PROPS,
+  ANCHORS, ARTBOARD_FITS, PLACE_UNITS, MOVE_NAMES, SURFACES, TEXT_SIZES, TONES, TRACK_PROPS,
   type ExitMove, type Film, type Issue, type Layer, type Move, type MoveName, type ResolvedLayer,
   type ResolvedMove, type ResolvedScene, type Scene, type TimeRef, type Timeline, type Tracks, type FilmAudio,
 } from './types.ts';
@@ -45,7 +45,7 @@ const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v =
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
 const FILM_KEYS = ['$schema', 'motion', 'title', 'size', 'fps', 'seed', 'poster', 'loop', 'narrative', 'style', 'tokens', 'tempo', 'audio', 'theme', 'scenes'];
-const SCENE_KEYS = ['id', 'length', 'hold', 'background', 'scheme', 'layout', 'layers', 'tracks', 'follow', 'out', 'uses', 'intent'];
+const SCENE_KEYS = ['id', 'length', 'hold', 'background', 'scheme', 'layout', 'artboard', 'layers', 'tracks', 'follow', 'out', 'uses', 'intent'];
 /** Primitives whose instance has a tip a camera can follow. */
 export const FOLLOWABLE = ['fx/path-draw'];
 const LAYER_KEYS = ['id', 'use', 'props', 'params', 'at', 'style', 'place', 'enter', 'exit', 'tracks', 'motionBlur'];
@@ -305,6 +305,20 @@ export function resolveFilm(input: unknown): Resolution {
       if (!isObject(scene.layout)) err(`${sp}.layout`, 'bad-layout', 'layout is { align, justify, gap, padding }.');
       else unknownKeys(scene.layout as Record<string, unknown>, ['align', 'justify', 'gap', 'padding'], `${sp}.layout`);
     }
+    if (scene.artboard !== undefined) {
+      const ab = scene.artboard, ap = `${sp}.artboard`;
+      if (!isObject(ab)) err(ap, 'bad-artboard', 'artboard is { width, height } in the design\'s pixels, with an optional fit and align.');
+      else {
+        unknownKeys(ab as unknown as Record<string, unknown>, ['width', 'height', 'fit', 'align'], ap);
+        for (const k of ['width', 'height'] as const) {
+          if (!isNum(ab[k]) || ab[k] < 1 || ab[k] > 20000) err(`${ap}.${k}`, 'bad-value', `${k} is the design's ${k} in its own pixels, 1 to 20000.`);
+        }
+        if (ab.fit !== undefined && !(ARTBOARD_FITS as readonly string[]).includes(ab.fit)) err(`${ap}.fit`, 'bad-value', `fit is one of: ${oneOf(ARTBOARD_FITS)}.`);
+        if (ab.align !== undefined && !(Array.isArray(ab.align) && ab.align.length === 2 && ab.align.every((v) => isNum(v) && v >= 0 && v <= 100))) {
+          err(`${ap}.align`, 'bad-value', 'align is [x, y], each 0 to 100: where the artboard sits along each side of the stage.');
+        }
+      }
+    }
     const sceneTracks = checkTracks(scene.tracks, `${sp}.tracks`);
     if (!Array.isArray(scene.layers)) { err(`${sp}.layers`, 'no-layers', 'A scene has a list of layers. It may be empty.'); return; }
 
@@ -369,8 +383,12 @@ export function resolveFilm(input: unknown): Resolution {
       }
       if (layer.place !== undefined) {
         const pl = layer.place;
-        if (!isObject(pl) || !isNum(pl.x) || !isNum(pl.y)) err(`${lp}.place`, 'bad-place', 'place is { x, y } in percent of the stage, with an optional anchor.');
-        else if (pl.anchor !== undefined && !(ANCHORS as readonly string[]).includes(pl.anchor)) err(`${lp}.place.anchor`, 'bad-value', `anchor is one of: ${oneOf(ANCHORS)}.`);
+        if (!isObject(pl) || !isNum(pl.x) || !isNum(pl.y)) err(`${lp}.place`, 'bad-place', 'place is { x, y } in percent of the stage (or artboard pixels with unit "px"), with an optional anchor.');
+        else {
+          unknownKeys(pl as unknown as Record<string, unknown>, ['x', 'y', 'anchor', 'unit'], `${lp}.place`);
+          if (pl.anchor !== undefined && !(ANCHORS as readonly string[]).includes(pl.anchor)) err(`${lp}.place.anchor`, 'bad-value', `anchor is one of: ${oneOf(ANCHORS)}.`);
+          if (pl.unit !== undefined && !(PLACE_UNITS as readonly string[]).includes(pl.unit)) err(`${lp}.place.unit`, 'bad-value', `unit is "%" (of the stage) or "px" (of the scene's artboard).`);
+        }
       }
       const tracks = checkTracks(layer.tracks, `${lp}.tracks`);
       if (layer.motionBlur !== undefined && typeof layer.motionBlur !== 'boolean' && !(isNum(layer.motionBlur) && layer.motionBlur >= 0 && layer.motionBlur <= 1)) {
