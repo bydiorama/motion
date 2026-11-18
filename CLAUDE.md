@@ -9,3 +9,4 @@
   No hex colours, other faces or monospace. A person's own brand content keeps its own look. The full rule is in `.claude/skills/motion-film/SKILL.md`.
 - After `node scripts/ui-theme.ts`, check `git diff src/studio/theme/`: it also rewrites the studio's Graphite file from the ui repo.
 - `pnpm verify` before committing; `python tools/validate.py` for library entries.
+- The repository is also a Claude Code plugin (`.claude-plugin/`, `hooks/hooks.json`, `bin/motion`). Packages the CLI needs at run time go in `dependencies` (the plugin's setup hook installs only those); tools for working on the repo go in `devDependencies`. No `version` in `plugin.json`, so installs follow `main`. The `motion-film` skill must work both from the plugin (`${CLAUDE_PLUGIN_ROOT}`, `motion` on PATH) and in this repository (`node bin/motion.mjs`). Run `claude plugin validate .` after changing any of these.

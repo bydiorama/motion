@@ -1,6 +1,6 @@
 # The film
 
-`schema/film.schema.json` gives editors completion; `motion validate` is the real check. Field by field:
+`schema/film.schema.json` in the library root gives editors completion (point `$schema` at it only inside the motion repository); `motion validate` is the real check. Field by field:
 
 ## Film
 
@@ -73,7 +73,7 @@ Named: `linear`, `smooth`, `sine.*`, `cubic.*`, `expo.*` (`.in`, `.out`, `.inOut
 
 ## Building films in code
 
-When a film repeats itself (a card per photo, a pin per stop), write `films/<name>.film.mjs` that `export default film({...})` with helpers from `@bydiorama/motion/build` (`repeat`, `grid`, `staggerFrom`, `sequence`), then `node bin/motion.mjs make films/<name>.film.mjs` writes and checks `films/<name>.film.json`. Edit the script, not the JSON.
+When a film repeats itself (a card per photo, a pin per stop), write `films/<name>.film.mjs` that `export default film({...})` with helpers from `@bydiorama/motion/build` (`motion make` resolves that import in any project; `repeat`, `grid`, `staggerFrom`, `sequence`), then `motion make films/<name>.film.mjs` writes and checks `films/<name>.film.json`. Edit the script, not the JSON.
 
 ## Errors and their fixes
 

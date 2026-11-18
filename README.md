@@ -48,6 +48,30 @@ python3 tools/build_showcase.py                     # rebuild showcase/index.htm
 
 Setup: `pip install -r requirements.txt` (Python 3.10+). Recipe checks also need Chrome.
 
+## Use it in Claude Code
+
+The repository is also a Claude Code plugin. It brings the `motion-film` skill, which writes, checks and revises films, and the `motion` command, to any project. Install it once:
+
+```
+/plugin install motion --marketplace bydiorama/motion
+```
+
+On Claude Code before 2.1.275, add the marketplace first:
+
+```
+/plugin marketplace add bydiorama/motion
+/plugin install motion@diorama-motion
+```
+
+Then ask for a video, or paste a brief from the wizard. Claude writes `films/<name>.film.json` in your project and runs `motion` (validate, pace, stills, check), and you direct it with `motion preview films/<name>.film.json`. Run `/motion:motion-film` to call the skill by name.
+
+- **First session:** a SessionStart hook installs the runtime's packages (`dependencies` in `package.json`) with npm into the plugin's data folder, which takes about ten seconds, once. Node 22.18 or later.
+- **Drawing:** stills, check and render need a Chromium. Pass `--browser` (or set `MOTION_CHROMIUM`) to use your Chrome, Brave or Edge, or let Claude install Playwright's Chromium. `render` and `beats` also need ffmpeg.
+- **Updates:** the plugin has no version number, so it follows `main`. Turn on auto-update for the `diorama-motion` marketplace in `/plugin`, or run `/plugin marketplace update diorama-motion`.
+- **Claude Code only:** claude.ai and Cowork don't install plugins that ship a `bin/` folder.
+
+The plugin is this whole repository: `.claude-plugin/` holds the manifest and the marketplace, `hooks/hooks.json` the setup hook (`scripts/plugin-setup.mjs`), and `bin/motion` the command. Check changes with `claude plugin validate .`.
+
 ## Start with a brief
 
 ```bash

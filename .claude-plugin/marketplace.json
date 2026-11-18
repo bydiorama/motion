@@ -1,0 +1,16 @@
+{
+  "name": "diorama-motion",
+  "owner": {
+    "name": "Diorama"
+  },
+  "metadata": {
+    "description": "The bydiorama motion library as a Claude Code plugin."
+  },
+  "plugins": [
+    {
+      "name": "motion",
+      "source": "./",
+      "description": "Make motion videos with the bydiorama motion library: films as JSON that the runtime validates, draws, checks and renders, with a studio for directing them."
+    }
+  ]
+}

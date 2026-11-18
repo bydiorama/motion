@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { once } from 'node:events';
 import fs from 'node:fs';
+import { registerHooks } from 'node:module';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { buildCatalog } from '../catalog.ts';
@@ -162,8 +163,29 @@ function catalog(args: Args) {
 /** Where `make` writes: beside the script, as <name>.film.json. */
 export const madePath = (script: string): string => script.replace(/(\.film)?\.(m?js|m?ts)$/, '') + '.film.json';
 
+/**
+ * `@bydiorama/motion` and `@bydiorama/motion/build`, for a script outside this repository
+ * (from the Claude plugin, say), resolve to this copy of the library. Inside it, Node's own
+ * self-reference finds the same files, so the hook changes nothing there.
+ */
+export const LIBRARY_ENTRIES: Record<string, string> = {
+  '@bydiorama/motion': path.join(ROOT, 'src/index.ts'),
+  '@bydiorama/motion/build': path.join(ROOT, 'src/build/index.ts'),
+};
+let libraryResolved = false;
+function resolveLibraryImports() {
+  if (libraryResolved) return;
+  libraryResolved = true;
+  registerHooks({
+    resolve: (specifier, context, next) => specifier in LIBRARY_ENTRIES
+      ? { url: pathToFileURL(LIBRARY_ENTRIES[specifier]!).href, format: 'module-typescript', shortCircuit: true }
+      : next(specifier, context),
+  });
+}
+
 async function make(args: Args) {
   const script = need(args), json = !!args.flags.json;
+  resolveLibraryImports();
   const mod = await import(pathToFileURL(path.resolve(script)).href) as { default?: unknown };
   let value = mod.default;
   if (typeof value === 'function') value = await (value as () => unknown)();
