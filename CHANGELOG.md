@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Claude Code plugin: the repository is a marketplace (`diorama-motion`) with one plugin, `motion`, that brings the `motion-film` skill and the `motion` command to any project. A SessionStart hook (`scripts/plugin-setup.mjs`) installs the runtime packages with npm into the plugin's data folder and links them in. The runtime packages (dialkit, esbuild, playwright, yaml) moved from `devDependencies` to `dependencies`. The skill finds the library through `${CLAUDE_PLUGIN_ROOT}` and still works inside the repository.
+- `motion make` resolves `@bydiorama/motion` and `@bydiorama/motion/build` to its own copy of the library, so film scripts run in any project.
+- Licensed under MIT for public release: `LICENSE`, `CREDITS.md` (DialKit, Aspekta, bydiorama/ui, trademarks), repository links in `package.json`, and a licence note in `CONTRIBUTING.md`.
 - `parallax` on a layer: its depth against the scene's camera (1 travels with the scene, above 1 nearer and faster, 0 holds still), or `{ depth, home }` with the moment it sits where it is placed (the scene's end by default). A part of a picture can travel ahead of the camera and land in place without a counter-track worked out by hand. It follows the camera's x and y travel, on an artboard in design px.
 - Moves `wipe` and `slide` take an `angle` (degrees; 0 rightwards, 90 downwards). An angled `wipe` cuts the layer square to its direction and, with `amount`, carries it that many px along it, so a slanted band unrolls from one end. `cutPolygon()` is exported.
 - `motion beats <audio|film>`: a soundtrack's tempo (to a hundredth of a bpm), its downbeats, and the stretches of `--bars` bars that loop best, scored by how alike the music is either side of the seam. For a film, whether its `tempo`, `audio.from` and loop agree with the music, and the `from` that puts its start on the beat. ffmpeg decodes the file; the analysis (`analyseBeats`, `loopWindows`, `seams`) is pure.

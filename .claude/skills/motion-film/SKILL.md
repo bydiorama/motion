@@ -1,6 +1,6 @@
 ---
 name: motion-film
-description: Write, check and revise motion videos with the bydiorama motion library — films as JSON that the runtime draws, checks and renders. Use whenever the task is to make, change or fix a motion video, animated announcement, product film, social loop or title sequence in this repository; when the person pastes a motion brief (a "# Motion brief:" document from the wizard or `motion brief`); when they mention a .film.json or .tune.json file, the studio, stills, a contact sheet or rendering an MP4; or when they say they left notes in the studio. Do NOT use for editing the library's Markdown entries (library/**), for UI animation in an app's codebase, or for video editing of footage.
+description: Write, check and revise motion videos with the bydiorama motion library — films as JSON that the runtime draws, checks and renders. Use whenever the task is to make, change or fix a motion video, animated announcement, product film, social loop or title sequence in this repository; when the person pastes a motion brief (a "# Motion brief:" document from the wizard or `motion brief`); when they mention a .film.json or .tune.json file, the studio, stills, a contact sheet or rendering an MP4; or when they say they left notes in the studio. Works in the motion repository and, through the motion plugin, in any project. Do NOT use for editing the library's Markdown entries (library/**), for UI animation in an app's codebase, or for video editing of footage.
 ---
 
 # Motion film
@@ -14,21 +14,32 @@ catalog.json             every primitive, prop, param range, ease, token you may
 library.json             styles and narratives: the beats a story needs, what a look prefers
 ```
 
+## Where the library is
+
+The library root is `${CLAUDE_PLUGIN_ROOT}`. From the motion plugin that is a path in Claude Code's plugin cache; from the motion repository's own `.claude/skills`, it is the repository root. `catalog.json`, `library.json`, `docs/CRAFT.md` and `schema/film.schema.json` below are files there.
+
+`motion` below is the command line:
+
+- **With the plugin**, `motion` is on PATH (or run `node "${CLAUDE_PLUGIN_ROOT}/bin/motion.mjs"`). Films live in the person's project, in `films/` unless they keep them elsewhere; output goes to `out/` beside each film. Leave out `$schema`.
+- **In the motion repository**, run `node bin/motion.mjs`.
+
+If a command says a package is missing, the plugin's setup has not finished: it runs when a session starts, so start a new session (or run `node "${CLAUDE_PLUGIN_ROOT}/scripts/plugin-setup.mjs"` with `CLAUDE_PLUGIN_ROOT` and `CLAUDE_PLUGIN_DATA` set). If a command that draws says Chromium is not installed, pass `--browser` with the path to an installed Chrome, Brave or Edge, or ask the person before running `node "${CLAUDE_PLUGIN_ROOT}/node_modules/playwright/cli.js" install chromium` (a download of about 150 MB). `render` and `beats` also need ffmpeg.
+
 ## Workflow
 
 Follow it in order. Each step is cheap; skipping one costs a round with the person.
 
-1. **Read the brief, then the catalog.** If there is no brief, ask for the four things one needs: what it is about, the one thing to remember, the length, the format. Or point the person at `node bin/motion.mjs wizard`. Read `catalog.json` before writing a single layer: it is the only list of what can be drawn.
-2. **Plan the story, then the rhythm.** One scene per story beat; each answers one question and leads to the next by "therefore" or "but", never "and then". Write each scene's `intent` in one line before its layers. Then set a `tempo` (music's bpm if there is music, measured with `node bin/motion.mjs beats <track>`, which also lists the stretches of whole bars that loop; else 100–144) and write the plan in bars before any layer: how many bars each scene lasts cut to cut, one hand-over length for the film (usually one beat), one change length (one or two beats), one rest (two to four beats). Merge scenes shorter than two bars, unless they are shots in a run of plain cuts: those last whole beats, long and short in turn. For a film of pictures, first make a contact sheet with the frame's crop drawn on each, and choose each picture's shot by what survives the crop (`docs/CRAFT.md`, "Composition"). Derive the signature moves from the identity (`docs/CRAFT.md`, "From identity to motion"). See `docs/CRAFT.md`, "Rhythm".
+1. **Read the brief, then the catalog.** If there is no brief, ask for the four things one needs: what it is about, the one thing to remember, the length, the format. Or point the person at `motion wizard`. Read the catalog (`motion catalog`, or `catalog.json` for the full data) before writing a single layer: it is the only list of what can be drawn.
+2. **Plan the story, then the rhythm.** One scene per story beat; each answers one question and leads to the next by "therefore" or "but", never "and then". Write each scene's `intent` in one line before its layers. Then set a `tempo` (music's bpm if there is music, measured with `motion beats <track>`, which also lists the stretches of whole bars that loop; else 100–144) and write the plan in bars before any layer: how many bars each scene lasts cut to cut, one hand-over length for the film (usually one beat), one change length (one or two beats), one rest (two to four beats). Merge scenes shorter than two bars, unless they are shots in a run of plain cuts: those last whole beats, long and short in turn. For a film of pictures, first make a contact sheet with the frame's crop drawn on each, and choose each picture's shot by what survives the crop (`docs/CRAFT.md`, "Composition"). Derive the signature moves from the identity (`docs/CRAFT.md`, "From identity to motion"). See `docs/CRAFT.md`, "Rhythm".
 3. **Write the film in beats.** Every time is `"2b"`, `"1bar"`, `"title.end + 1b"`, so the film stays on the grid and a new bpm retimes all of it. See the rules below, `reference/film.md` for the shape, and `docs/CRAFT.md` for the numbers that make motion look designed: eases, durations, reveal patterns, end cards and safe areas.
-4. **Validate until clean.** `node bin/motion.mjs validate films/<name>.film.json`. Fix exactly what each error says; the hint names the fix and "did you mean" names the slug. Warnings about params out of range are real: bring them back in range unless the brief asks otherwise.
-5. **Pace.** `node bin/motion.mjs pace films/<name>.film.json` prints each scene's time alone (free of hand-overs), the lengths of hand-overs, changes and rests, the share in motion, and a chart of the film beat by beat. Fix every rhythm warning before looking at frames: a hand-over that outweighs its scene, moves of one kind with different lengths, a scene far busier than the next, cuts off the bar. They are what makes a film feel fast, then slow.
-6. **Look.** `node bin/motion.mjs stills films/<name>.film.json` writes key frames and `sheet.png` to `films/out/<name>/stills/`. Open the sheet. Check: text collides, leaves the frame, is too long to read, or the accent appears more than once per scene.
-7. **Check.** `node bin/motion.mjs check films/<name>.film.json` must report frames that repeat exactly and nothing off stage. For loops it also reports the seam: fix a `loop-seam` warning. If no Chromium is installed, add `--browser <path to Chrome or Brave>`.
-8. **Hand over.** Tell the person to run `node bin/motion.mjs preview films/<name>.film.json` (studio at http://127.0.0.1:4321). Say what you would like them to judge.
-9. **Answer notes.** When they come back: `node bin/motion.mjs notes films/<name>.film.json`. Each note has a time, a scene and text. Change the film to answer it, validate again, and say per note what you did. Do not mark notes done; the person does.
+4. **Validate until clean.** `motion validate films/<name>.film.json`. Fix exactly what each error says; the hint names the fix and "did you mean" names the slug. Warnings about params out of range are real: bring them back in range unless the brief asks otherwise.
+5. **Pace.** `motion pace films/<name>.film.json` prints each scene's time alone (free of hand-overs), the lengths of hand-overs, changes and rests, the share in motion, and a chart of the film beat by beat. Fix every rhythm warning before looking at frames: a hand-over that outweighs its scene, moves of one kind with different lengths, a scene far busier than the next, cuts off the bar. They are what makes a film feel fast, then slow.
+6. **Look.** `motion stills films/<name>.film.json` writes key frames and `sheet.png` to `films/out/<name>/stills/`. Open the sheet. Check: text collides, leaves the frame, is too long to read, or the accent appears more than once per scene.
+7. **Check.** `motion check films/<name>.film.json` must report frames that repeat exactly and nothing off stage. For loops it also reports the seam: fix a `loop-seam` warning. If no Chromium is installed, add `--browser <path to Chrome or Brave>`.
+8. **Hand over.** Tell the person to run `motion preview films/<name>.film.json` (studio at http://127.0.0.1:4321). Say what you would like them to judge.
+9. **Answer notes.** When they come back: `motion notes films/<name>.film.json`. Each note has a time, a scene and text. Change the film to answer it, validate again, and say per note what you did. Do not mark notes done; the person does.
 
-Render only when asked: `node bin/motion.mjs render films/<name>.film.json` (needs ffmpeg).
+Render only when asked: `motion render films/<name>.film.json` (needs ffmpeg).
 
 ## Rules for the film
 

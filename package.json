@@ -2,8 +2,14 @@
   "name": "@bydiorama/motion",
   "version": "0.4.0",
   "private": true,
-  "license": "UNLICENSED",
+  "license": "MIT",
   "description": "Diorama motion library: films as data, written by agents, directed by people.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bydiorama/motion.git"
+  },
+  "homepage": "https://github.com/bydiorama/motion#readme",
+  "bugs": "https://github.com/bydiorama/motion/issues",
   "type": "module",
   "packageManager": "pnpm@10.30.3",
   "engines": {
@@ -24,12 +30,14 @@
     "type-check": "tsc --noEmit",
     "verify": "pnpm run type-check && pnpm run test && node bin/motion.mjs catalog --check && node bin/motion.mjs validate films/*.film.json"
   },
-  "devDependencies": {
-    "@types/node": "^24.0.0",
+  "dependencies": {
     "dialkit": "2.1.0",
     "esbuild": "0.28.1",
     "playwright": "1.62.1",
-    "typescript": "^6",
     "yaml": "2.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^6"
   }
 }

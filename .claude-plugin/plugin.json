@@ -1,0 +1,13 @@
+{
+  "name": "motion",
+  "displayName": "Motion",
+  "description": "Make motion videos with the bydiorama motion library: films as JSON that the runtime validates, draws, checks and renders, with a studio for directing them.",
+  "author": {
+    "name": "Diorama"
+  },
+  "homepage": "https://github.com/bydiorama/motion#readme",
+  "repository": "https://github.com/bydiorama/motion",
+  "license": "MIT",
+  "keywords": ["motion", "video", "animation", "film", "render"],
+  "skills": ["./.claude/skills/"]
+}

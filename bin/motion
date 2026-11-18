@@ -1,0 +1,3 @@
+#!/bin/sh
+# `motion` on PATH when the Claude Code plugin is enabled (the plugin's bin/ is added to PATH).
+exec node "$(dirname "$0")/motion.mjs" "$@"
