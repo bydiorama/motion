@@ -2,6 +2,8 @@
 // film time alone, so frames can be drawn in any order and always come out the same.
 import { clamp, progress, resolveEase, type Bezier, type EaseSpec } from '../core/ease.ts';
 import { track } from '../core/track.ts';
+import { frameAt, type FrameKey } from '../core/frame.ts';
+import { pressAt, ringAt } from '../core/tap.ts';
 import { resolveFilm } from '../film/resolve.ts';
 import { applyTune } from '../film/tune.ts';
 import type { Artboard, Film, Issue, ResolvedLayer, ResolvedMove, ResolvedScene, Timeline, Tracks, Tune } from '../film/types.ts';
@@ -67,11 +69,28 @@ interface LiveLayer {
   spec: ResolvedLayer; el: HTMLElement; instance: Instance; tracks: Sampler; ease: { enter?: (x: number) => number; exit?: (x: number) => number }; shutter: number;
   /** Stage px to one of the layer's own px: the artboard's scale for a layer placed on one, else 1. */
   unit: number;
+  /** Times it is tapped, scene seconds. */
+  taps?: number[];
+}
+/** A tap's ring: drawn in the target's own parent, around its layout box, in its own shape. */
+interface LiveRing {
+  target: LiveLayer; el: HTMLElement; taps: number[];
+  /** A mark in the target's picture: the ring goes round it where it is at the moment. */
+  mark?: string;
+  /** The box, in the parent's px, and the shape's corner radius. */
+  box?: { x: number; y: number; w: number; h: number; radius: number };
 }
 interface LiveScene {
   spec: ResolvedScene; el: HTMLElement; cam: HTMLElement; layers: LiveLayer[]; tracks: Sampler; handover: boolean; follow?: LiveFollow;
+  /** The framing camera's keys, aimed at layout boxes measured while nothing was moved. */
+  frame?: FrameKey[];
+  /** Px from the viewer for the camera's tilt, and the camera's shutter for motion blur. */
+  depth: number; shutter: number;
   /** The camera at each parallax home time, worked out once. */
   homes: Map<number, Pose>;
+  rings: LiveRing[];
+  /** Layout glides: where every layer sits before the first glide, against the laid-out page, and each glide's travel. */
+  glide?: { base: Map<LiveLayer, [number, number]>; steps: { t: number; delta: Map<LiveLayer, [number, number]> }[] };
 }
 /** A camera following a layer's tip: the layer, where its box sits in the camera's world, and the settings. */
 interface LiveFollow { layer: LiveLayer; origin: [number, number]; at: [number, number]; lag: number; blend: number; scale: number }
@@ -133,10 +152,14 @@ interface Pose {
   yShare: number;
   /** Clipped share of each side, 0..1: top, right, bottom, left. */
   clip: [number, number, number, number];
+  /** For the camera: the screen point (px from the stage centre) its tilt turns about. */
+  pivot?: [number, number];
   /** Px a slot move has carried the layer down (positive) or up (negative), clipped at its box. */
   slot?: number;
   /** An angled wipe: its direction in degrees, the share of the box still covered, and whether it is leaving. */
   cut?: { angle: number; hidden: number; leaving: boolean };
+  /** A soft edge for masks and straight wipes: px, or true for a tenth of the line height. */
+  feather?: number | true;
 }
 const rest = (): Pose => ({ x: 0, y: 0, scale: 1, rotate: 0, opacity: 1, blur: 0, rotateX: 0, rotateY: 0, skew: 0, yShare: 0, clip: [0, 0, 0, 0] });
 
@@ -161,7 +184,8 @@ function applyMove(p: Pose, m: ResolvedMove, k: number, leaving: boolean) {
   const dir = leaving ? -1 : 1;
   const fades = !m.move.startsWith('mask-') && !m.move.startsWith('wipe') && m.move !== 'slot-up';
   const rad = ((m.angle ?? 0) * Math.PI) / 180, ux = Math.cos(rad), uy = Math.sin(rad);
-  if (fades) p.opacity *= m.move === 'pop' || m.move === 'swing' ? 1 - Math.min(1, g * 2.5) : 1 - g;
+  if (m.feather !== undefined && g > 0) p.feather = m.feather;
+  if (fades) p.opacity *= m.move === 'pop' || m.move === 'swing' || m.move === 'pop-check' ? 1 - Math.min(1, g * 2.5) : 1 - g;
   switch (m.move) {
     case 'rise': p.y += dir * gone * amount; break;
     case 'drop': p.y -= dir * gone * amount; break;
@@ -188,6 +212,8 @@ function applyMove(p: Pose, m: ResolvedMove, k: number, leaving: boolean) {
     }
     case 'slide': p.x -= dir * gone * amount * ux; p.y -= dir * gone * amount * uy; break;
     case 'swing': p.rotateX += dir * gone * amount; break;
+    // A check arriving: small, turned back and soft, then past its mark and home.
+    case 'pop-check': p.scale *= 1 - gone * amount; p.rotate -= gone * 80; p.blur += g * 4; break;
     // Into its slot from below, out of it through the top: the box stays where it is.
     case 'slot-up': { const d = gone * amount * (leaving ? -1 : 1); p.y += d; p.slot = (p.slot ?? 0) + d; break; }
     default: break;
@@ -199,19 +225,65 @@ function writePose(el: HTMLElement, p: Pose, depth: number, smear = '') {
   const still = p.x === 0 && p.y === 0 && p.scale === 1 && p.rotate === 0 && p.skew === 0 && p.yShare === 0 && !p.slot && flat;
   const parts: string[] = [];
   if (!flat) parts.push(`perspective(${depth}px)`);
+  // A framing camera turns in depth about its anchor, so the framed point stays where it is.
+  const pivot = !flat && p.pivot ? p.pivot : undefined;
+  if (pivot) parts.push(`translate(${pivot[0]}px, ${pivot[1]}px) rotateX(${p.rotateX}deg) rotateY(${p.rotateY}deg) translate(${-pivot[0]}px, ${-pivot[1]}px)`);
   // A mask travels its own height plus the room above and below it, so the
   // line is fully out of the window before the move starts.
   if (p.yShare !== 0) parts.push(`translateY(calc(${p.yShare * 100}% + ${p.yShare * 2} * ${MASK_PAD}))`);
   parts.push(`translate(${p.x}px, ${p.y}px)`);
-  if (!flat) parts.push(`rotateX(${p.rotateX}deg) rotateY(${p.rotateY}deg)`);
+  if (!flat && !pivot) parts.push(`rotateX(${p.rotateX}deg) rotateY(${p.rotateY}deg)`);
   parts.push(`rotate(${p.rotate}deg)`);
   if (p.skew !== 0) parts.push(`skewX(${p.skew}deg)`);
   parts.push(`scale(${p.scale})`);
   el.style.transform = still ? '' : parts.join(' ');
   el.style.opacity = p.opacity >= 1 ? '' : String(Math.max(0, p.opacity));
   el.style.filter = [smear, p.blur > 0.01 ? `blur(${p.blur}px)` : ''].filter(Boolean).join(' ');
+  // A feathered mask or wipe fades its edge out with a mask image instead of cutting it.
+  const soft = p.feather !== undefined && !p.cut && !p.slot && (Math.abs(p.yShare) > 1e-6 || p.clip.some((v) => v > 1e-4));
+  if (soft) {
+    const cs = getComputedStyle(el), fs = parseFloat(cs.fontSize) || 16, padVar = cs.getPropertyValue('--m-mask-pad').trim();
+    const pad = padVar.endsWith('px') ? parseFloat(padVar) : (padVar.endsWith('em') ? parseFloat(padVar) : 0.3) * fs;
+    const lh = parseFloat(cs.lineHeight) || fs * 1.2;
+    const m = featherMask(p, el.offsetWidth, el.offsetHeight, pad, p.feather === true ? lh / 10 : p.feather!);
+    el.style.clipPath = '';
+    el.style.maskImage = m.image; el.style.maskSize = m.size; el.style.maskPosition = m.position;
+    el.style.maskRepeat = 'no-repeat'; el.style.maskComposite = 'intersect'; el.style.setProperty('mask-clip', 'no-clip');
+    return;
+  }
+  if (el.style.maskImage) for (const k of ['mask-image', 'mask-size', 'mask-position', 'mask-repeat', 'mask-composite', 'mask-clip']) el.style.removeProperty(k);
   // An angled wipe cuts in the layer's own px, so it needs the box's size (untransformed).
   el.style.clipPath = clipFor(p, p.cut && p.cut.hidden > 0 ? [el.offsetWidth, el.offsetHeight] : undefined);
+}
+
+/**
+ * The mask for a feathered mask or wipe on a w × h box: the same window `clipFor` cuts, with
+ * each edge fading out over `f` px beyond it rather than cut, so a line rises out of a soft
+ * edge. A wipe's edge travels its share of the box plus the feather, so it starts and ends
+ * fully off the box: nothing changes the frame the move ends and the mask comes off. The
+ * image spans well past the box so overhangs, accents and italics are not cut.
+ */
+export function featherMask(p: Pick<Pose, 'clip' | 'yShare'>, w: number, h: number, pad: number, f: number): { image: string; size: string; position: string } {
+  const X = Math.max(w, h) + pad + f, [t, r, b, l] = p.clip;
+  let top = -X + f, bottom = h + X - f, left = -X + f, right = w + X - f;
+  if (Math.abs(p.yShare) > 1e-6) {
+    // The mask's window, fixed on stage, in the layer's own px as the layer travels through it.
+    const travel = p.yShare * (h + 2 * pad);
+    top = -pad - travel; bottom = h + pad - travel;
+  }
+  // A wipe's covered share, with the ramp carried past the box at either end of the move.
+  if (t > 1e-4) top = Math.max(top, t * (h + f));
+  if (b > 1e-4) bottom = Math.min(bottom, h - b * (h + f));
+  if (l > 1e-4) left = Math.max(left, l * (w + f));
+  if (r > 1e-4) right = Math.min(right, w - r * (w + f));
+  const px = (v: number) => `${(v + X).toFixed(2)}px`;
+  const ramp = (dir: string, a: number, z: number) =>
+    z <= a ? `linear-gradient(${dir}, transparent, transparent)` : `linear-gradient(${dir}, transparent ${px(a - f)}, #000 ${px(a)}, #000 ${px(z)}, transparent ${px(z + f)})`;
+  return {
+    image: `${ramp('to bottom', top, bottom)}, ${ramp('to right', left, right)}`,
+    size: `${(w + 2 * X).toFixed(2)}px ${(h + 2 * X).toFixed(2)}px`,
+    position: `${(-X).toFixed(2)}px ${(-X).toFixed(2)}px`,
+  };
 }
 
 /**
@@ -300,6 +372,10 @@ export function clipFor(p: Pick<Pose, 'clip' | 'yShare' | 'slot' | 'cut'>, size?
   return `inset(${edge(t, mTop)} ${side(r)} ${edge(b, mBottom)} ${side(l)})`;
 }
 
+/** Seconds a layout glide takes, and its curve: quick away, a long settle. */
+const GLIDE = 0.45;
+const glideEase = resolveEase([0.22, 1, 0.36, 1]);
+
 /** A layer's shutter: `true` is the film-standard half frame, a number is the share of a frame. */
 const shutterOf = (v: unknown): number => (v === true ? 0.5 : typeof v === 'number' && Number.isFinite(v) ? clamp(v, 0, 1) : 0);
 
@@ -355,7 +431,19 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
   const ctx: Ctx = {
     tokens, seed: film.seed ?? 1, size: [W, H], fps: timeline.fps, easeOverrides: ui.ease, slots: options.slots ?? {},
     ease: (spec) => resolveEase(spec, ui.ease),
+    ...(timeline.tempo ? { beat: 60 / timeline.tempo.bpm } : {}),
+    cameraScale: () => drawingScale,
+    cameraPose: () => drawingPose,
   };
+  let drawingPose = { scale: 1, rotateX: 0, rotateY: 0 };
+  /** A layer's smaller copies of its footage, pulled as "<key>@1", "<key>@2", …, largest first. */
+  const mipsOf = (key: string): FrameSequence[] => {
+    const out: FrameSequence[] = [];
+    for (let k = 1; options.frames?.[`${key}@${k}`]; k++) out.push(options.frames[`${key}@${k}`]!);
+    return out;
+  };
+  /** The camera scale of the scene being drawn, set before its layers seek. */
+  let drawingScale = 1;
 
   // The stage must be in the page before primitives build: some of them measure text.
   host.appendChild(stage);
@@ -396,7 +484,7 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
     const frame = s.artboard ?? { width: W, height: H };
     const fit = artboardFit([W, H], frame);
     let board: HTMLElement | undefined;
-    const canvas = !!s.follow || (['x', 'y', 'scale', 'rotate', 'rotateX', 'rotateY'] as const).some((k) => (s.tracks?.[k]?.length ?? 0) > 1);
+    const canvas = !!s.follow || !!spec.camera || (['x', 'y', 'scale', 'rotate', 'rotateX', 'rotateY'] as const).some((k) => (s.tracks?.[k]?.length ?? 0) > 1);
     const layers: LiveLayer[] = spec.layers.map((layer) => {
       const le = doc.createElement('div');
       le.className = 'm-layer';
@@ -436,16 +524,44 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
           cam.appendChild(board);
         }
         board.appendChild(le);
+      } else if (layer.source.screen) {
+        // Fixed to the screen: a sibling of the camera, never moved by it. Written before every
+        // camera layer it lies under the camera (a fixed backdrop); otherwise over it (a vignette).
+        le.style.position = le.style.position || 'absolute';
+        if (!place) le.style.inset = '0';
+        le.classList.add('m-screen');
+        if (cam.childElementCount === 0) el.insertBefore(le, cam); else el.appendChild(le);
       } else cam.appendChild(le);
       const frames = options.frames?.[`${spec.id}/${layer.id}`];
-      const instance = PRIMITIVES[layer.use]!.build(le, layer.props, layer.params, frames ? { ...ctx, frames } : ctx);
+      const instance = PRIMITIVES[layer.use]!.build(le, layer.props, layer.params, { ...ctx, ...(frames ? { frames } : {}), filmStart: spec.start + layer.start, boxOf: (id) => boxOf(spec.id, id), mips: mipsOf(`${spec.id}/${layer.id}`) });
       return {
         spec: layer, el: le, instance, tracks: samplers(layer.source.tracks, tokens.ease_move, ui.ease),
         ease: { ...(layer.enter ? { enter: ctx.ease(layer.enter.ease) } : {}), ...(layer.exit ? { exit: ctx.ease(layer.exit.ease) } : {}) },
         shutter: shutterOf(layer.source.motionBlur), unit: onBoard ? fit.scale : 1,
+        // A tap on a mark of footage is already pressed in the footage: only its ring is drawn.
+        ...(layer.taps?.some((t) => !t.mark) ? { taps: layer.taps.filter((t) => !t.mark).map((t) => t.t) } : {}),
       };
     });
-    const live: LiveScene = { spec, el, cam, layers, tracks: samplers(s.tracks, tokens.ease_move, ui.ease), handover: false, homes: new Map() };
+    // Taps' rings, one per layer they are drawn around.
+    const rings: LiveRing[] = [];
+    for (const l of layers) for (const tap of l.spec.taps ?? []) {
+      const target = tap.ring === null ? undefined : layers.find((o) => o.spec.id === tap.ring);
+      if (!target) continue;
+      let ring = rings.find((r) => r.target === target && r.mark === tap.mark);
+      if (!ring) {
+        const re = doc.createElement('div');
+        re.className = 'm-ring';
+        re.style.cssText = `position:absolute;pointer-events:none;box-sizing:border-box;border:${1.5 / target.unit}px solid var(--m-accent);opacity:0`;
+        target.el.parentElement!.appendChild(re);
+        rings.push((ring = { target, el: re, taps: [], ...(tap.mark ? { mark: tap.mark } : {}) }));
+      }
+      ring.taps.push(tap.t);
+    }
+    const live: LiveScene = { spec, el, cam, layers, tracks: samplers(s.tracks, tokens.ease_move, ui.ease), handover: false, homes: new Map(),
+      depth: s.perspective ?? W * 1.2, shutter: shutterOf(s.motionBlur), rings };
+    reflow(live);
+    aim(live);
+    shape(live);
     const f = s.follow, target = f ? layers.find((l) => l.spec.id === f.layer) : undefined;
     if (f && target?.instance.tip) {
       // Where the layer's box sits in the camera's world, measured once while nothing is moved.
@@ -463,8 +579,129 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
 
   const last = scenes[scenes.length - 1]!;
 
+  /**
+   * Aims a scene's framing camera. Every layer's box is measured where layout put it, with
+   * nothing moved: no camera, no enter move, no hand-over. So the camera aims at where a thing
+   * sits, never at where its animation happens to carry it, and a layer not yet in, or already
+   * gone, is framed where it will be or was (hidden layers keep their room). Layout does not
+   * change after build, so this is done once, and again when the fonts have loaded.
+   */
+  function aim(scene: LiveScene) {
+    const keys = scene.spec.camera;
+    if (!keys) return;
+    const world = unmoved(scene, () => {
+      const c = scene.cam.getBoundingClientRect(), k = c.width / W || 1;
+      return new Map(scene.layers.map((l) => {
+        const r = l.el.getBoundingClientRect();
+        return [l.spec.id, { x: (r.left - c.left) / k, y: (r.top - c.top) / k, w: r.width / k, h: r.height / k }] as const;
+      }));
+    });
+    scene.frame = keys.map((key) => {
+      let box = typeof key.frame === 'string' ? world.get(key.frame.split('#')[0]!) : undefined;
+      if (box && typeof key.frame === 'string' && key.frame.includes('#')) {
+        // A mark in a footage plane's picture, where it is at the key's moment.
+        const [lid, mark] = key.frame.split('#') as [string, string];
+        const layer = scene.layers.find((l) => l.spec.id === lid), m = layer?.instance.markAt?.(mark, key.t - layer.spec.start);
+        if (m) box = { x: box.x + m[0], y: box.y + m[1], w: m[2], h: m[3] };
+      }
+      const target: [number, number] = box
+        ? [box.x + key.point[0] * box.w + key.offset[0], box.y + key.point[1] * box.h + key.offset[1]]
+        : [((key.frame as [number, number])[0] / 100) * W + key.offset[0], ((key.frame as [number, number])[1] / 100) * H + key.offset[1]];
+      return {
+        t: key.t, target, zoom: key.zoom, anchor: [(key.anchor[0] / 100) * W, (key.anchor[1] / 100) * H], tilt: key.tilt, rotate: key.rotate,
+        ease: ctx.ease(key.ease ?? tokens.ease_move), drift: key.drift,
+      };
+    });
+  }
+
+  /**
+   * Measures each tap ring's target where layout put it, with nothing moved, and finds its
+   * shape: the first element down a single-child chain with rounded corners (a button inside
+   * its layer's box), so the ring follows the control, not the box around it.
+   */
+  function shape(scene: LiveScene) {
+    if (!scene.rings.length) return;
+    unmoved(scene, () => {
+      for (const ring of scene.rings) {
+        const parent = ring.el.parentElement!, pr = parent.getBoundingClientRect(), k = pr.width / (parent.offsetWidth || 1) || 1;
+        let e: Element = ring.target.el;
+        const radius = (x: Element) => parseFloat(getComputedStyle(x).borderTopLeftRadius) || 0;
+        while (!ring.mark && radius(e) === 0 && e.children.length === 1) e = e.firstElementChild!;
+        if (radius(e) === 0) e = ring.target.el;
+        const r = e.getBoundingClientRect(), w = r.width / k, h = r.height / k;
+        ring.box = { x: (r.left - pr.left) / k, y: (r.top - pr.top) / k, w, h, radius: Math.min(radius(e), Math.min(w, h) / 2) };
+      }
+    });
+  }
+
+  /**
+   * Layout glides. A glide layer takes no room until it starts and gives it up when its exit
+   * starts. The page stays laid out with every layer in place, so nothing re-wraps; instead each
+   * layout the scene passes through is measured once here (glide layers taken out with
+   * display: none), and the layers are moved between them by transforms over GLIDE seconds.
+   */
+  function reflow(scene: LiveScene) {
+    const glides = scene.layers.filter((l) => l.spec.source.reflow === 'glide' && !l.spec.source.place && !l.spec.source.screen);
+    if (!glides.length) { delete scene.glide; return; }
+    const events = glides.flatMap((g) => [
+      { t: g.spec.start, g, on: true },
+      ...(g.spec.exit ? [{ t: g.spec.exit.start, g, on: false }] : []),
+    ]).sort((a, b) => a.t - b.t);
+    scene.glide = unmoved(scene, () => {
+      const display = new Map(scene.layers.map((l) => [l, l.el.style.display] as const));
+      const c = () => scene.cam.getBoundingClientRect();
+      const measure = (present: Set<LiveLayer>) => {
+        for (const g of glides) g.el.style.display = present.has(g) ? display.get(g)! : 'none';
+        const cr = c(), k = cr.width / W || 1;
+        return new Map(scene.layers.map((l) => {
+          const r = l.el.getBoundingClientRect();
+          return [l, [(r.left - cr.left) / k, (r.top - cr.top) / k] as [number, number]] as const;
+        }));
+      };
+      const diff = (a: Map<LiveLayer, [number, number]>, b: Map<LiveLayer, [number, number]>) =>
+        new Map(scene.layers.map((l) => [l, [(a.get(l)![0] - b.get(l)![0]) / l.unit, (a.get(l)![1] - b.get(l)![1]) / l.unit] as [number, number]] as const));
+      const full = measure(new Set(glides));
+      const present = new Set<LiveLayer>();
+      let prev = measure(present);
+      const base = diff(prev, full);
+      const steps = events.map((e) => {
+        if (e.on) present.add(e.g); else present.delete(e.g);
+        const next = measure(present), delta = diff(next, prev);
+        prev = next;
+        return { t: e.t, delta };
+      });
+      for (const g of glides) g.el.style.display = display.get(g)!;
+      return { base, steps };
+    });
+  }
+
+  /** Layout boxes other layers asked for, by scene and layer id; cleared when the fonts load. */
+  const boxes = new Map<string, { x: number; y: number; w: number; h: number } | undefined>();
+  function boxOf(sceneId: string, id: string) {
+    const key = `${sceneId}/${id}`;
+    if (boxes.has(key)) return boxes.get(key);
+    const scene = scenes.find((x) => x.spec.id === sceneId), layer = scene?.layers.find((l) => l.spec.id === id);
+    const box = scene && layer ? unmoved(scene, () => {
+      const c = scene.cam.getBoundingClientRect(), k = c.width / W || 1, r = layer.el.getBoundingClientRect();
+      return { x: (r.left - c.left) / k, y: (r.top - c.top) / k, w: r.width / k, h: r.height / k };
+    }) : undefined;
+    boxes.set(key, box);
+    return box;
+  }
+
+  /** Runs `measure` with the scene, its camera and its layers unmoved and the scene laid out. */
+  function unmoved<T>(scene: LiveScene, measure: () => T): T {
+    const moved = [scene.el, scene.cam, ...scene.layers.map((l) => l.el)];
+    const was = moved.map((e) => [e.style.transform, e.style.display] as const);
+    for (const e of moved) e.style.transform = 'none';
+    scene.el.style.display = '';
+    try { return measure(); } finally { moved.forEach((e, i) => { e.style.transform = was[i]![0]; e.style.display = was[i]![1]; }); }
+  }
+
+  let lastSeek = 0;
   function seek(time: number) {
     const t = clamp(time, 0, timeline.duration);
+    lastSeek = t;
     // First take off every finished hand-over's styles, including on scenes not on
     // screen. It must come before this frame's hand-overs are drawn: a scene can be
     // the incoming side of one transition and the outgoing side of the next, and
@@ -489,7 +726,18 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
       const local = t - spec.start;
 
       const cam = camAt(scene, local);
-      writePose(scene.cam, cam, W * 1.2);
+      // Motion blur on the camera: the frame's travel over half a frame either side, along the
+      // pan, plus the zoom's spread at a third of the way to the corner, which a round blur stands in for.
+      let camSmear = '';
+      if (scene.shutter > 0) {
+        const h = 0.5 / timeline.fps, a = camAt(scene, local - h), b = camAt(scene, local + h);
+        const spread = Math.abs(Math.log(b.scale / a.scale)) * Math.hypot(W, H) / 6;
+        camSmear = directionalBlur(scene.cam, Math.hypot(streak(b.x - a.x, scene.shutter), streak(spread, scene.shutter)), Math.hypot(streak(b.y - a.y, scene.shutter), streak(spread, scene.shutter)));
+      }
+      writePose(scene.cam, cam, scene.depth, camSmear);
+      const posed = new Map<LiveLayer, Pose>();
+      drawingScale = Math.abs(cam.scale) || 1;
+      drawingPose = { scale: drawingScale, rotateX: cam.rotateX, rotateY: cam.rotateY };
 
       for (const layer of scene.layers) {
         const l = layer.spec;
@@ -507,6 +755,30 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
           smear = directionalBlur(layer.el, streak(b.x - a.x, layer.shutter), streak(b.y - a.y, layer.shutter));
         }
         writePose(layer.el, pose, W * 0.8, smear);
+        // Inside a zoomed camera, a part without its own compositor layer is painted at whole CSS px
+        // of the camera's space, so a slow move steps by the zoom (4 px at 4×). While it moves there,
+        // it gets a layer of its own and lands where its time puts it; at rest it is painted flat again.
+        const prev = drawingScale >= 1.25 ? poseAt(layer, local - 1 / timeline.fps, scene, cam) : undefined;
+        const moving = !!prev && (Math.abs(prev.x - pose.x) > 1e-3 || Math.abs(prev.y - pose.y) > 1e-3 || Math.abs(prev.scale - pose.scale) > 1e-5);
+        if (moving) layer.el.style.setProperty('will-change', 'transform', 'important');
+        else layer.el.style.removeProperty('will-change');
+        posed.set(layer, pose);
+      }
+
+      // Rings leave their control's layout box, moved with it but never scaled by its press.
+      for (const ring of scene.rings) {
+        const r = ringAt(ring.taps, local), p = posed.get(ring.target);
+        let b = ring.box;
+        if (b && ring.mark) {
+          // A mark: where it is in the footage now, inside the layer's box.
+          const m = ring.target.instance.markAt?.(ring.mark, local - ring.target.spec.start);
+          b = m ? { x: b.x + m[0], y: b.y + m[1], w: m[2], h: m[3], radius: Math.min(m[3] / 2, 14) } : undefined;
+        }
+        if (!r || !b || !p) { ring.el.style.opacity = '0'; continue; }
+        const g = r.grow / ring.target.unit, st = ring.el.style;
+        st.left = `${b.x + p.x - g}px`; st.top = `${b.y + p.y - g}px`;
+        st.width = `${b.w + 2 * g}px`; st.height = `${b.h + 2 * g}px`;
+        st.borderRadius = `${b.radius + g}px`; st.opacity = String(r.opacity * p.opacity);
       }
 
       // Hand-over: this scene is the outgoing one while the next has already started.
@@ -560,6 +832,10 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
   /** The scene's camera at `local` seconds: its tracks, then the follow. */
   function camAt(scene: LiveScene, local: number): Pose {
     const cam = rest();
+    if (scene.frame) {
+      const f = frameAt(scene.frame, local, [W, H]);
+      Object.assign(cam, { x: f.x, y: f.y, scale: f.scale, rotate: f.rotate, rotateX: f.rotateX, rotateY: f.rotateY, pivot: f.pivot });
+    }
     sample(cam, scene.tracks, local);
     if (scene.follow) follow(cam, scene.follow, local);
     return cam;
@@ -575,6 +851,17 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
     if (l.enter && layer.ease.enter) applyMove(pose, l.enter, progress(local, l.enter.start, l.enter.duration, layer.ease.enter), false);
     if (l.exit && layer.ease.exit && local >= l.exit.start) applyMove(pose, l.exit, progress(local, l.exit.start, l.exit.duration, layer.ease.exit), true);
     sample(pose, layer.tracks, local - l.start);
+    if (layer.taps) pose.scale *= pressAt(layer.taps, local);
+    if (scene?.glide) {
+      const g = scene.glide, b = g.base.get(layer)!;
+      let dx = b[0], dy = b[1];
+      for (const step of g.steps) {
+        if (local <= step.t) break;
+        const k = progress(local, step.t, GLIDE, glideEase), d = step.delta.get(layer)!;
+        dx += d[0] * k; dy += d[1] * k;
+      }
+      pose.x += dx; pose.y += dy;
+    }
     const px = l.parallax;
     if (scene && px && px.depth !== 1) {
       const now = cam ?? camAt(scene, local);
@@ -627,7 +914,8 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
     return boxes;
   }
 
-  const images = [...stage.querySelectorAll('img')];
+  // Images a layer fills in later (a footage plane's copies) have no source yet: nothing to wait for.
+  const images = [...stage.querySelectorAll('img')].filter((img) => img.getAttribute('src'));
   const videos = [...stage.querySelectorAll('video')];
   const ready = Promise.all([
     doc.fonts.ready,
@@ -637,6 +925,8 @@ export function mount(host: HTMLElement, source: Film, options: MountOptions = {
       v.addEventListener('error', () => reject(new Error(`Video did not load: ${v.getAttribute('src')}`)), { once: true });
     }))),
   ]).then(() => undefined);
+  // Fonts change where text sits: aim the framing cameras again once they are in.
+  void ready.then(() => { boxes.clear(); scenes.forEach((s) => { reflow(s); aim(s); shape(s); }); seek(lastSeek); }).catch(() => undefined);
   const settled = () => Promise.all(scenes.flatMap((s) => s.layers.map((l) => l.instance.pending?.()))).then(() => undefined);
 
   seek(0);

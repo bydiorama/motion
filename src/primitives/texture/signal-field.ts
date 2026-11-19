@@ -6,6 +6,7 @@
 // drawn on a canvas; jitter is hashed from the frame number, so every frame is
 // the same each time it is drawn.
 import { clamp, lerp } from '../../core/ease.ts';
+import { fitBitmap } from '../canvas.ts';
 import { num, type Primitive } from '../types.ts';
 
 /** Deterministic hash noise in [0, 1). */
@@ -49,8 +50,6 @@ export const signalField: Primitive = {
     const [W, H] = ctx.size, u = W / 1080, fps = ctx.fps || 30;
     el.style.cssText += ';position:absolute;inset:0;max-width:none;pointer-events:none';
     const canvas = doc.createElement('canvas');
-    canvas.width = Math.round(W * 2);
-    canvas.height = Math.round(H * 2);
     canvas.style.cssText = `position:absolute;left:0;top:0;width:${W}px;height:${H}px`;
     el.appendChild(canvas);
     const g = canvas.getContext('2d');
@@ -75,7 +74,7 @@ export const signalField: Primitive = {
       seek(t) {
         if (!g) return;
         const f = Math.round(t * fps);
-        g.setTransform(2, 0, 0, 2, 0, 0);
+        fitBitmap(canvas, g, ctx.size, ctx);
         g.clearRect(0, 0, W, H);
         const order = inOut(clamp((t - t0) / span));
         const shake = (1 - order) ** 1.5;

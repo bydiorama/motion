@@ -53,6 +53,30 @@ export interface Ctx {
    * where footage plays from a video element.
    */
   frames?: FrameSequence;
+  /** Seconds per beat, when the film has a tempo. Light that pulses on the beat reads it. */
+  beat?: number;
+  /** The film time this layer starts at, so a phase can come from the film's clock, not the layer's. */
+  filmStart?: number;
+  /**
+   * The scale the camera shows this layer's scene at in the frame being drawn: 2 when it is
+   * twice as big. A canvas sizes its bitmap to it, so it stays sharp in a close-up. It is the
+   * frame's own camera, read after the camera is placed, so it never lags a frame.
+   */
+  cameraScale?: () => number;
+  /**
+   * Where another layer of the same scene sits, laid out and unmoved, in the camera's px (the
+   * stage's px at rest): for a field that keeps clear of the marks on it. Undefined for an id
+   * the scene does not have. Measure in seek, not build: later layers are not built yet then.
+   */
+  boxOf?: (id: string) => { x: number; y: number; w: number; h: number } | undefined;
+  /** The camera of this layer's scene in the frame being drawn: its scale and its tilt in degrees. */
+  cameraPose?: () => { scale: number; rotateX: number; rotateY: number };
+  /**
+   * Smaller copies of this layer's footage (½, ¼, …), largest first, for a picture shown much
+   * smaller than it was pulled: drawing each size from the copy nearest it keeps fine detail from
+   * shimmering as the camera pulls out.
+   */
+  mips?: FrameSequence[];
 }
 
 /** Frames of a video, extracted to numbered images so every film frame is exact. */
@@ -68,6 +92,8 @@ export interface FrameSequence {
   /** The source's own size in px. */
   width: number;
   height: number;
+  /** Boxes of elements recorded with the footage (`motion record --marks`), in the source's px. */
+  marks?: { fps: number; size: [number, number]; marks: Record<string, ([number, number, number, number] | null)[]> };
 }
 
 export const frameUrl = (f: FrameSequence, n: number): string =>
@@ -89,6 +115,11 @@ export interface Instance {
    * the tip of a line being drawn. A scene's camera can follow it.
    */
   tip?(t: number): [number, number] | undefined;
+  /**
+   * Where a named mark in the primitive's picture is at t, as [x, y, width, height] in px from
+   * the layer's top-left, unmoved: the button a camera key frames, or a tap's ring goes round.
+   */
+  markAt?(name: string, t: number): [number, number, number, number] | undefined;
 }
 
 /**

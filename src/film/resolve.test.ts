@@ -215,3 +215,43 @@ test('wipe and slide travel at any angle; other moves keep their own direction',
   assert.deepEqual(enter({ move: 'rise', angle: 30 }).issues.map((i) => `${i.level}:${i.code}`), ['warning:unused']);
   assert.ok(enter({ move: 'wipe', angle: 'up' }).issues.some((i) => i.code === 'bad-value'));
 });
+
+test('camera keys fill in from the key before, in seconds, and aim at layers by id', () => {
+  const r = resolveFilm(film([{ id: 'a', length: 4, layers: [text('title'), text('send')], camera: [
+    { at: 0, frame: 'title', zoom: 1.2 },
+    { at: '2b', frame: 'send', zoom: 3, anchor: [40, 60], ease: 'punch' },
+    { at: 3, tilt: [8, -12], drift: 0.02 },
+  ] }], { tempo: { bpm: 120 } }));
+  const cam = r.timeline!.scenes[0]!.camera!;
+  assert.deepEqual(cam.map((k) => k.t), [0, 1, 3]);
+  assert.equal(cam[2]!.frame, 'send');
+  assert.equal(cam[2]!.zoom, 3);
+  assert.deepEqual(cam[2]!.anchor, [40, 60]);
+  assert.equal(cam[2]!.drift, 0.02);
+  assert.equal(cam[0]!.anchor[0], 50);
+});
+
+test('the framing camera and x, y or scale tracks cannot both drive a scene', () => {
+  assert.ok(codes(film([{ id: 'a', layers: [text('t')], camera: [{ at: 0, frame: 't' }], tracks: { scale: [[0, 1], [1, 2]] } }])).includes('error:bad-camera'));
+  assert.ok(codes(film([{ id: 'a', layers: [text('t')], camera: [{ at: 0, frame: 'tt' }] }])).includes('error:unknown-layer'));
+  assert.ok(codes(film([{ id: 'a', layers: [text('t')], camera: [{ at: 1, frame: 't' }, { at: 0.5 }] }])).includes('error:bad-order'));
+  assert.ok(!codes(film([{ id: 'a', layers: [text('t')], camera: [{ at: 0, frame: 't' }], tracks: { rotate: [[0, 0], [1, 2]] } }])).some((c) => c.startsWith('error')));
+});
+
+test('taps resolve to scene seconds with the layer their ring is drawn around', () => {
+  const r = resolveFilm(film([{ id: 'a', length: 4, layers: [
+    text('card'),
+    text('send', { at: 0.5, taps: [2, { at: 3, ring: 'card' }, { at: 1, ring: false }] }),
+  ] }]));
+  assert.deepEqual(r.timeline!.scenes[0]!.layers[1]!.taps, [{ t: 1, ring: null }, { t: 2, ring: 'send' }, { t: 3, ring: 'card' }]);
+  assert.ok(codes(film([{ id: 'a', length: 2, layers: [text('send', { taps: [{ at: 1, ring: 'crad' }] })] }])).includes('error:unknown-layer'));
+  assert.ok(codes(film([{ id: 'a', length: 3, layers: [text('send', { at: 1, taps: [0.5] })] }])).includes('warning:tap-hidden'));
+});
+
+test('pop-check arrives on the bounce and fades in over its first part', () => {
+  const r = resolveFilm(film([{ id: 'a', length: 2, layers: [text('ok', { enter: 'pop-check' })] }]));
+  const e = r.timeline!.scenes[0]!.layers[0]!.enter!;
+  assert.equal(e.move, 'pop-check');
+  assert.equal(e.ease, 'bounce.out');
+  assert.equal(e.amount, 0.65);
+});

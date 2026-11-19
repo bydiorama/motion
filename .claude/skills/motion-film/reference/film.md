@@ -33,6 +33,9 @@
 | `scheme` | Flip one scene to `dark` or `light`. |
 | `layout` | `align`, `justify` (`start`/`center`/`end`/`between`), `gap` and `padding` in px. |
 | `artboard` | `{ "width": 1920, "height": 1080, "fit": "height", "align": [0, 50] }`: the frame a design was drawn on, in its own px. Layers placed with `"unit": "px"` are laid out on it and the whole board is scaled onto the stage: `cover` (default) fills the stage, `contain` shows all of it, `width` or `height` matches that side. `align` is where the board sits when it overhangs or falls short, in % (default `[50, 50]`). The camera's tracks stay in stage px. `motion import <design.json>` writes such a scene from a design's exported parts. |
+| `camera` | The framing camera (see Camera): keys that put a layer or a point at a place on the screen, this big, tilted so. Replaces the `x`, `y` and `scale` tracks. |
+| `perspective` | Px from the viewer to the stage for the camera's tilt: smaller is a wider lens. Default 1.2 × the stage width. |
+| `motionBlur` | Blur on the camera's moves: `true` for a half-frame shutter, or the share of a frame (0–1). Smears along the move, sharp at rest. |
 | `tracks` | Camera keyframes for the whole scene (see Tracks). A scene whose camera moves is a canvas: layers may lie outside the frame for part of the time, and `check` reports one only if the camera never brings it into view. |
 | `follow` | `{ "layer": "route", "at": [50, 50], "lag": 0.15, "blend": 0.6 }`: the camera holds the tip of a drawing line (`fx/path-draw`) at `at` (% of the stage), trailing by `lag` s, easing over from the x/y tracks in `blend` s. Scale and rotate tracks still apply, so zoom in with `scale` and let `follow` steer. |
 | `out` | `{ "use": "transition/blur-dissolve", "duration": 0.4, "params": {} }`. |
@@ -47,13 +50,44 @@
 | `props` | Content. Required props are marked in the catalog. |
 | `params` | Motion values, each inside its catalog range. |
 | `at` | Start, in seconds from the scene start, or relative: `"other.start"`, `"other.end - 0.1"`, `"scene.end - 1"`. With a tempo: `"4b"`, `"other.end + 1b"`. |
-| `enter` | `"rise"`, or `{ "move": "rise", "duration": "$duration.base", "ease": "expo.out", "amount": 24 }`. Moves: `fade`, `rise`, `drop`, `scale`, `blur`, `slide-left`, `slide-right`, `zoom` (scales down from slightly large), `pop` (spring from small), `focus` (sharpens from a blur), `mask-up`/`mask-down` (rises through its own edge, no fade), `wipe-up`/`wipe-down`/`wipe-left`/`wipe-right` (uncovered by a clip, no fade), `swing` (hinges in on X), `slot-up` (rises `amount` px, 48 by default, into its own box, cut off at the box's bottom edge, no fade: a framed picture settling into its slot), `wipe` (a wipe along any `angle` in degrees, 0 rightwards, 90 downwards; with `amount` the layer also travels that many px that way, so a slanted band unrolls along its own length), `slide` (a slide along any `angle`). Masks, wipes and `pop` bring their own eases when you give none. |
+| `enter` | `"rise"`, or `{ "move": "rise", "duration": "$duration.base", "ease": "expo.out", "amount": 24 }`. Moves: `fade`, `rise`, `drop`, `scale`, `blur`, `slide-left`, `slide-right`, `zoom` (scales down from slightly large), `pop` (spring from small), `focus` (sharpens from a blur), `mask-up`/`mask-down` (rises through its own edge, no fade), `wipe-up`/`wipe-down`/`wipe-left`/`wipe-right` (uncovered by a clip, no fade), `swing` (hinges in on X), `slot-up` (rises `amount` px, 48 by default, into its own box, cut off at the box's bottom edge, no fade: a framed picture settling into its slot), `wipe` (a wipe along any `angle` in degrees, 0 rightwards, 90 downwards; with `amount` the layer also travels that many px that way, so a slanted band unrolls along its own length), `slide` (a slide along any `angle`). `pop-check` (a check mark arriving: small, turned back −80° and soft, then past its size and home on `bounce.out`). Masks, wipes, `pop` and `pop-check` bring their own eases when you give none. Masks and `wipe-*` take `feather`: a soft edge instead of a hard line, in px, or `true` for a tenth of the line height; the ramp sits outside the edge, so nothing changes when the move ends. |
 | `exit` | Same, plus `at` for when it starts. Default: it ends with the scene. |
 | `style` | `size` (`hero`, `headline`, `title`, `body`, `caption`), `color` (see `colors` in the catalog), `font` (`display`, `body`, `mono`), `weight`, `align`, `width` (% of stage width: the most a line may run before it wraps), `css` (last resort). |
 | `place` | `{ "x": 50, "y": 80, "anchor": "bottom" }` in % of the stage. Takes the layer out of the stack. A placed layer is as wide as its text, up to `style.width`, or else up to the room its anchor leaves on stage (centred at x 50: the whole width). With `"unit": "px"`, x and y are px on the scene's `artboard` (on the stage when it has none), and the layer's own sizes, `style.width` (% of the artboard), track `x`/`y` and move `amount` are design px too: copy a layer's position and size straight from the design file. |
 | `tracks` | Keyframes from the layer start. |
 | `parallax` | A depth against the scene's camera: `1.3` travels 1.3 times as far as the camera (nearer), `0.7` less (farther), `0` holds still on the stage. Or `{ "depth": 1.3, "home": "2b" }`: `home` is when the layer sits exactly where it is placed, the scene's end by default (the frame the camera arrives at). It follows the camera's x and y travel and replaces a counter-track worked out by hand. |
 | `motionBlur` | `true`, or the share of a frame the shutter is open (0–1). The layer smears along its path while it moves fast and is sharp when it stops. For long, fast travel: slides, throws, whips. |
+| `screen` | `true`: drawn outside the scene's camera, so its travel, zoom and tilt leave the layer where it is. For a vignette (`texture/vignette`), a frame, a caption bar. |
+| `taps` | Taps on a control, as a viewer reads one: `["3.25b", "5b"]`. The layer goes 7% down over 80 ms, landing on the tap, comes back past rest over 350 ms (`bounce.out`), and a 1.5 px accent ring leaves it in its own shape, growing 12 px as it fades over 0.5 s. `{ "at": "3.25b", "ring": "send" }` draws the ring round another layer (a button in a card); `"ring": false` draws none. On a `rig/footage-plane`, `{ "at": "6b", "mark": "send" }` rings a recorded mark; the press is already in the footage. A `ui/cursor-click` with `props.target` adds its tap to that layer itself. |
+| `reflow` | `"glide"`: the layer takes no room in the stack until it enters and gives its room up as it leaves; the layers around it glide over (0.45 s, quick then settling) by transforms, so no text re-wraps. Without it a layer keeps its room all scene, even hidden. |
+
+## Camera
+
+`scene.camera` is a list of keys. Each key says what to frame and how, and the camera solves its position every frame, so the framed thing stays exactly on its anchor through the whole move (moving `x`, `y` and `scale` tracks separately lets it drift off mid-move).
+
+```json
+"camera": [
+  { "at": 0, "frame": [50, 50], "zoom": 1 },
+  { "at": "2b", "frame": "card", "zoom": 1.6, "tilt": [8, -10], "ease": "expo.inOut" },
+  { "at": "3.25b", "frame": "send", "zoom": 2.2, "ease": "punch" },
+  { "at": "4b", "frame": "send", "zoom": 2.2, "drift": 0.02 }
+]
+```
+
+| Field | Meaning |
+|---|---|
+| `at` | When the camera arrives. |
+| `frame` | A layer id, `"plane#send"` (a mark recorded with a `rig/footage-plane`'s footage, followed as it moves), or a point `[x, y]` in % of the stage. The first key defaults to the stage centre. |
+| `point` | Which point of the layer's box, as shares of its width and height. Default `[0.5, 0.5]`. |
+| `offset` | Px added to the framed point. |
+| `zoom` | 1 is the stage as laid out. Zoom travels in log space, so 1 → 2 paces like 2 → 4. |
+| `anchor` | Where the framed point sits on the screen, % of the stage. Default `[50, 50]`. |
+| `tilt` | `[rx, ry]` degrees: the picture turned in depth about the anchor, so the target never swings away. |
+| `rotate` | Degrees in the plane of the screen. |
+| `ease` | Shapes the move arriving at this key. `punch` for a punch-in (150–225 ms). |
+| `drift` | On the last key: zoom per second, linear, to the scene's end, so the shot never comes to rest. `pace` does not count it as a move. |
+
+The camera aims at where layout puts a layer, never where its enter or parallax has it at that moment, and keeps aiming at a layer after it has left. `rotate`, `rotateX`/`rotateY` and the other tracks still apply on top.
 
 ## Tracks
 
@@ -65,11 +99,13 @@
 
 ## Eases
 
-Named: `linear`, `smooth`, `sine.*`, `cubic.*`, `expo.*` (`.in`, `.out`, `.inOut`), `back.out`, and the bydiorama/ui curves `ui.default`, `ui.in`, `ui.out`, `ui.spring`. Also `[x1, y1, x2, y2]` and `{ "spring": { "duration": 0.4, "bounce": 0.3 } }`.
+Named: `linear`, `smooth`, `sine.*`, `cubic.*`, `expo.*` (`.in`, `.out`, `.inOut`), `back.out`, `punch` (a camera punch-in: nearly all of it at once, then a long settle), `bounce.out` (back past rest and home), and the bydiorama/ui curves `ui.default`, `ui.in`, `ui.out`, `ui.spring`. Also `[x1, y1, x2, y2]` and `{ "spring": { "duration": 0.4, "bounce": 0.3 } }`.
 
 ## Footage
 
 `el/video` plays a stretch of a file: `props: { "src": "shots/harbour.mp4", "from": 12.5, "to": 18 }`, `params: { "rate": 1, "loop": false, "width": 1920 }`. `to` left at 0 plays on until the scene ends (give the scene a `length`). `crop: [x, y, w, h]` in % of the source picks part of the picture; with `width` and `height` both set it fills the window without stretching. For a film that loops through footage, end on a shot and open on its continuation: give the opening layer `"continues": "outro.shot"` and no `from`. Renders pull exact frames with ffmpeg; never make one image layer per frame.
+
+`rig/footage-plane` lays flat footage of a screen on a plane in the scene, for the camera to move over: `props: { "src": "screen.mp4", "marks": "screen.marks.json", "focus": "send" }`, `params: { "width": 1600, "aperture": 6, "light": 235 }`. Record the screen flat with `motion record <url> --scale 3 --marks '#send,#card'`, large enough for the deepest zoom (`render` warns `undersampled`), then frame the marks with camera keys (`"frame": "plane#send"`) and tap them (`"taps": [{ "at": "6b", "mark": "send" }]`). Tilted, the plane goes soft away from `focus` and catches the light. `src` may also be a still picture.
 
 ## Building films in code
 

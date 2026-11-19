@@ -83,6 +83,10 @@ export const EXPRESSIVE: Record<string, Bezier> = {
   'snap.out': [0.3, 0.9, 0.1, 1],
   // Pulls back a little, then whips away: exits with weight.
   'anticipate.in': [0.45, -0.48, 1, -0.82],
+  // A camera punch-in: nearly all of the move in the first frames, then a long settle. 150–225 ms.
+  punch: [0.16, 1, 0.3, 1],
+  // A press let go: back past rest and home. For a tapped control coming back up.
+  'bounce.out': [0.34, 1.36, 0.64, 1],
 };
 
 /** The nearest cubic-bezier to each named curve: what a curve editor shows for it. */

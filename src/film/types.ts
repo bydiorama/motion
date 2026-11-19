@@ -31,15 +31,18 @@ export type Tracks = Partial<Record<TrackProp, Key[]>>;
  *  wipe: like wipe-*, along any `angle`; it can also travel `amount` px that way as it is
  *    uncovered, so a band unrolls along its own slant.
  *  slide: like slide-*, along any `angle`.
+ *  pop-check: a success mark arriving: grows from a third of its size while turning in from
+ *    -80° and coming into focus, past its mark and back (bounce.out, 0.5 s). `amount` is the
+ *    scale offset (0.65).
  */
 export type MoveName =
   | 'fade' | 'rise' | 'drop' | 'scale' | 'blur' | 'slide-left' | 'slide-right'
   | 'zoom' | 'pop' | 'focus' | 'mask-up' | 'mask-down' | 'wipe-up' | 'wipe-down' | 'wipe-left' | 'wipe-right' | 'swing' | 'slot-up'
-  | 'wipe' | 'slide';
+  | 'wipe' | 'slide' | 'pop-check';
 export const MOVE_NAMES: readonly MoveName[] = [
   'fade', 'rise', 'drop', 'scale', 'blur', 'slide-left', 'slide-right',
   'zoom', 'pop', 'focus', 'mask-up', 'mask-down', 'wipe-up', 'wipe-down', 'wipe-left', 'wipe-right', 'swing', 'slot-up',
-  'wipe', 'slide',
+  'wipe', 'slide', 'pop-check',
 ];
 /** Moves that take an `angle`. */
 export const ANGLED_MOVES: readonly MoveName[] = ['wipe', 'slide'];
@@ -53,6 +56,11 @@ export interface Move {
   amount?: number;
   /** For wipe and slide: the direction the edge or the layer travels, in degrees. 0 is rightwards, 90 downwards, 180 leftwards, 270 upwards. */
   angle?: number;
+  /**
+   * For mask-* and wipe-*: a soft edge instead of a hard line, in px, or `true` for a tenth of
+   * the layer's line height. The ramp sits outside the edge, so nothing changes when the move ends.
+   */
+  feather?: boolean | number;
 }
 export interface ExitMove extends Move {
   /** When the exit starts. Defaults to the scene end minus the exit duration. */
@@ -146,6 +154,36 @@ export interface Layer {
    * is gone when the layer stops.
    */
   motionBlur?: boolean | number;
+  /**
+   * Fixed to the screen: the layer is drawn outside the scene's camera, so the camera's travel,
+   * zoom and tilt leave it where it is. For a vignette, a frame, a caption bar.
+   */
+  screen?: boolean;
+  /**
+   * Taps on the layer, as a viewer reads one: it goes down under the finger, landing on
+   * each time, comes back up past rest, and a thin accent ring leaves it in its own shape.
+   * A time, or `{ at, ring }`, where `ring` is the id of another layer to draw the ring
+   * around (a button inside a card) or false for none.
+   */
+  taps?: (TimeRef | Tap)[];
+  /**
+   * How the layer's room in the scene's stack comes and goes. `glide`: it takes no room until
+   * it enters and gives its room up as it leaves, and the layers around it glide over to make
+   * or close the gap (0.45 s, quick then settling), with transforms only, so no text re-wraps.
+   * Without it a layer keeps its room the whole scene, even while hidden.
+   */
+  reflow?: 'glide';
+}
+
+export interface Tap {
+  at: TimeRef;
+  /** The layer to draw the ring around: this one by default, another one's id, or false for no ring. */
+  ring?: string | false;
+  /**
+   * On a rig/footage-plane: a mark recorded with its footage (`motion record --marks`). The ring
+   * goes round it where it is in the picture at that moment; the press is already in the footage.
+   */
+  mark?: string;
 }
 
 export type Surface = 'base' | 'surface' | 'sunken' | 'accent' | 'inverse';
@@ -181,6 +219,44 @@ export interface Follow {
   blend?: number;
 }
 
+/** One key of the framing camera. Anything left out is kept from the key before. */
+export interface CameraKey {
+  /** When the camera arrives: seconds from the scene start, or beats (`"2b"`). */
+  at: number | string;
+  /** What to frame: a layer id, or a point `[x, y]` in % of the stage. The first key defaults to the stage centre. */
+  frame?: string | [number, number];
+  /** The point of the layer's box to frame, as shares of its width and height. Default `[0.5, 0.5]`. */
+  point?: [number, number];
+  /** Px added to the framed point, in the layout. */
+  offset?: [number, number];
+  /** Size: 1 is the stage as laid out, 2 shows it twice as big. */
+  zoom?: number;
+  /** Where the framed point sits on the screen, in % of the stage. Default `[50, 50]`. */
+  anchor?: [number, number];
+  /** Degrees about x and y: the picture turned in depth, about the anchor. */
+  tilt?: [number, number];
+  /** Degrees in the plane of the screen. */
+  rotate?: number;
+  /** The ease of the move arriving at this key. Default: the film's move ease. */
+  ease?: EaseSpec;
+  /** On the last key: zoom per second, linear, to the end of the scene, so the shot never comes to rest. */
+  drift?: number;
+}
+
+/** A camera key with every value filled in, its time in seconds. */
+export interface ResolvedCameraKey {
+  t: number;
+  frame: string | [number, number];
+  point: [number, number];
+  offset: [number, number];
+  zoom: number;
+  anchor: [number, number];
+  tilt: [number, number];
+  rotate: number;
+  ease?: EaseSpec;
+  drift: number;
+}
+
 export interface Scene {
   id: string;
   /** Seconds, or beats (`"8b"`, `"2bars"`). Left out, the scene lasts until its last layer ends, plus `hold`. */
@@ -198,6 +274,16 @@ export interface Scene {
   tracks?: Tracks;
   /** Camera follows the tip of a line being drawn. Replaces the x and y tracks while it follows. */
   follow?: Follow;
+  /**
+   * The framing camera: keys that put a layer (or a point) at a place on the screen, this big,
+   * tilted so. The camera's translation is solved every frame, so the framed point stays on its
+   * anchor through a move; zoom travels in log space. Replaces the x, y and scale tracks.
+   */
+  camera?: CameraKey[];
+  /** Px from the viewer to the stage for the camera's tilt: smaller is a wider lens. Default 1.2 × the stage width. */
+  perspective?: number;
+  /** Motion blur on the camera's moves: `true` for a half-frame shutter, or the share of a frame (0–1). */
+  motionBlur?: boolean | number;
   /** How this scene hands over to the next. The two scenes overlap by the duration. */
   out?: Transition;
   /** Vocabulary slugs this scene is built from. Informational; checked against the library. */
@@ -297,6 +383,8 @@ export interface ResolvedMove {
   amount?: number;
   /** Degrees, for wipe and slide. */
   angle?: number;
+  /** A soft edge for masks and straight wipes: px, or true for a tenth of the line height. */
+  feather?: number | true;
 }
 
 export interface ResolvedLayer {
@@ -318,6 +406,8 @@ export interface ResolvedLayer {
   speed?: number;
   /** Depth against the camera, and the scene time it sits where it is placed. */
   parallax?: { depth: number; home: number };
+  /** Taps, in scene seconds, each with the layer its ring is drawn around (null: none). */
+  taps?: { t: number; ring: string | null; mark?: string }[];
   source: Layer;
 }
 
@@ -329,6 +419,8 @@ export interface ResolvedScene {
   end: number;
   layers: ResolvedLayer[];
   out?: { use: string; duration: number; params: Record<string, unknown> };
+  /** The framing camera's keys, in order, every value filled in. */
+  camera?: ResolvedCameraKey[];
   source: Scene;
 }
 

@@ -4,15 +4,21 @@ import { num, str, type Primitive } from '../types.ts';
 
 const ARROW = 'M2 1.5 L2 20.5 L7.2 15.6 L10.6 23.2 L14 21.7 L10.7 14.2 L17.6 14.2 Z';
 
-const timing = (p: Record<string, unknown>) => {
+/** Seconds from the layer's start to the moment the click is fully down. */
+export const clickAt = (p: Record<string, unknown>): number => timing(p).at + timing(p).press;
+
+function timing(p: Record<string, unknown>) {
   const travel = num(p.travel), press = 0.08;
   return { travel, press, at: travel + 0.06, end: travel + 0.06 + press * 2 + 0.55 };
-};
+}
 
 export const cursorClick: Primitive = {
   slug: 'ui/cursor-click',
   summary: 'A drawn cursor moves to a target and clicks.',
-  props: { label: { type: 'string', default: '', label: 'A name tag beside the cursor, for a collaborator' } },
+  props: {
+    label: { type: 'string', default: '', label: 'A name tag beside the cursor, for a collaborator' },
+    target: { type: 'string', default: '', label: 'The id of the layer it clicks: that layer presses, and the ring leaves it in its own shape' },
+  },
   params: {
     from_x: { type: 'number', default: 78, min: 0, max: 100, step: 0.5, unit: '% of width', label: 'Start, across', pad: { name: 'start', axis: 'x' } },
     from_y: { type: 'number', default: 82, min: 0, max: 100, step: 0.5, unit: '% of height', label: 'Start, down', pad: { name: 'start', axis: 'y' } },
@@ -43,7 +49,9 @@ export const cursorClick: Primitive = {
       tag.style.cssText = `position:absolute;left:${size * 0.7}px;top:${size * 0.9}px;padding:${size * 0.12}px ${size * 0.3}px;border-radius:${size * 0.3}px;background:var(--m-bg-accent);color:var(--m-text-on-accent);font:600 ${size * 0.42}px var(--m-font-body);white-space:nowrap`;
       cursor.appendChild(tag);
     }
-    el.append(ring, cursor);
+    // A click on a layer draws its ring around that layer (a tap), not round the tip.
+    const own = !str(props.target);
+    el.append(...(own ? [ring] : []), cursor);
     const move = ctx.ease([0.45, 0, 0.15, 1]), out = ctx.ease('expressive.out');
     return {
       seek(t) {

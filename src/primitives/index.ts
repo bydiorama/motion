@@ -30,6 +30,9 @@ import { lineChart } from './scene/line-chart.ts';
 import { logoReveal } from './scene/logo-reveal.ts';
 import { gradientDrift } from './texture/gradient-drift.ts';
 import { grain } from './texture/grain.ts';
+import { vignette } from './texture/vignette.ts';
+import { beatField } from './texture/beat-field.ts';
+import { footagePlane } from './rig/footage-plane.ts';
 import { coverReveal } from './transition/cover-reveal.ts';
 import { curtain } from './transition/curtain.ts';
 import { diveIn } from './transition/dive-in.ts';
@@ -70,7 +73,7 @@ const byslug = <T extends { slug: string }>(items: T[]): Record<string, T> =>
 export const PRIMITIVES: Record<string, Primitive> = byslug([
   text, box, image, frames, video, html, slot, wordBuild, typedTitle, scramble, counterRoll, staggerFill, depthDrift, marqueeWall, orbitRing, halftoneField,
   maskReveal, charCascade, blockReveal, wordRoller, trackingIn, shimmer, echo, scribbleHighlight,
-  odometer, pathDraw, shapeMorph, gridRipple, logoReveal, barChart, lineChart, gradientDrift, grain, cursorClick,
+  odometer, pathDraw, shapeMorph, gridRipple, logoReveal, barChart, lineChart, gradientDrift, grain, vignette, beatField, footagePlane, cursorClick,
   fillText, signalField, browserWindow, tabStack, layerStack, pinDrop, gridWall, slowPush, panAcross, pageScroll, bentoGrid, postCarousel, stripCycle,
 ]);
 

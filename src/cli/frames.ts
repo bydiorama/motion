@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { Timeline } from '../film/types.ts';
 import { cropOf, sourceTime } from '../primitives/el/video.ts';
+import { isPicture } from '../primitives/rig/footage-plane.ts';
 import type { FrameSequence } from '../primitives/types.ts';
 import { filmName } from './files.ts';
 
@@ -22,7 +23,14 @@ export interface FootageNeed {
   rate: number;
   /** Width of the pulled frames in px; the height follows the shot. */
   width: number;
+  /** A footage plane's marks file (`motion record --marks`), to send with the frames. */
+  marks?: string;
+  /** The width the deepest zoom needs: less than this from the source is undersampled. */
+  wants?: number;
 }
+
+/** Layers that show footage, pulled frame by frame. */
+const FOOTAGE = new Set(['el/video', 'rig/footage-plane']);
 
 const isUrl = (s: string) => /^[a-z][a-z0-9+.-]*:\/\//i.test(s);
 
@@ -32,8 +40,9 @@ export function footageNeeds(t: Timeline, filmDir: string, scale = 1): FootageNe
   const frame = 1 / t.fps;
   for (const s of t.scenes) {
     for (const l of s.layers) {
-      if (l.use !== 'el/video') continue;
+      if (!FOOTAGE.has(l.use)) continue;
       const src = String(l.props.src);
+      if (l.use === 'rig/footage-plane' && isPicture(src)) continue;
       const rate = typeof l.params.rate === 'number' ? l.params.rate : 1;
       const from = typeof l.props.from === 'number' ? l.props.from : 0, to = typeof l.props.to === 'number' ? l.props.to : 0;
       // On screen from its start to its exit's end, or to the scene's last frame.
@@ -41,11 +50,22 @@ export function footageNeeds(t: Timeline, filmDir: string, scale = 1): FootageNe
       const looped = l.params.loop === true && to > from;
       const end = looped ? to : sourceTime(Math.max(0, visible - frame), l.props, l.params) + frame * rate;
       const [, , cw] = cropOf(l.props.crop);
+      const base = { src: isUrl(src) ? src : path.resolve(filmDir, src), start: from, length: Math.max(frame * rate, end - from), rate: t.fps * rate };
+      if (l.use === 'rig/footage-plane') {
+        // A plane is seen as close as the scene's camera goes: pull enough for its deepest zoom,
+        // then halve it until it is small enough for the widest view, so every size is drawn
+        // from a copy near it (mips) and nothing shimmers as the camera pulls out.
+        const shown = (typeof l.params.width === 'number' ? l.params.width : 1080) * scale;
+        const zooms = s.camera?.map((k) => k.zoom * (1 + Math.max(0, k.drift) * s.length)) ?? [1];
+        const deep = Math.max(1, ...zooms), wide = Math.min(1, ...zooms);
+        const top = Math.ceil((shown * deep) / 2) * 2;
+        const marks = typeof l.props.marks === 'string' && l.props.marks ? (isUrl(l.props.marks) ? l.props.marks : path.resolve(filmDir, l.props.marks)) : undefined;
+        needs.push({ key: `${s.id}/${l.id}`, ...base, width: top, wants: top, ...(marks ? { marks } : {}) });
+        for (let k = 1, w = top / 2; w >= (shown * wide) / 2 && k <= 4; k++, w /= 2) needs.push({ key: `${s.id}/${l.id}@${k}`, ...base, width: Math.max(16, Math.ceil(w / 2) * 2) });
+        continue;
+      }
       const width = Math.max(16, Math.ceil(((typeof l.params.width === 'number' ? l.params.width : 1280) * scale * 100) / cw / 2) * 2);
-      needs.push({
-        key: `${s.id}/${l.id}`, src: isUrl(src) ? src : path.resolve(filmDir, src),
-        start: from, length: Math.max(frame * rate, end - from), rate: t.fps * rate, width,
-      });
+      needs.push({ key: `${s.id}/${l.id}`, ...base, width });
     }
   }
   return needs;
@@ -109,6 +129,13 @@ export async function prepareFrames(filmFile: string, t: Timeline, scale = 1, lo
       base: `/${path.relative(filmDir, dir).split(path.sep).map(encodeURIComponent).join('/')}/`, ext: 'jpg',
       count: info.count, start: n.start, rate: n.rate, width: info.width, height: info.height,
     };
+    if (n.wants && info.width < n.wants * 0.98) {
+      log(`warn undersampled: ${n.key} is seen as close as ${n.wants} px across, but ${path.basename(n.src)} is ${info.width} px: the deepest zoom is drawn soft. Record the footage at --scale ${Math.ceil((n.wants / info.width) * 10) / 10} or more, or zoom in less.`);
+    }
+    if (n.marks) {
+      if (!fs.existsSync(n.marks)) throw new Error(`Marks not found: ${path.relative(process.cwd(), n.marks)} (layer ${n.key}). Record them with motion record --marks.`);
+      out[n.key]!.marks = JSON.parse(fs.readFileSync(n.marks, 'utf8'));
+    }
   }
   return out;
 }
