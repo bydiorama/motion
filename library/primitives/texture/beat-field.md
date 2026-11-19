@@ -2,7 +2,7 @@
 slug: texture/beat-field
 kind: primitive
 group: texture
-summary: A quiet dot lattice whose light breathes on the beat, with a ring of light leaving the centre on each one.
+summary: A dim dot lattice whose light breathes on the beat, with a ring leaving the centre.
 status: specified
 origin: designed
 energy: low

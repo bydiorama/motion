@@ -2,7 +2,7 @@
 slug: rig/footage-plane
 kind: primitive
 group: rig
-summary: Footage of a screen on a plane the camera moves over, with depth of field, light and marks to aim at.
+summary: Flat screen footage on a plane the camera moves over, with depth of field and light.
 status: specified
 origin: designed
 energy: medium

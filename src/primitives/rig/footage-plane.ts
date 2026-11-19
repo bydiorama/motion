@@ -81,7 +81,7 @@ export function lightOn(rx: number, ry: number, angle: number): number {
 
 export const footagePlane: Primitive = {
   slug: 'rig/footage-plane',
-  summary: 'Footage of a screen on a plane the camera moves over, with depth of field, light and marks to aim at.',
+  summary: 'Flat screen footage on a plane the camera moves over, with depth of field and light.',
   props: {
     src: { type: 'string', required: true, label: 'Video recorded flat (motion record), or a still picture of a screen' },
     from: { type: 'number', default: 0, label: 'Source time the plane opens on, in seconds' },

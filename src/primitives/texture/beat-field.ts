@@ -31,7 +31,7 @@ function channels(el: HTMLElement, css: string): string {
 
 export const beatField: Primitive = {
   slug: 'texture/beat-field',
-  summary: 'A quiet dot lattice whose light breathes on the beat, with a ring of light leaving the centre on each one.',
+  summary: 'A dim dot lattice whose light breathes on the beat, with a ring leaving the centre.',
   props: {
     clear: { type: 'string[]', default: [], label: 'Ids of layers on the field: no dot is drawn under them' },
   },
