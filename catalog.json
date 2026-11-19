@@ -64,6 +64,8 @@
     "expressive.inOut",
     "snap.out",
     "anticipate.in",
+    "punch",
+    "bounce.out",
     "ui.default",
     "ui.in",
     "ui.out",
@@ -89,7 +91,8 @@
     "swing",
     "slot-up",
     "wipe",
-    "slide"
+    "slide",
+    "pop-check"
   ],
   "tracks": [
     "x",
@@ -890,6 +893,15 @@
           "type": "ease",
           "default": "expressive.out",
           "label": "Curve of each rise"
+        },
+        "feather": {
+          "type": "number",
+          "default": 0,
+          "min": 0,
+          "max": 0.4,
+          "step": 0.01,
+          "unit": "em",
+          "label": "A soft edge to rise out of, instead of a hard line (0.1–0.12 em reads as soft)"
         }
       }
     },
@@ -1074,6 +1086,24 @@
             "down"
           ],
           "label": "Roll direction"
+        },
+        "style": {
+          "type": "choice",
+          "default": "roll",
+          "options": [
+            "roll",
+            "lift"
+          ],
+          "label": "Roll through a clipped slot, or lift: the word lifts away out of focus, a beat, the next settles in (a status line)"
+        },
+        "gap": {
+          "type": "number",
+          "default": 0.05,
+          "min": 0,
+          "max": 0.2,
+          "step": 0.01,
+          "unit": "s",
+          "label": "For lift: the empty beat between the words"
         }
       }
     },
@@ -1842,6 +1872,313 @@
       }
     },
     {
+      "slug": "texture/vignette",
+      "summary": "The frame darkens towards its edges, holding the eye on the middle. Fixed to the screen.",
+      "props": {
+        "color": {
+          "type": "string",
+          "default": "#000000",
+          "label": "CSS colour the edges darken to"
+        }
+      },
+      "params": {
+        "inner": {
+          "type": "number",
+          "default": 48,
+          "min": 0,
+          "max": 90,
+          "step": 1,
+          "unit": "%",
+          "label": "Where the darkening starts, from the centre to the corner"
+        },
+        "outer": {
+          "type": "number",
+          "default": 82,
+          "min": 10,
+          "max": 100,
+          "step": 1,
+          "unit": "%",
+          "label": "Where it reaches its middle strength"
+        },
+        "strength": {
+          "type": "number",
+          "default": 0.85,
+          "min": 0,
+          "max": 1,
+          "step": 0.05,
+          "unit": "ratio",
+          "label": "Opacity at the corners"
+        },
+        "mid": {
+          "type": "number",
+          "default": 0.55,
+          "min": 0,
+          "max": 1,
+          "step": 0.05,
+          "unit": "ratio",
+          "label": "Opacity at `outer`"
+        },
+        "center_x": {
+          "type": "number",
+          "default": 50,
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "unit": "%",
+          "label": "Centre, across"
+        },
+        "center_y": {
+          "type": "number",
+          "default": 46,
+          "min": 0,
+          "max": 100,
+          "step": 1,
+          "unit": "%",
+          "label": "Centre, down: a little above the middle reads as level"
+        }
+      }
+    },
+    {
+      "slug": "texture/beat-field",
+      "summary": "A dim dot lattice whose light breathes on the beat, with a ring leaving the centre.",
+      "props": {
+        "clear": {
+          "type": "string[]",
+          "default": [],
+          "label": "Ids of layers on the field: no dot is drawn under them"
+        }
+      },
+      "params": {
+        "pitch": {
+          "type": "number",
+          "default": 18,
+          "min": 8,
+          "max": 60,
+          "step": 1,
+          "unit": "px",
+          "label": "Distance between dots"
+        },
+        "dot": {
+          "type": "number",
+          "default": 0.33,
+          "min": 0.1,
+          "max": 0.5,
+          "step": 0.01,
+          "unit": "ratio",
+          "label": "Dot radius, as a share of the pitch"
+        },
+        "paper": {
+          "type": "number",
+          "default": 0.045,
+          "min": 0,
+          "max": 0.2,
+          "step": 0.005,
+          "unit": "opacity",
+          "label": "How much every dot shows, unlit"
+        },
+        "glow": {
+          "type": "number",
+          "default": 0.13,
+          "min": 0,
+          "max": 0.4,
+          "step": 0.01,
+          "unit": "opacity",
+          "label": "The light at the centre, at the top of a breath"
+        },
+        "glow_radius": {
+          "type": "number",
+          "default": 320,
+          "min": 80,
+          "max": 1200,
+          "step": 10,
+          "unit": "px",
+          "label": "How far the centre light reaches"
+        },
+        "decay": {
+          "type": "number",
+          "default": 3.2,
+          "min": 0.5,
+          "max": 8,
+          "step": 0.1,
+          "unit": "per beat",
+          "label": "How fast a breath dies away"
+        },
+        "ring": {
+          "type": "number",
+          "default": 0.22,
+          "min": 0,
+          "max": 0.6,
+          "step": 0.01,
+          "unit": "opacity",
+          "label": "The ring of light at its start (0: no ring)"
+        },
+        "ring_reach": {
+          "type": "number",
+          "default": 620,
+          "min": 120,
+          "max": 2000,
+          "step": 10,
+          "unit": "px",
+          "label": "How far the ring travels in a beat"
+        },
+        "ring_life": {
+          "type": "number",
+          "default": 0.95,
+          "min": 0.3,
+          "max": 1,
+          "step": 0.05,
+          "unit": "beats",
+          "label": "Share of a beat the ring takes to fade"
+        },
+        "center_x": {
+          "type": "number",
+          "default": 50,
+          "min": 0,
+          "max": 100,
+          "step": 0.5,
+          "unit": "% of width",
+          "label": "Centre of the light, across"
+        },
+        "center_y": {
+          "type": "number",
+          "default": 50,
+          "min": 0,
+          "max": 100,
+          "step": 0.5,
+          "unit": "% of height",
+          "label": "Centre of the light, down"
+        },
+        "period": {
+          "type": "number",
+          "default": 0.5,
+          "min": 0.2,
+          "max": 2,
+          "step": 0.01,
+          "unit": "s",
+          "label": "Seconds per beat when the film has no tempo"
+        }
+      }
+    },
+    {
+      "slug": "rig/footage-plane",
+      "summary": "Flat screen footage on a plane the camera moves over, with depth of field and light.",
+      "props": {
+        "src": {
+          "type": "string",
+          "required": true,
+          "label": "Video recorded flat (motion record), or a still picture of a screen"
+        },
+        "from": {
+          "type": "number",
+          "default": 0,
+          "label": "Source time the plane opens on, in seconds"
+        },
+        "to": {
+          "type": "number",
+          "default": 0,
+          "label": "Source time it ends on; 0 plays on until the scene ends"
+        },
+        "marks": {
+          "type": "string",
+          "default": "",
+          "label": "The marks file motion record --marks wrote, for camera keys (\"plane#mark\") and taps to aim at"
+        },
+        "focus": {
+          "type": "string",
+          "default": "",
+          "label": "The mark the lens focuses on; the middle of the picture when empty"
+        }
+      },
+      "params": {
+        "width": {
+          "type": "number",
+          "default": 1080,
+          "min": 100,
+          "max": 8000,
+          "step": 1,
+          "unit": "px",
+          "label": "Width of the plane on the stage at zoom 1"
+        },
+        "radius": {
+          "type": "number",
+          "default": 0,
+          "min": 0,
+          "max": 200,
+          "step": 1,
+          "unit": "px",
+          "label": "Corner radius"
+        },
+        "rate": {
+          "type": "number",
+          "default": 1,
+          "min": 0.1,
+          "max": 4,
+          "step": 0.05,
+          "unit": "×",
+          "label": "Playback speed"
+        },
+        "loop": {
+          "type": "boolean",
+          "default": false,
+          "label": "Wrap from \"to\" back to \"from\" until the scene ends"
+        },
+        "aperture": {
+          "type": "number",
+          "default": 6,
+          "min": 0,
+          "max": 24,
+          "step": 0.5,
+          "unit": "px",
+          "label": "Blur where the tilted plane is furthest out of focus (0: all sharp)"
+        },
+        "depth": {
+          "type": "number",
+          "default": 260,
+          "min": 40,
+          "max": 2000,
+          "step": 10,
+          "unit": "px",
+          "label": "Depth from the focal plane at which the blur is full"
+        },
+        "light": {
+          "type": "number",
+          "default": 235,
+          "min": 0,
+          "max": 360,
+          "step": 5,
+          "unit": "deg",
+          "label": "Where the light comes from, on the screen (0 right, 90 below, 270 above)"
+        },
+        "shade": {
+          "type": "number",
+          "default": 0.5,
+          "min": 0,
+          "max": 1,
+          "step": 0.05,
+          "unit": "ratio",
+          "label": "How much the tilt lights and darkens the plane"
+        },
+        "sheen": {
+          "type": "number",
+          "default": 0.06,
+          "min": 0,
+          "max": 0.3,
+          "step": 0.01,
+          "unit": "opacity",
+          "label": "A soft band of reflected light that slides as the plane turns"
+        },
+        "shadow": {
+          "type": "number",
+          "default": 0.35,
+          "min": 0,
+          "max": 1,
+          "step": 0.05,
+          "unit": "opacity",
+          "label": "The plane's shadow on what is behind it"
+        }
+      }
+    },
+    {
       "slug": "ui/cursor-click",
       "summary": "A drawn cursor moves to a target and clicks.",
       "props": {
@@ -1849,6 +2186,11 @@
           "type": "string",
           "default": "",
           "label": "A name tag beside the cursor, for a collaborator"
+        },
+        "target": {
+          "type": "string",
+          "default": "",
+          "label": "The id of the layer it clicks: that layer presses, and the ring leaves it in its own shape"
         }
       },
       "params": {
@@ -1961,17 +2303,40 @@
         "dim": {
           "type": "number",
           "default": 0.35,
-          "min": 0.15,
+          "min": 0,
           "max": 0.6,
           "step": 0.01,
           "unit": "opacity",
-          "label": "How dim the words wait"
+          "label": "How dim the words wait (0: unseen, so the text streams in)"
+        },
+        "blur": {
+          "type": "number",
+          "default": 0,
+          "min": 0,
+          "max": 6,
+          "step": 0.1,
+          "unit": "px",
+          "label": "Soft focus a word fills out of"
+        },
+        "rise": {
+          "type": "number",
+          "default": 0,
+          "min": 0,
+          "max": 12,
+          "step": 0.5,
+          "unit": "px",
+          "label": "How far a word rises as it fills"
+        },
+        "word_ease": {
+          "type": "ease",
+          "default": "linear",
+          "label": "Pace of each word's own fill"
         },
         "soft": {
           "type": "number",
           "default": 1.5,
           "min": 1,
-          "max": 4,
+          "max": 8,
           "step": 0.1,
           "unit": "words",
           "label": "How many words fill at once"

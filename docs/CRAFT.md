@@ -149,7 +149,12 @@ What makes 3D look shot rather than assembled.
 - **A pan never strobes.** At its fastest, a picture crosses at most a fortieth of the frame's shorter side a frame (27 px at 1080 wide); at 30 fps that is half the speed it may take at 60. `fx/pan-across` reports its speed and `pace` warns (`judder`).
 - **Depth from speed.** When the camera travels a flat picture made of parts, give the part that should stand forward a `parallax` of 1.2–1.4 and keep the page at 1: it slides ahead of the camera and lands in its place on the last frame. Above about 1.5 it reads as a separate layer sliding over, not as depth. Background texture at 0.8–0.9 deepens it further. One depth per part, never animated.
 - **Slanted things unroll along their slant.** A band, a ribbon or a tilted card enters with a `wipe` at its own angle, travelling a little along it (`amount` about a tenth of its length), so it unrolls from one end. A wipe square to the frame cuts across the slant and reads as a mask.
-- **Shared rhythm.** A family of pulses (ripples, glows) shares one phase, so they are the same size at every instant.
+- **Frame, don't steer.** Move the camera with `scene.camera` keys that say what to frame, how big and where on the screen; the camera works out its position each frame, so the target stays on its mark through the move. Zoom travels in log space: 1 → 2 takes as long to read as 2 → 4.
+- **Tilt grows with closeness.** 12–20° in a close-up, 1–3° on a wide, flat (0°) on a punch-in and on the final wide. A tilted wide looks like a mistake; a flat close-up looks like a screenshot.
+- **A punch is short and lands on the event.** 150–225 ms on `punch`, landing on the beat or the tap it shows, then a slow linear creep. Blur the camera through it (`scene.motionBlur`).
+- **The camera arrives before the event.** Key the camera to land about 50 ms before what it shows happens (a row lands, a choice is made), so the eye is there when it does.
+- **Keys run past the cut.** The last key of a shot drifts on (`drift`, about 0.02 zoom a second) to the cut and beyond it, so no shot comes to rest before it ends.
+- **Shared rhythm, offset marks.** Light that pulses (a glow, a ring, a field lit by the beat) shares one phase, from the film's clock and its tempo, so every pulse lands on the music. Marks that loop on their own (spinners, progress, status dots) offset theirs instead (§12).
 - **Open from black.** A dark film fades in its first texture over 0.6–0.8 s before anything settles; the type starts with it.
 
 ## 8. Transitions
@@ -176,6 +181,7 @@ What makes 3D look shot rather than assembled.
 - **Swap only while covered.** A cover or curtain changes the scene while the frame is fully covered.
 - **Anticipation before speed.** A whip or a throw pulls back 3–5° for about 0.15 s first.
 - **Changes between logo states are hard cuts**, not crossfades.
+- **A match cut carries size and tilt.** When a plain cut joins two framing cameras, the thing in shot on either side is the same size on screen, at the same tilt (a 256 px mark at rx 12, ry 14 cuts to a 16 px mark at zoom 16, rx 12, ry 14). `motion pace` lists the camera either side of every cut, so set it on purpose.
 
 - **The signature transition comes from the identity.** Take its own shape, a ruled row, a band, a cut corner, and make it the wipe; a stock transition says nothing about whose film it is.
 
@@ -223,7 +229,44 @@ Pick one pattern for a film and repeat it, short, at the end.
 
 - The last frame equals the first. Rotate roles or slots so the state after one period matches the start.
 - Duplicate lists and wrap them, rather than resetting.
-- Desynchronise a family of moves by phase offsets, not by fresh randomness.
+- Desynchronise a family of moves by phase offsets, not by fresh randomness. The offsets are never half the period: half a loop only mirrors a pair, and the eye pairs them up. Uneven offsets (4, 5, 6 and 9 ticks of a 20-tick loop) read as a family that each keeps its own time.
+- A loop's phase comes from the film's clock alone, never from when the layer appeared, so a cut or a retime never resets it mid-cycle.
 - Loop lengths are whole bars at the film's tempo.
 - **Close on the ground you opened on.** An identity loop can start and end on the system's bare device (a ruled grid, a field, a mark) with one small element resting on it. Let that element leave by being covered and come back by landing, so the seam falls on a held frame.
 - **Breathe on the seam, briefly.** The rest at the seam is the end hold plus the opening hold: 0.8–1.2 s in all. Longer reads as a stall when the loop repeats.
+
+## 13. Coherence
+
+What keeps motion from wiggling, juddering, floating or flickering. The eye forgives slow motion and forgives speed; it never forgives a picture that steps, shakes or blinks when it should glide.
+
+**Measure, don't eyeball.** Run `motion review` on every render and every piece of recorded footage. It follows the picture frame by frame (phase correlation on a grid of tiles, fitted to one zoom and pan a frame) and names what it finds:
+
+| Finding | What it is | Threshold (px at 1080 short side) | Usual cause |
+| --- | --- | --- | --- |
+| `wiggle` | The camera reverses, step after step | 1.5 px both ways | A camera solved from a moving or re-laid-out target |
+| `jump` | One step 3× its neighbours | 3 px | A key, a re-wrap or a layout change landing in one frame |
+| `judder` | Parts hold a frame, then catch up, inside a steady move | 1.5 px steps, 3 times in 0.5 s | Something moving by layout (whole px) inside a scaled stage |
+| `hitch` / `stall` | The move stops for a frame, or stops and goes | — | A dropped or repeated frame, a key at rest mid-move |
+| `floating` | One part shakes against the rest | 2–12 px, 4 reversals in 0.5 s | A part laid out again each frame while the camera moves |
+| `blip` | One frame differs from both neighbours while they agree | 2 levels | A state that flips for a single frame |
+| `flicker` | Brightness flips up and down in a tile | 1.5 levels, 3 flips | Opacity or light keyed per frame from an unstable source |
+| `shimmer` | Fine detail crawls while the picture holds | 1.2 levels a frame | JPEG frames, a bitmap drawn smaller than shown, mip levels jumping |
+| `strobe` (note) | A pan faster than a fortieth of the frame a frame | 27 px | Too fast: slow it or blur it |
+
+Cuts and declared punches are not jumps. A clean review says so; a finding comes with the frames around it.
+
+**Rules.**
+
+- **Lay out once, move with transforms.** Nothing that is seen moving may move by `top`, `left`, `margin`, `width`, `height` or CSS `zoom`: layout lands on whole pixels and can re-wrap a line, so it steps and wiggles however exactly it is recorded. Translate, scale and rotate instead.
+- **Aim at layout, not at animation.** A camera that frames a layer frames where layout puts it, never where its own enter or parallax has it this frame; otherwise the camera inherits every move of its target and shakes. The library does this; a hand-built page must strip transforms before measuring.
+- **Glide layout changes.** When something takes or gives up room, measure the layout with and without it once, and move the neighbours by the difference with transforms (`reflow: "glide"`). Never let the browser re-flow it frame by frame.
+- **Streamed text is laid out whole.** Words that appear one by one are all in place from the first frame, invisible, and fade or sharpen in their slots (`type/fill-text` with `dim: 0`). Text that is laid out as it grows re-wraps and re-centres every word.
+- **No literal shake.** A camera shake, a jitter, a vibrate is never animated as random offsets: it reads as a fault. Show impact with a punch, a pop or a flash instead.
+- **Soft edges, not hard lines.** A mask that reveals text has a feather (`feather` on `mask-*` and `wipe-*`, about a tenth of the line height), placed outside the edge so nothing changes when it stops.
+- **Shoot flat, move the camera in the film.** Record a screen at its final layout, still, with no camera of its own (`motion record`), and lay the footage on a plane (`rig/footage-plane`) for the film's camera to move over. The page never re-lays out to move the camera, so its type cannot wiggle; the plane takes the depth of field and the light.
+- **Footage covers the deepest zoom.** At zoom 4 on a 1080 px plane, the footage is about 4320 px wide; record at a larger `--scale` rather than letting the render upsample. Canvas layers size their bitmaps to the camera's zoom for the same reason. `motion render` warns `undersampled`.
+- **Smaller copies for pull-outs.** A picture shown much smaller than it was drawn shimmers as it moves. The footage plane draws from halved copies, cross-faded by on-screen size.
+- **Scaled stages need their own layers.** Content moving inside a stage scaled up by a transform snaps to whole CSS px unless it has its own compositor layer (`will-change: transform`): at 3× that is a 3 px step. The film's own camera does this for moving layers when it zooms; a recorded page must do it itself, or better, be laid out at its final size.
+- **The review sees tiles, not parts.** A small part moving against a large still area in the same tile can step without the review noticing. In a close-up with a slow move, check the strip of frames (`motion stills --at`) or measure the part itself.
+- **Frames go as PNG.** JPEG noise changes from frame to frame and crawls on fine type. `render` pipes PNG; `--fast` (JPEG) is for drafts.
+- **The recorder's guard.** `motion record` reports layout moves (even under the 3 px the browser's own Layout Instability API ignores), lines that re-wrap and wrap back, CSS zoom that changes, and stages scaled 1.5× or more. Fix every `guard:` line in the page before using the footage.

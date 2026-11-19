@@ -16,6 +16,9 @@ import { analyseBeats, loopWindows, offDownbeat, seams, type BeatAnalysis } from
 import type { Issue, Timeline } from '../film/types.ts';
 import { open, type Session } from './browser.ts';
 import { capture } from './capture.ts';
+import { record } from './record.ts';
+import { describe as describeReview, filmCuts, review } from './review.ts';
+import { Analyser, findings, REFERENCE_SHORT } from '../review/measure.ts';
 import type { LayerBox } from '../dom/mount.ts';
 import { bundle, wizardPage, filmName, inlineCss, readFilm, readJson, readTune, ROOT, tunePath, writeJson } from './files.ts';
 import { filmSchema } from './schema.ts';
@@ -48,14 +51,26 @@ Look
   stills <film> [--at 1.2,3] [--scale n]   Frames as PNG plus a contact sheet, in out/<film>/
   check <film> [--json] [--loop]    Draw it and test: repeatable frames, layers on stage, page errors;
                                     --loop (or "loop": true) measures the seam from last frame to first
+  review <film|video.mp4> [--json] [--loop] [--video file]
+                                    Watch the motion frame by frame: a camera that wiggles, jumps or
+                                    stalls, parts floating against the rest, frames that blink, flicker
+                                    or shimmer. Run it on every render and on recorded footage
 
 Collect
   capture <url> [--sections] [--selector css] [--out dir] [--width 1440] [--scale 2]
           [--hide sel,sel] [--keep-banners] [--keep-header]
                                     Screenshots of a page, or of each section, for a film to use
+  record <url> [--out file.mp4|dir] [--duration 4] [--fps 60] [--size 1080x1920] [--scale 1]
+         [--scheme light|dark] [--lead 0] [--crf 12] [--marks sel,sel] [--no-guard]
+                                    Footage of a live page on a virtual clock: its timers, frames and
+                                    CSS animations step a frame at a time, so the footage is exact.
+                                    The guard reports layout moves, re-wraps, CSS zoom and scaled
+                                    stages; --marks writes those elements' boxes per frame to
+                                    <out>.marks.json, for a footage plane to aim at
 
 Deliver
-  render <film> [--out file.mp4] [--scale 2] [--crf 15]   MP4 through ffmpeg, plus a report
+  render <film> [--out file.mp4] [--scale 2] [--crf 15] [--fast]   MP4 through ffmpeg, plus a report;
+                                    frames go as PNG, or JPEG with --fast for drafts
   build <film> [--out file.html]    One self-contained page that plays the film
   bake <film>                       Write the tuning into the film and empty the tune file
 
@@ -70,7 +85,7 @@ interface Args { _: string[]; flags: Record<string, string | boolean>; css: stri
 
 function parse(argv: string[]): Args {
   const out: Args = { _: [], flags: {}, css: [] };
-  const BOOL = new Set(['json', 'write', 'check', 'no-tune', 'help', 'loop', 'sections', 'keep-banners', 'keep-header']);
+  const BOOL = new Set(['json', 'write', 'check', 'no-tune', 'help', 'loop', 'sections', 'keep-banners', 'keep-header', 'fast', 'no-guard']);
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]!;
     if (!a.startsWith('--')) { out._.push(a); continue; }
@@ -220,6 +235,31 @@ async function captureCmd(args: Args) {
   if (args.flags.json) return print({ url: href, dir, shots });
   console.log(`${shots.length} screenshot(s) at ${num('scale', 2)}× in ${path.relative(process.cwd(), dir) || '.'}/`);
   for (const x of shots) console.log(`  ${path.basename(x.file).padEnd(32)} ${x.width}×${x.height} px at y ${x.y}`);
+}
+
+async function recordCmd(args: Args) {
+  const url = args._[1];
+  if (!url) throw new Error('Name a page to record: motion record http://localhost:5173/ --duration 4 --out shot.mp4');
+  const href = /^[a-z]+:\/\//i.test(url) ? url : fs.existsSync(url) ? pathToFileURL(path.resolve(url)).href : `https://${url}`;
+  const num = (k: string, d: number, min = 0) => { const v = Number(args.flags[k] ?? d); if (!(v >= min) || !Number.isFinite(v)) throw new Error(`--${k} takes a number of at least ${min}.`); return v; };
+  const size = String(args.flags.size ?? '1080x1920').split('x').map(Number);
+  if (size.length !== 2 || !size.every((n) => n > 0)) throw new Error('--size is width x height in CSS px, e.g. 1080x1920.');
+  const scheme = args.flags.scheme ?? 'light';
+  if (scheme !== 'light' && scheme !== 'dark') throw new Error('--scheme is light or dark.');
+  const out = path.resolve(typeof args.flags.out === 'string' ? args.flags.out : path.join('out', 'record', 'footage.mp4'));
+  const json = !!args.flags.json;
+  const res = await record({
+    url: href, out, duration: num('duration', 4, 1 / 120), fps: num('fps', 60, 1), size: [size[0]!, size[1]!], scale: num('scale', 1, 0.25),
+    scheme, lead: num('lead', 0), crf: num('crf', 12), ...browserOpt(args), guard: !args.flags['no-guard'],
+    ...(typeof args.flags.marks === 'string' ? { marks: args.flags.marks.split(',').map((m) => m.trim()).filter(Boolean) } : {}),
+    ...(json ? {} : { onProgress: (d: number, n: number) => { if (d === n || d % 30 === 0) process.stderr.write(`\r  frame ${d}/${n}`); if (d === n) process.stderr.write('\n'); } }),
+  });
+  if (json) return print(res);
+  console.log(`${res.frames} frame(s) at ${res.size[0]}×${res.size[1]} → ${path.relative(process.cwd(), res.out) || res.out}`);
+  for (const e of res.errors) console.log(`warn page: ${e}`);
+  for (const g of res.guard) console.log(`warn ${g}`);
+  if (res.marks) console.log(`Marks: ${path.relative(process.cwd(), res.marks) || res.marks}`);
+  if (!res.guard.length) console.log('Guard: the page moved by transforms only, with no re-wraps or CSS zoom.');
 }
 
 function validate(args: Args) {
@@ -483,7 +523,65 @@ async function check(args: Args) {
       if (!first) continue;
       issues.push({ level: 'warning', code: 'never-in-view', path: p, t: first.t, message: `Layer "${first.b.layer}" is never on stage: the camera does not bring it into view while it is shown.`, hint: 'Move it where the camera passes, move the camera to it, or remove it.' });
     }
-    // 3. A loop's last frame must lead into its first as a normal frame leads into the next.
+    // 3. Layout must not flip: a layer whose own size (before transforms) changes and changes back
+    // re-wraps a line or re-centres a block, and the eye sees the words jump. Sizes are sampled
+    // through the film; a change that returns within a second is reported.
+    const sizes = () => s.page.evaluate(() => Object.fromEntries([...document.querySelectorAll<HTMLElement>('.m-scene')].flatMap((sc) =>
+      [...sc.querySelectorAll<HTMLElement>('.m-layer')].filter((e) => e.checkVisibility()).map((e) => [`scenes.${sc.dataset.scene}.layers.${e.dataset.layer}`, `${e.offsetWidth}×${e.offsetHeight}`]))));
+    const history = new Map<string, { t: number; size: string }[]>();
+    const every = Math.max(1 / 12, t.duration / 240);
+    for (let time = 0; time < t.duration; time += every) {
+      await s.seek(Math.round(time * t.fps) / t.fps);
+      for (const [p, size] of Object.entries(await sizes())) {
+        const h = history.get(p) ?? [];
+        if (h[h.length - 1]?.size !== size) h.push({ t: time, size });
+        history.set(p, h);
+      }
+    }
+    for (const [p, h] of history) {
+      const flip = h.findIndex((x, k) => k >= 2 && h[k - 2]!.size === x.size && x.t - h[k - 1]!.t <= 1);
+      if (flip < 0) continue;
+      const [a, b] = [h[flip - 2]!, h[flip - 1]!];
+      issues.push({ level: 'warning', code: 'relayout-flip', path: p, t: b.t, message: `Layer "${p.split('.').pop()}" changes its laid-out size from ${a.size} to ${b.size} at ${b.t.toFixed(2)} s and back by ${h[flip]!.t.toFixed(2)} s: a line re-wraps, and the words jump.`,
+        hint: 'Lay text out whole from the first frame and reveal it with opacity or a mask; move things with transforms, never by changing size, zoom or font size.' });
+    }
+    // 4. A light motion pass: runs of consecutive frames inside each camera move, through the same
+    // measures as `motion review`, so a wiggle or a jump shows before a render.
+    const moving = t.scenes.filter(movesCamera);
+    if (moving.length) {
+      const decoder = await s.page.context().newPage();
+      const [vw, vh] = t.size, k = 360 / Math.min(vw, vh), aw = Math.round((vw * k) / 2) * 2, ah = Math.round((vh * k) / 2) * 2;
+      const gray = async (png: Buffer) => {
+        const b64 = await decoder.evaluate(async ([data, w, h]) => {
+          const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${data}`)).blob(), { resizeWidth: w as number, resizeHeight: h as number, resizeQuality: 'medium' });
+          const c = new OffscreenCanvas(w as number, h as number).getContext('2d')!;
+          c.drawImage(bmp, 0, 0);
+          const d = c.getImageData(0, 0, w as number, h as number).data, g = new Uint8Array((w as number) * (h as number));
+          for (let i = 0; i < g.length; i++) g[i] = Math.round(0.299 * d[i * 4]! + 0.587 * d[i * 4 + 1]! + 0.114 * d[i * 4 + 2]!);
+          let out = '';
+          for (let i = 0; i < g.length; i += 0x8000) out += String.fromCharCode(...g.subarray(i, i + 0x8000));
+          return btoa(out);
+        }, [png.toString('base64'), aw, ah] as const);
+        return Float32Array.from(Buffer.from(b64, 'base64'));
+      };
+      const reported = new Set<string>();
+      try {
+        for (const sc of moving) for (const at of [1 / 3, 2 / 3]) {
+          const first = Math.round((sc.start + sc.length * at) * t.fps) - 6;
+          if (first < 0 || first + 12 > t.frames) continue;
+          const an = new Analyser(aw, ah, REFERENCE_SHORT / Math.min(aw, ah));
+          for (let i = first; i < first + 12; i++) { await s.seek(i / t.fps); an.push(await gray(await s.page.screenshot({ type: 'png' }))); }
+          for (const f of findings(an.result(), { fps: t.fps })) {
+            if (f.level !== 'fault' || reported.has(`${sc.id}:${f.kind}`)) continue;
+            reported.add(`${sc.id}:${f.kind}`);
+            const time = (first + f.frame) / t.fps;
+            issues.push({ level: 'warning', code: `motion-${f.kind}`, path: `scenes.${sc.id}`, t: Number(time.toFixed(2)), message: `At ${time.toFixed(2)} s: ${f.message}`,
+              hint: 'This samples a few frames of each camera move; render and run motion review for the whole film.' });
+          }
+        }
+      } finally { await decoder.close(); }
+    }
+    // 5. A loop's last frame must lead into its first as a normal frame leads into the next.
     if (args.flags.loop || readFilm(file).loop === true) loop = await seam(s, t);
     for (const e of s.errors) issues.push({ level: 'error', code: 'page-error', path: 'film', message: e });
   } finally { await s.close(); }
@@ -505,7 +603,7 @@ async function check(args: Args) {
 /** A scene whose camera moves: tracks that move or turn the whole scene, or a camera that follows a line. */
 function movesCamera(sc: Timeline['scenes'][number]): boolean {
   const tr = sc.source.tracks ?? {};
-  return !!sc.source.follow || (['x', 'y', 'scale', 'rotate', 'rotateX', 'rotateY'] as const).some((k) => (tr[k]?.length ?? 0) > 1);
+  return !!sc.source.follow || (sc.camera?.length ?? 0) > 1 || !!sc.camera?.some((k) => k.drift) || (['x', 'y', 'scale', 'rotate', 'rotateX', 'rotateY'] as const).some((k) => (tr[k]?.length ?? 0) > 1);
 }
 
 /** Key moments, plus every quarter second of scenes whose camera moves. */
@@ -565,6 +663,29 @@ async function seam(s: Session, t: Timeline): Promise<Seam> {
   } finally { await page.close(); }
 }
 
+async function reviewCmd(args: Args) {
+  const target = need(args), json = !!args.flags.json;
+  let file = target, cuts: number[] | undefined, spans: [number, number][] | undefined, loop = !!args.flags.loop, out: string;
+  if (/\.json$/i.test(target)) {
+    // A film: review its render, judging cuts and hand-overs as the film declares them.
+    const t = timelineOrExit(load(target, args), json);
+    const dir = path.join(path.dirname(path.resolve(target)), 'out', filmName(target));
+    file = typeof args.flags.video === 'string' ? path.resolve(args.flags.video) : path.join(dir, `${filmName(target)}-${t.size[0] - (t.size[0] % 2)}x${t.size[1] - (t.size[1] % 2)}-${t.fps}fps.mp4`);
+    if (!fs.existsSync(file)) throw new Error(`No render at ${path.relative(process.cwd(), file)}. Run: motion render ${target}`);
+    if (fs.statSync(file).mtimeMs < fs.statSync(target).mtimeMs) console.error(`warn: the render is older than ${path.basename(target)}; render again to review the film as it is now.`);
+    ({ cuts, spans } = filmCuts(t));
+    loop ||= t.loop === true;
+    out = path.join(dir, 'review');
+  } else {
+    if (!fs.existsSync(target)) throw new Error(`${target} not found.`);
+    out = path.join(path.dirname(path.resolve(target)), `${path.basename(target).replace(/\.[^.]+$/, '')}.review`);
+  }
+  const res = await review({ file, out, loop, ...(cuts ? { cuts } : {}), ...(spans ? { spans } : {}),
+    ...(json ? {} : { onProgress: (d: number, n: number) => { if (d === n || d % 60 === 0) process.stderr.write(`\r  frame ${d}/${n}`); if (d === n) process.stderr.write('\n'); } }) });
+  if (json) print(res); else console.log(describeReview(res));
+  if (!res.ok) process.exit(1);
+}
+
 async function render(args: Args) {
   const file = need(args), l = load(file, args), t = timelineOrExit(l, false);
   const scale = Number(args.flags.scale ?? 1), crf = String(args.flags.crf ?? 15);
@@ -582,7 +703,10 @@ async function render(args: Args) {
     // A few milliseconds of fade even when none is asked for, so the cut ends never click.
     '-af', [`volume=${a.gain}dB`, `afade=t=in:st=0:d=${Math.max(0.005, a.fade_in)}`, `afade=t=out:st=${Math.max(0, t.duration - Math.max(0.005, a.fade_out)).toFixed(4)}:d=${Math.max(0.005, a.fade_out)}`, `apad=whole_dur=${t.duration}`].join(','),
   ] : ['-an'];
-  const ff = spawn('ffmpeg', ['-v', 'error', '-y', '-f', 'image2pipe', '-framerate', String(t.fps), '-vcodec', 'mjpeg', '-i', 'pipe:0', ...audioIn,
+  // Frames go to ffmpeg as PNG: JPEG's noise is different in every frame and crawls on fine type and
+  // flat fills (the review's shimmer). --fast keeps JPEG for drafts, at about twice the speed.
+  const fast = !!args.flags.fast;
+  const ff = spawn('ffmpeg', ['-v', 'error', '-y', '-f', 'image2pipe', '-framerate', String(t.fps), '-vcodec', fast ? 'mjpeg' : 'png', '-i', 'pipe:0', ...audioIn,
     '-vf', `scale=${w}:${h}:flags=lanczos+accurate_rnd+full_chroma_int:in_color_matrix=bt601:in_range=pc:out_color_matrix=bt709:out_range=tv,format=yuv420p`,
     '-c:v', 'libx264', '-preset', 'slow', '-crf', crf, '-colorspace', 'bt709', '-color_primaries', 'bt709', '-color_trc', 'bt709', '-movflags', '+faststart', ...audioOut, '-t', String(t.duration), out]);
   let ffErr = '';
@@ -594,12 +718,12 @@ async function render(args: Args) {
   try {
     for (let i = 0; i < t.frames; i++) {
       await s.seek(i / t.fps);
-      const jpg = await s.page.screenshot({ type: 'jpeg', quality: 95 });
-      const hash = createHash('sha1').update(jpg).digest('hex');
+      const img = fast ? await s.page.screenshot({ type: 'jpeg', quality: 95 }) : await s.page.screenshot({ type: 'png' });
+      const hash = createHash('sha1').update(img).digest('hex');
       if (hash === prev) { if (runStart < 0) runStart = i - 1; }
       else if (runStart >= 0) { still.push([runStart, i - 1]); runStart = -1; }
       prev = hash;
-      if (!ff.stdin.write(jpg)) await once(ff.stdin, 'drain');
+      if (!ff.stdin.write(img)) await once(ff.stdin, 'drain');
       if (i % t.fps === 0) process.stderr.write(`\r${i}/${t.frames} frames`);
     }
     if (runStart >= 0) still.push([runStart, t.frames - 1]);
@@ -615,7 +739,7 @@ async function render(args: Args) {
   const still_runs_s = still.filter(([a, b]) => b - a + 1 >= t.fps).map(([a, b]) => [Number((a / t.fps).toFixed(2)), Number(((b + 1) / t.fps).toFixed(2))]);
   const report = {
     file: out, size: `${w}x${h}`, fps: t.fps, frames: t.frames, duration_s: t.duration, megabytes: Number((fs.statSync(out).size / 1e6).toFixed(2)),
-    supersample: scale, render_s: Number(((Date.now() - started) / 1000).toFixed(1)), still_runs_s, page_errors: s.errors,
+    supersample: scale, frames_as: fast ? 'jpeg' : 'png', render_s: Number(((Date.now() - started) / 1000).toFixed(1)), still_runs_s, page_errors: s.errors,
   };
   writeJson(out.replace(/\.mp4$/, '.report.json'), report);
   print(report);
@@ -675,6 +799,7 @@ export async function main(argv: string[]) {
   if (cmd === 'catalog') return catalog(args);
   if (cmd === 'make') return make(args);
   if (cmd === 'capture') return captureCmd(args);
+  if (cmd === 'record') return recordCmd(args);
   if (cmd === 'validate') return validate(args);
   if (cmd === 'inspect') return inspect(args);
   if (cmd === 'pace') return paceCmd(args);
@@ -684,6 +809,7 @@ export async function main(argv: string[]) {
   if (cmd === 'preview') return preview(args);
   if (cmd === 'stills') return stills(args);
   if (cmd === 'check') return check(args);
+  if (cmd === 'review') return reviewCmd(args);
   if (cmd === 'render') return render(args);
   if (cmd === 'build') return build(args);
   if (cmd === 'bake') return bakeCmd(args);

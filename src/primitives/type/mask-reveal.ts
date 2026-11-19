@@ -26,11 +26,12 @@ export const maskReveal: Primitive = {
     tilt: { type: 'number', default: 0, min: 0, max: 8, step: 0.5, unit: 'deg', label: 'Tilt that settles as it rises' },
     from: { type: 'choice', default: 'start', options: STAGGER_FROM, label: 'Which unit goes first' },
     ease: { type: 'ease', default: 'expressive.out', label: 'Curve of each rise' },
+    feather: { type: 'number', default: 0, min: 0, max: 0.4, step: 0.01, unit: 'em', label: 'A soft edge to rise out of, instead of a hard line (0.1–0.12 em reads as soft)' },
   },
   duration: (props, p, ctx) => span(props, p, ctx.seed) * num(p.stagger) + num(p.duration),
   build(el, props, p, ctx) {
     const byWord = p.unit === 'word';
-    const split = splitText(el, str(props.text), { mask: byWord ? 'word' : 'line', accent: list(props.accent) });
+    const split = splitText(el, str(props.text), { mask: byWord ? 'word' : 'line', accent: list(props.accent), feather: num(p.feather) });
     const units = byWord ? split.words : split.lines;
     // Measured lines can outnumber "\n" lines; the stagger shrinks so the reveal
     // still ends when the timeline says it does.
@@ -39,6 +40,8 @@ export const maskReveal: Primitive = {
     const stagger = steps > budget && steps > 0 ? (num(p.stagger) * budget) / steps : num(p.stagger);
     const delays = staggerDelays(units.length, stagger, str(p.from), ctx.seed);
     const ease = ctx.ease(p.ease as never), dur = num(p.duration), tilt = num(p.tilt);
+    // A feathered mask reaches further down, so the unit starts that much lower.
+    const feather = num(p.feather);
     for (const u of units) {
       u.style.transformOrigin = '0% 100%';
       u.style.willChange = 'transform';
@@ -48,7 +51,7 @@ export const maskReveal: Primitive = {
         units.forEach((u, i) => {
           const k = progress(t, delays[i]!, dur, ease);
           const off = 1 - k;
-          u.style.transform = off === 0 ? '' : `translateY(${(off * 110).toFixed(3)}%) rotate(${(off * tilt).toFixed(3)}deg)`;
+          u.style.transform = off === 0 ? '' : `translateY(${feather > 0 ? `calc(${(off * 110).toFixed(3)}% + ${(off * feather).toFixed(4)}em)` : `${(off * 110).toFixed(3)}%`}) rotate(${(off * tilt).toFixed(3)}deg)`;
         });
       },
     };

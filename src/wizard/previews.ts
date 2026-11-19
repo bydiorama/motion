@@ -75,11 +75,14 @@ export function moveLayer(slug: string, id = 'move', text?: string): Layer | und
     case 'scene/line-chart': return { id, use: slug, props: { values: [12, 18, 15, 24, 22, 31, 29, 42] }, params: { width: 80, height: 60, draw: 1.4 }, style: { size: 'headline' } };
     case 'texture/gradient-drift': return { id, use: slug, params: { period: 6 } };
     case 'texture/grain': return { id, use: slug, params: { amount: 0.22 } };
+    case 'texture/vignette': return { id, use: slug, screen: true, params: { strength: 1, mid: 0.7 } };
+    case 'texture/beat-field': return { id, use: slug, params: { glow: 0.3, ring: 0.45, paper: 0.08 } };
     case 'ui/cursor-click': return { id, use: slug, params: { size: 4 } };
     case 'type/fill-text': return { id, use: slug, props: { text: text ?? 'Noise into signal', accent: text ? [] : ['signal'] }, style: { size: 'headline', width: 86, css: BIG } };
     case 'texture/signal-field': return { id, use: slug, params: { cols: 24, settle_at: 0.4 } };
     case 'rig/tab-stack': return { id, use: slug, props: { items: ['Monitor', 'Detect', 'Respond', 'Report'], details: ['', '', '', 'Every signal, in one place.'] }, params: { width: 80, slide_at: 0.5, slide: 1.2 } };
     case 'rig/layer-stack': return { id, use: slug, props: { items: ['Base', 'Rules', 'Parts', 'Uses'], name: 'One layer' }, params: { width: 46, gap: 150, start: 0.5, travel: 0.7 } };
+    case 'rig/footage-plane': return { id, use: slug, place: { x: 50, y: 50 }, props: { src: PICTURE }, params: { width: 900, radius: 20 } };
     case 'rig/browser-window': return { id, use: slug, props: { lift: [36, 54, 28, 38] }, params: { width: 90, move: 0.9 } };
     case 'fx/slow-push': return { id, use: slug, props: { src: PICTURE }, params: { width: 1040, height: 780, radius: 24, from: 1, to: 1.16, pan_x: -6, duration: 3 } };
     case 'fx/pan-across': return { id, use: slug, props: { src: PICTURE }, params: { width: 560, height: 780, aspect: 800 / 600, from: 10, to: 90, duration: 3 } };
@@ -99,7 +102,7 @@ export function moveLayer(slug: string, id = 'move', text?: string): Layer | und
 }
 
 /** Moves that fill the stage and loop, so their thumbnails get a set length and no padding. */
-const FULL_STAGE = new Set(['scene/marquee-wall', 'scene/bento-grid', 'texture/halftone-field', 'texture/gradient-drift', 'texture/grain', 'fx/grid-ripple', 'ui/cursor-click', 'texture/signal-field', 'fx/pin-drop', 'scene/strip-cycle']);
+const FULL_STAGE = new Set(['scene/marquee-wall', 'scene/bento-grid', 'texture/halftone-field', 'texture/gradient-drift', 'texture/grain', 'texture/vignette', 'texture/beat-field', 'fx/grid-ripple', 'ui/cursor-click', 'texture/signal-field', 'fx/pin-drop', 'scene/strip-cycle']);
 
 const handover = (slug: string): number => { const d = TRANSITIONS[slug]?.duration; return typeof d === 'number' ? d : 0.8; };
 

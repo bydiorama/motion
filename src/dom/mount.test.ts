@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { artboardFit, clipFor, cutPolygon, placedMaxWidth, placedRoom, wipeSide } from './mount.ts';
+import { artboardFit, clipFor, cutPolygon, featherMask, placedMaxWidth, placedRoom, wipeSide } from './mount.ts';
 
 test('a mask leaves room above and below the line, and opens its sides', () => {
   // Entering from below: the window's bottom is pulled back by the travel, its top is padded.
@@ -87,4 +87,18 @@ test('an angled wipe cuts the box square to its direction', () => {
   assert.equal(clipFor({ clip: none, yShare: 0, cut: { angle: 10, hidden: 1, leaving: false } }, [100, 100]), 'polygon(0 0, 0 0, 0 0)');
   // Fully shown: no clip at all.
   assert.equal(clipFor({ clip: none, yShare: 0, cut: { angle: 10, hidden: 0, leaving: false } }, [100, 100]), '');
+});
+
+test('a feathered wipe starts and ends with its ramp off the box', () => {
+  // The stops of the vertical ramp, in the box's own px (the image starts X px above it).
+  const stops = (clip: [number, number, number, number], yShare = 0) => {
+    const m = featherMask({ clip, yShare }, 200, 100, 10, 8), X = 200 + 10 + 8;
+    return [...m.image.split('), ')[0]!.matchAll(/(-?[\d.]+)px/g)].map((x) => Number(x[1]) - X);
+  };
+  // Nearly uncovered from the top: opaque from the box's top edge down, the ramp above it.
+  assert.deepEqual(stops([0.0002, 0, 0, 0]).slice(0, 2).map(Math.round), [-8, 0]);
+  // Fully covered: the ramp has run past the bottom.
+  assert.deepEqual(stops([1, 0, 0, 0]).slice(0, 2).map(Math.round), [100, 108]);
+  // A mask rising from below: the window is the box plus its room, fading out past the room.
+  assert.deepEqual(stops([0, 0, 0, 0], 0.5).map(Math.round), [-78, -70, 50, 58]);
 });

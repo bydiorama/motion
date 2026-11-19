@@ -68,6 +68,27 @@ export interface Pace {
   /** Share of the film something moves or drifts, 0–1. */
   drifting: number;
   issues: Issue[];
+  /**
+   * The framing camera either side of each plain cut where one side has it: what is framed, how
+   * big and how tilted. A match cut carries the size and the tilt across (CRAFT §8).
+   */
+  cuts: { at: number; from: CutCamera; to: CutCamera }[];
+}
+
+export interface CutCamera { scene: string; frame?: string | [number, number]; zoom: number; tilt: [number, number] }
+
+/** The framing camera's frame, zoom (log) and tilt at a scene-local time, the eases taken as linear. */
+function cameraAt(s: Timeline['scenes'][number], local: number): CutCamera {
+  const keys = s.camera;
+  if (!keys?.length) return { scene: s.id, zoom: 1, tilt: [0, 0] };
+  let i = keys.findIndex((k) => k.t >= local);
+  if (i < 0) {
+    const k = keys[keys.length - 1]!;
+    return { scene: s.id, frame: k.frame, zoom: k.zoom * (1 + k.drift * (local - k.t)), tilt: k.tilt };
+  }
+  if (i === 0) return { scene: s.id, frame: keys[0]!.frame, zoom: keys[0]!.zoom, tilt: keys[0]!.tilt };
+  const a = keys[i - 1]!, b = keys[i]!, p = (local - a.t) / Math.max(1e-9, b.t - a.t);
+  return { scene: s.id, frame: p < 0.5 ? a.frame : b.frame, zoom: Math.exp(Math.log(a.zoom) + (Math.log(b.zoom) - Math.log(a.zoom)) * p), tilt: [a.tilt[0] + (b.tilt[0] - a.tilt[0]) * p, a.tilt[1] + (b.tilt[1] - a.tilt[1]) * p] };
 }
 
 /** The numbers the checks use. CRAFT.md "Rhythm" explains each. */
@@ -130,6 +151,14 @@ export function movesOf(t: Timeline): PaceMove[] {
         for (const c of l.cues) if (seen(at + c.at, c.length)) out.push({ kind: 'change', scene: s.id, layer: l.id, use: l.use, start: at + c.at, length: c.length, lane: `${s.id}/${l.id}/${c.lane ?? 0}`, ...(c.share !== undefined ? { share: c.share } : {}) });
       } else if (l.duration > 0) out.push({ kind: 'run', scene: s.id, layer: l.id, use: l.use, start: at, length: Math.min(l.duration, s.length - l.start) });
     }
+    // The framing camera: each move between keys is motion; a drift after the last key is alive, never a move.
+    const keys = s.camera ?? [];
+    keys.forEach((b, k) => {
+      const a = keys[k - 1];
+      if (a && b.t > a.t && (a.zoom !== b.zoom || JSON.stringify([a.frame, a.point, a.offset, a.anchor, a.tilt, a.rotate]) !== JSON.stringify([b.frame, b.point, b.offset, b.anchor, b.tilt, b.rotate])))
+        out.push({ kind: 'run', scene: s.id, use: 'scene.camera', start: s.start + a.t, length: b.t - a.t });
+      if (k === keys.length - 1 && b.drift && s.length > b.t) out.push({ kind: 'drift', scene: s.id, use: 'scene.camera', start: s.start + b.t, length: s.length - b.t });
+    });
   });
   return out.sort((a, b) => a.start - b.start);
 }
@@ -349,7 +378,13 @@ export function pace(t: Timeline): Pace {
     }
   }
 
-  return { duration: t.duration, ...(tempo ? { tempo } : {}), moves: all, scenes, moving, drifting: alive, issues };
+  // The framing camera at each plain cut, either side.
+  const cuts = t.scenes.slice(1).flatMap((s, i) => {
+    const before = t.scenes[i]!;
+    if (before.out || (!before.camera && !s.camera)) return [];
+    return [{ at: s.start, from: cameraAt(before, before.length), to: cameraAt(s, 0) }];
+  });
+  return { duration: t.duration, ...(tempo ? { tempo } : {}), moves: all, scenes, moving, drifting: alive, issues, cuts };
 }
 
 /** One row per scene, one cell per beat (or quarter second): ≈ hand-over, █ change, ▒ other move, ~ drift, · still. */
@@ -397,5 +432,10 @@ export function describePace(t: Timeline, p: Pace): string {
   }
   lines.push('', `rhythm (one cell per ${p.tempo ? 'beat' : '0.25 s'}, | every ${p.tempo ? 'bar' : 'second'}; ≈ hand-over, █ change, ▒ other move, ~ drift, · still)`);
   lines.push(...rhythmChart(t, p));
+  if (p.cuts.length) {
+    const cam = (c: CutCamera) => `${c.scene}${c.frame ? ` on ${typeof c.frame === 'string' ? c.frame : `${c.frame[0]}%,${c.frame[1]}%`}` : ''} ×${+c.zoom.toFixed(2)}${c.tilt[0] || c.tilt[1] ? ` tilt ${+c.tilt[0].toFixed(1)}°/${+c.tilt[1].toFixed(1)}°` : ''}`;
+    lines.push('', 'camera at the cuts (match size and tilt across a cut to make it a match cut):');
+    for (const c of p.cuts) lines.push(`  ${fmt(c.at)}  ${cam(c.from)}  →  ${cam(c.to)}`);
+  }
   return lines.join('\n');
 }

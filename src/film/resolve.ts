@@ -3,6 +3,7 @@
 // anything is drawn.
 import { EASE_NAMES, isEaseSpec, type EaseSpec } from '../core/ease.ts';
 import { PRIMITIVES, TRANSITIONS } from '../primitives/index.ts';
+import { clickAt } from '../primitives/ui/cursor-click.ts';
 import { UI_THEME_NAMES } from './types.ts';
 import type { Cue, ParamSpec, PureCtx } from '../primitives/types.ts';
 import type { Key } from '../core/track.ts';
@@ -11,7 +12,7 @@ import { beatsToSeconds, framesPerBeat, isBeats, wholeFrameTempos, type Tempo } 
 import {
   ANCHORS, ANGLED_MOVES, ARTBOARD_FITS, PLACE_UNITS, MOVE_NAMES, SURFACES, TEXT_SIZES, TONES, TRACK_PROPS,
   type ExitMove, type Film, type Issue, type Layer, type Move, type MoveName, type ResolvedLayer,
-  type ResolvedMove, type ResolvedScene, type Scene, type TimeRef, type Timeline, type Tracks, type FilmAudio,
+  type ResolvedMove, type ResolvedScene, type ResolvedCameraKey, type Scene, type TimeRef, type Timeline, type Tracks, type FilmAudio,
 } from './types.ts';
 
 export interface Resolution {
@@ -45,16 +46,16 @@ const isObject = (v: unknown): v is Record<string, unknown> => !!v && typeof v =
 const isNum = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v);
 
 const FILM_KEYS = ['$schema', 'motion', 'title', 'size', 'fps', 'seed', 'poster', 'loop', 'narrative', 'style', 'tokens', 'tempo', 'audio', 'theme', 'scenes'];
-const SCENE_KEYS = ['id', 'length', 'hold', 'background', 'scheme', 'layout', 'artboard', 'layers', 'tracks', 'follow', 'out', 'uses', 'intent'];
+const SCENE_KEYS = ['id', 'length', 'hold', 'background', 'scheme', 'layout', 'artboard', 'layers', 'tracks', 'follow', 'camera', 'perspective', 'motionBlur', 'out', 'uses', 'intent'];
 /** Primitives whose instance has a tip a camera can follow. */
 export const FOLLOWABLE = ['fx/path-draw'];
-const LAYER_KEYS = ['id', 'use', 'props', 'params', 'at', 'style', 'place', 'enter', 'exit', 'tracks', 'motionBlur', 'parallax'];
+const LAYER_KEYS = ['id', 'use', 'props', 'params', 'at', 'style', 'place', 'enter', 'exit', 'tracks', 'motionBlur', 'parallax', 'screen', 'taps', 'reflow'];
 const STYLE_KEYS = ['size', 'color', 'font', 'weight', 'align', 'width', 'css'];
 
 const MOVE_AMOUNT: Record<MoveName, number> = {
   fade: 0, rise: 40, drop: 40, scale: 0.08, blur: 16, 'slide-left': 120, 'slide-right': 120,
   zoom: 0.12, pop: 0.5, focus: 24, 'mask-up': 0, 'mask-down': 0, 'wipe-up': 0, 'wipe-down': 0, 'wipe-left': 0, 'wipe-right': 0, swing: 70, 'slot-up': 48,
-  wipe: 0, slide: 120,
+  wipe: 0, slide: 120, 'pop-check': 0.65,
 };
 /** Moves that read best with their own curve when the film does not give one. */
 const MOVE_EASE: Partial<Record<MoveName, { enter: EaseSpec; exit: EaseSpec }>> = {
@@ -68,6 +69,7 @@ const MOVE_EASE: Partial<Record<MoveName, { enter: EaseSpec; exit: EaseSpec }>> 
   'wipe-right': { enter: 'quart.inOut', exit: 'quart.inOut' },
   wipe: { enter: 'quart.inOut', exit: 'quart.inOut' },
   swing: { enter: { spring: { duration: 0.6, bounce: 0.2 } }, exit: 'cubic.in' },
+  'pop-check': { enter: 'bounce.out', exit: 'back.in' },
 };
 
 function distance(a: string, b: string): number {
@@ -393,6 +395,12 @@ export function resolveFilm(input: unknown): Resolution {
         }
       }
       const tracks = checkTracks(layer.tracks, `${lp}.tracks`);
+      if (layer.reflow !== undefined) {
+        if (layer.reflow !== 'glide') err(`${lp}.reflow`, 'bad-value', 'reflow is "glide": the layer takes no room until it enters, and the layers around it glide over.');
+        else if (layer.place || layer.screen) warn(`${lp}.reflow`, 'unused', `Layer "${lid}" is placed on its own, so it takes no room in the stack and nothing glides around it.`);
+      }
+      if (layer.screen !== undefined && typeof layer.screen !== 'boolean') err(`${lp}.screen`, 'bad-value', 'screen is true (fixed to the screen, outside the camera) or false.');
+      if (layer.screen === true && layer.parallax !== undefined) err(`${lp}.parallax`, 'bad-value', 'A layer fixed to the screen does not travel with the camera, so it has no parallax.');
       if (layer.motionBlur !== undefined && typeof layer.motionBlur !== 'boolean' && !(isNum(layer.motionBlur) && layer.motionBlur >= 0 && layer.motionBlur <= 1)) {
         err(`${lp}.motionBlur`, 'bad-value', 'motionBlur is true (a half-frame shutter) or the share of a frame the shutter is open, 0 to 1.');
       }
@@ -421,7 +429,14 @@ export function resolveFilm(input: unknown): Resolution {
         err(path, 'unknown-move', `A move is one of: ${oneOf(MOVE_NAMES)}.`, near ? `Did you mean "${near}"?` : undefined);
         return undefined;
       }
-      unknownKeys(m as unknown as Record<string, unknown>, exit ? ['move', 'duration', 'ease', 'amount', 'angle', 'at'] : ['move', 'duration', 'ease', 'amount', 'angle'], path);
+      unknownKeys(m as unknown as Record<string, unknown>, exit ? ['move', 'duration', 'ease', 'amount', 'angle', 'feather', 'at'] : ['move', 'duration', 'ease', 'amount', 'angle', 'feather'], path);
+      const soft = m.move.startsWith('mask-') || m.move.startsWith('wipe-');
+      let feather: number | true | undefined;
+      if (m.feather !== undefined && m.feather !== false) {
+        if (m.feather !== true && !(isNum(m.feather) && m.feather >= 0 && m.feather <= 200)) err(`${path}.feather`, 'bad-value', 'feather is a soft edge in px (0 to 200), or true for a tenth of the line height.');
+        else if (!soft) warn(`${path}.feather`, 'unused', `${m.move} has no edge to soften, so feather is ignored.`, 'Feather mask-up, mask-down and the wipe-* moves.');
+        else if (m.feather === true || m.feather > 0) feather = m.feather;
+      }
       const angled = ANGLED_MOVES.includes(m.move);
       if (m.angle !== undefined) {
         if (!isNum(m.angle)) err(`${path}.angle`, 'bad-value', 'angle is degrees: 0 rightwards, 90 downwards, 180 leftwards, 270 upwards.');
@@ -432,7 +447,7 @@ export function resolveFilm(input: unknown): Resolution {
       const ease = m.ease === undefined ? (own ? own[exit ? 'exit' : 'enter'] : exit ? tokens.ease_exit : tokens.ease_enter) : checkEase(m.ease, `${path}.ease`);
       if (m.amount !== undefined && !isNum(m.amount)) err(`${path}.amount`, 'bad-value', 'amount is a number.');
       if (duration === undefined || ease === undefined) return undefined;
-      return { move: m.move, duration, ease, amount: isNum(m.amount) ? m.amount : MOVE_AMOUNT[m.move], ...(angled ? { angle: isNum(m.angle) ? m.angle : 0 } : {}) };
+      return { move: m.move, duration, ease, amount: isNum(m.amount) ? m.amount : MOVE_AMOUNT[m.move], ...(angled ? { angle: isNum(m.angle) ? m.angle : 0 } : {}), ...(feather !== undefined ? { feather } : {}) };
     };
     const enters = new Map<string, Omit<ResolvedMove, 'start'>>();
     for (const [id, d] of drafts) {
@@ -506,7 +521,7 @@ export function resolveFilm(input: unknown): Resolution {
     const length = sceneLength;
 
     const layers: ResolvedLayer[] = [];
-    const cameraMoves = !!scene.follow || (['x', 'y'] as const).some((k) => (scene.tracks?.[k]?.length ?? 0) > 1);
+    const cameraMoves = !!scene.follow || (Array.isArray(scene.camera) && scene.camera.length > 0) || (['x', 'y'] as const).some((k) => (scene.tracks?.[k]?.length ?? 0) > 1);
     const cycling: { path: string; id: string; start: number; cues: Cue[] }[] = [];
     for (const [id, d] of drafts) {
       if (d.start === undefined) continue;
@@ -551,11 +566,53 @@ export function resolveFilm(input: unknown): Resolution {
           if (scene.follow && isObject(scene.follow) && scene.follow.layer === id) err(pp, 'bad-follow', `The camera follows "${id}", so it cannot also travel against the camera.`);
         }
       }
+      let taps: ResolvedLayer['taps'];
+      const from = d.start;
+      if (d.layer.taps !== undefined) {
+        const tp = `${d.path}.taps`;
+        if (!Array.isArray(d.layer.taps)) err(tp, 'bad-value', 'taps is a list of times, or of { at, ring }.', 'e.g. "taps": ["3.25b"]');
+        else {
+          taps = [];
+          d.layer.taps.forEach((tap, i) => {
+            const ip = `${tp}.${i}`, spec = (isObject(tap) ? tap : { at: tap }) as { at: TimeRef; ring?: unknown };
+            if (isObject(tap)) unknownKeys(tap as unknown as Record<string, unknown>, ['at', 'ring', 'mark'], ip);
+            const mark = isObject(tap) && typeof (tap as { mark?: unknown }).mark === 'string' ? (tap as { mark: string }).mark : undefined;
+            if (mark !== undefined && d.layer.use !== 'rig/footage-plane') err(`${ip}.mark`, 'bad-value', 'Only a rig/footage-plane has marks to tap.');
+            const t = timeRef(spec.at, isObject(tap) ? `${ip}.at` : ip, undefined);
+            if (spec.ring !== undefined && spec.ring !== false && typeof spec.ring !== 'string') err(`${ip}.ring`, 'bad-value', 'ring is the id of a layer in this scene, or false for no ring.');
+            if (t === undefined) return;
+            if (t < from || (exit && t > exit.start)) warn(ip, 'tap-hidden', `Layer "${id}" is tapped at ${t.toFixed(2)} s, when it is not on screen.`);
+            taps!.push({ t: snap(t), ring: spec.ring === false ? null : typeof spec.ring === 'string' ? spec.ring : id, ...(mark ? { mark } : {}) });
+          });
+          taps.sort((a, b) => a.t - b.t);
+        }
+      }
       layers.push({
         id, use: d.layer.use, start: d.start, duration: d.duration, end, props: d.props, params: d.params, ...(d.cues ? { cues: d.cues } : {}), ...(d.speed !== undefined ? { speed: d.speed } : {}),
-        ...(enter ? { enter: { ...enter, start: d.start } } : {}), ...(exit ? { exit } : {}), ...(parallax ? { parallax } : {}), source: d.layer,
+        ...(enter ? { enter: { ...enter, start: d.start } } : {}), ...(exit ? { exit } : {}), ...(parallax ? { parallax } : {}), ...(taps?.length ? { taps } : {}), source: d.layer,
       });
     }
+
+    // A cursor clicking a layer taps it, the moment the click is fully down.
+    for (const l of layers) {
+      if (l.use !== 'ui/cursor-click' || typeof l.props.target !== 'string' || !l.props.target) continue;
+      const target = layers.find((o) => o.id === l.props.target);
+      if (!target) {
+        const near = nearest(l.props.target, layers.map((o) => o.id));
+        err(`${sp}.layers.${l.id}.props.target`, 'unknown-layer', `Scene "${sid}" has no layer "${l.props.target}" for the cursor to click.`, near ? `Did you mean "${near}"?` : undefined);
+        continue;
+      }
+      (target.taps ??= []).push({ t: snap(l.start + clickAt(l.params)), ring: target.id });
+      target.taps.sort((a, b) => a.t - b.t);
+    }
+
+    // A tap's ring is drawn around a layer of this scene.
+    layers.forEach((l) => l.taps?.forEach((tap, i) => {
+      if (tap.ring !== null && !layers.some((o) => o.id === tap.ring)) {
+        const near = nearest(tap.ring, layers.map((o) => o.id));
+        err(`${sp}.layers.${l.id}.taps.${i}.ring`, 'unknown-layer', `Scene "${sid}" has no layer "${tap.ring}" to draw a tap's ring around.`, near ? `Did you mean "${near}"?` : undefined);
+      }
+    }));
 
     // ---- camera follow -----------------------------------------------------------
     if (scene.follow !== undefined) {
@@ -577,6 +634,62 @@ export function resolveFilm(input: unknown): Resolution {
           if (f[k] !== undefined && !(isNum(f[k]) && f[k]! >= 0)) err(`${fp}.${k}`, 'bad-time', `${k} is seconds, zero or more.`);
         }
       }
+    }
+
+    // ---- framing camera --------------------------------------------------------
+    let camera: ResolvedCameraKey[] | undefined;
+    if (scene.camera !== undefined) {
+      const cp = `${sp}.camera`;
+      if (!Array.isArray(scene.camera) || scene.camera.length === 0) err(cp, 'bad-camera', 'camera is a list of keys: { at, frame, zoom, anchor, tilt, ease }.');
+      else {
+        if (scene.follow !== undefined) err(cp, 'bad-camera', 'A scene has a framing camera or a follow, not both.', 'Frame the line\'s layer with camera keys, or follow its tip.');
+        const fought = (['x', 'y', 'scale'] as const).filter((k) => scene.tracks?.[k] !== undefined);
+        if (fought.length) err(`${sp}.tracks`, 'bad-camera', `The framing camera sets x, y and scale itself, so tracks ${fought.join(', ')} would fight it.`, 'Move them into camera keys: frame, offset and zoom. rotate, rotateX and rotateY tracks still apply.');
+        const ids = layers.map((l) => l.id);
+        const pairOk = (v: unknown, lo: number, hi: number) => Array.isArray(v) && v.length === 2 && v.every((x) => isNum(x) && x >= lo && x <= hi);
+        let prev: ResolvedCameraKey = { t: 0, frame: [50, 50], point: [0.5, 0.5], offset: [0, 0], zoom: 1, anchor: [50, 50], tilt: [0, 0], rotate: 0, drift: 0 };
+        camera = [];
+        scene.camera.forEach((key, i) => {
+          const kp = `${cp}.${i}`;
+          if (!isObject(key)) { err(kp, 'bad-camera', 'A camera key is an object: { at, frame, zoom, anchor, tilt, ease }.'); return; }
+          unknownKeys(key as unknown as Record<string, unknown>, ['at', 'frame', 'point', 'offset', 'zoom', 'anchor', 'tilt', 'rotate', 'ease', 'drift'], kp);
+          const t = seconds(key.at, `${kp}.at`, 'at');
+          if (t === undefined) return;
+          if (camera!.length && t < camera![camera!.length - 1]!.t) err(`${kp}.at`, 'bad-order', `Camera keys run in time order; this one (${t.toFixed(2)} s) comes before the key above it.`);
+          if (t > length + 1e-6) warn(`${kp}.at`, 'after-end', `This key (${t.toFixed(2)} s) is after scene "${sid}" ends (${length.toFixed(2)} s).`, 'A key past the cut is fine for a camera that keeps moving through the cut; otherwise move it earlier.');
+          const next: ResolvedCameraKey = { ...prev, t, drift: 0 };
+          if (key.ease !== undefined) { const e = checkEase(key.ease, `${kp}.ease`); if (e !== undefined) next.ease = e; } else delete next.ease;
+          if (key.frame !== undefined) {
+            if (typeof key.frame === 'string') {
+              // "layer#mark": a mark recorded with the footage a footage plane shows.
+              const [lid, mark] = key.frame.split('#') as [string, string | undefined];
+              if (!ids.includes(lid)) { const near = nearest(lid, ids); err(`${kp}.frame`, 'unknown-layer', `Scene "${sid}" has no layer "${lid}" to frame.`, near ? `Did you mean "${near}"?` : `Layers: ${oneOf(ids)}.`); }
+              else if (mark !== undefined && layers.find((l) => l.id === lid)?.use !== 'rig/footage-plane') err(`${kp}.frame`, 'bad-camera', `"${key.frame}" frames a mark, and only a rig/footage-plane has marks.`, `Frame the layer itself: "${lid}".`);
+              else if (mark === '') err(`${kp}.frame`, 'bad-camera', 'Name the mark after the #: "plane#send", as given to motion record --marks.');
+              next.frame = key.frame;
+            } else if (pairOk(key.frame, 0, 100)) next.frame = [key.frame[0], key.frame[1]];
+            else err(`${kp}.frame`, 'bad-value', 'frame is a layer id, or [x, y] in % of the stage.');
+          }
+          if (key.point !== undefined) { if (pairOk(key.point, 0, 1)) next.point = [key.point[0], key.point[1]]; else err(`${kp}.point`, 'bad-value', 'point is [x, y] as shares of the layer box, 0 to 1.', 'The middle is [0.5, 0.5].'); }
+          if (key.offset !== undefined) { if (Array.isArray(key.offset) && key.offset.length === 2 && key.offset.every(isNum)) next.offset = [key.offset[0], key.offset[1]]; else err(`${kp}.offset`, 'bad-value', 'offset is [dx, dy] in px.'); }
+          if (key.anchor !== undefined) { if (pairOk(key.anchor, 0, 100)) next.anchor = [key.anchor[0], key.anchor[1]]; else err(`${kp}.anchor`, 'bad-value', 'anchor is [x, y] in % of the stage, 0 to 100.'); }
+          if (key.tilt !== undefined) { if (pairOk(key.tilt, -80, 80)) next.tilt = [key.tilt[0], key.tilt[1]]; else err(`${kp}.tilt`, 'bad-value', 'tilt is [about x, about y] in degrees, -80 to 80.'); }
+          if (key.zoom !== undefined) { if (isNum(key.zoom) && key.zoom > 0) next.zoom = key.zoom; else err(`${kp}.zoom`, 'bad-value', 'zoom is a number above 0; 1 is the stage as laid out.'); }
+          if (key.rotate !== undefined) { if (isNum(key.rotate)) next.rotate = key.rotate; else err(`${kp}.rotate`, 'bad-value', 'rotate is degrees.'); }
+          if (key.drift !== undefined) {
+            if (!isNum(key.drift)) err(`${kp}.drift`, 'bad-value', 'drift is zoom per second, such as 0.02.');
+            else if (i !== scene.camera!.length - 1) warn(`${kp}.drift`, 'unused', 'drift runs from the last key to the end of the scene; on an earlier key it does nothing.');
+            else next.drift = key.drift;
+          }
+          camera!.push(next);
+          prev = next;
+        });
+        if (scene.perspective !== undefined && !(isNum(scene.perspective) && scene.perspective >= 100)) err(`${sp}.perspective`, 'bad-value', 'perspective is px from the viewer to the stage, 100 or more.', `The default is ${Math.round(size[0] * 1.2)} (1.2 × the stage width).`);
+        if (!camera.length) camera = undefined;
+      }
+    }
+    if (scene.motionBlur !== undefined && typeof scene.motionBlur !== 'boolean' && !(isNum(scene.motionBlur) && scene.motionBlur >= 0 && scene.motionBlur <= 1)) {
+      err(`${sp}.motionBlur`, 'bad-value', 'motionBlur is true (a half-frame shutter) or the share of a frame the shutter is open, 0 to 1.');
     }
 
     // ---- hand-over to the next scene ------------------------------------------
@@ -615,7 +728,7 @@ export function resolveFilm(input: unknown): Resolution {
       }
     }
     exact.set(sid, { length: exactLength ?? length, out: exactOut });
-    scenes.push({ id: sid, start: 0, length, end: length, layers, ...(out ? { out } : {}), source: sceneTracks ? { ...scene, tracks: sceneTracks } : scene });
+    scenes.push({ id: sid, start: 0, length, end: length, layers, ...(out ? { out } : {}), ...(camera ? { camera } : {}), source: sceneTracks ? { ...scene, tracks: sceneTracks } : scene });
   });
 
   // ---- scene starts: in order, overlapping by each hand-over ------------------

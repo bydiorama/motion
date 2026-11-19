@@ -30,7 +30,7 @@ since: 0.3.0
 
 ## Behaviour
 
-Each word moves up a few pixels while fading in. The line re-centres as words are added.
+Each word moves up a few pixels while fading in. The line is laid out whole from the first frame, so it never re-wraps or re-centres as words arrive.
 
 ## Rules
 

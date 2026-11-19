@@ -14,6 +14,7 @@ export function filmSchema(c: Catalog) {
       { type: 'object', required: ['spring'], properties: { spring: { type: 'object', required: ['duration'], properties: { duration: { type: 'number' }, bounce: { type: 'number' } } } } },
     ],
   };
+  const pair = (min: number, max: number) => ({ type: 'array', items: { type: 'number', minimum: min, maximum: max }, minItems: 2, maxItems: 2 });
   const tracks = {
     type: 'object', additionalProperties: false,
     properties: Object.fromEntries(c.tracks.map((p) => [p, { type: 'array', items: { type: 'array', minItems: 2, maxItems: 3, description: '[time, value] or [time, value, ease]; time in seconds or beats ("2b")' } }])),
@@ -21,7 +22,7 @@ export function filmSchema(c: Catalog) {
   const move = (exit: boolean) => ({
     anyOf: [{ enum: c.moves }, {
       type: 'object', required: ['move'], additionalProperties: false,
-      properties: { move: { enum: c.moves }, duration: seconds, ease, amount: { type: 'number' }, angle: { type: 'number', description: 'For wipe and slide: degrees, 0 rightwards, 90 downwards.' }, ...(exit ? { at: timeRef } : {}) },
+      properties: { move: { enum: c.moves }, duration: seconds, ease, amount: { type: 'number' }, angle: { type: 'number', description: 'For wipe and slide: degrees, 0 rightwards, 90 downwards.' }, feather: { anyOf: [{ type: 'boolean' }, { type: 'number', minimum: 0, maximum: 200 }], description: 'For mask-* and wipe-*: a soft edge in px, or true for a tenth of the line height.' }, ...(exit ? { at: timeRef } : {}) },
     }],
   });
   return {
@@ -70,6 +71,25 @@ export function filmSchema(c: Catalog) {
               description: 'The camera follows the tip of a line as it draws.',
               properties: { layer: { type: 'string' }, at: { type: 'array', items: { type: 'number', minimum: 0, maximum: 100 }, minItems: 2, maxItems: 2 }, lag: { type: 'number', minimum: 0 }, blend: { type: 'number', minimum: 0 } },
             },
+            camera: {
+              type: 'array', minItems: 1,
+              description: 'The framing camera: each key puts a layer (or a point) at an anchor on the screen, this big, tilted so. Replaces the x, y and scale tracks.',
+              items: {
+                type: 'object', required: ['at'], additionalProperties: false,
+                properties: {
+                  at: { anyOf: [{ type: 'number', minimum: 0 }, beats] },
+                  frame: { anyOf: [{ type: 'string' }, pair(0, 100)], description: 'A layer id, "layer#mark" for a mark recorded with a footage plane\'s footage, or [x, y] in % of the stage.' },
+                  point: { ...pair(0, 1), description: 'The point of the layer box to frame, as shares of its width and height.' },
+                  offset: { type: 'array', items: { type: 'number' }, minItems: 2, maxItems: 2 },
+                  zoom: { type: 'number', exclusiveMinimum: 0 },
+                  anchor: { ...pair(0, 100), description: 'Where the framed point sits on the screen, in % of the stage.' },
+                  tilt: { type: 'array', items: { type: 'number', minimum: -80, maximum: 80 }, minItems: 2, maxItems: 2, description: 'Degrees about x and y, about the anchor.' },
+                  rotate: { type: 'number' }, ease: {}, drift: { type: 'number' },
+                },
+              },
+            },
+            perspective: { type: 'number', minimum: 100 },
+            motionBlur: { anyOf: [{ type: 'boolean' }, { type: 'number', minimum: 0, maximum: 1 }] },
             out: { type: 'object', required: ['use'], additionalProperties: false, properties: { use: { enum: c.transitions.map((t) => t.slug) }, duration: seconds, params: { type: 'object' } } },
             layers: {
               type: 'array',
@@ -84,7 +104,11 @@ export function filmSchema(c: Catalog) {
                     properties: { size: { enum: c.sizes }, color: { enum: c.colors }, font: { enum: ['display', 'body', 'mono'] }, weight: { type: 'number' }, align: { enum: ['left', 'center', 'right'] }, width: { type: 'number', exclusiveMinimum: 0, maximum: 100 }, css: { type: 'object', additionalProperties: { type: 'string' } } },
                   },
                   place: { type: 'object', required: ['x', 'y'], additionalProperties: false, properties: { x: { type: 'number' }, y: { type: 'number' }, anchor: { enum: c.anchors }, unit: { enum: ['%', 'px'], description: '% of the stage (default), or px of the scene\'s artboard.' } } },
-                  enter: move(false), exit: move(true), tracks,
+                  screen: { type: 'boolean', description: 'Fixed to the screen: drawn outside the camera, so its travel, zoom and tilt leave the layer where it is.' }, reflow: { enum: ['glide'], description: 'glide: the layer takes no room until it enters and gives it up as it leaves; the layers around it glide over.' },
+                  taps: {
+                    type: 'array', description: 'Taps: the layer goes down under the finger, landing on each time, comes back up past rest, and an accent ring leaves it in its own shape.',
+                    items: { anyOf: [timeRef, { type: 'object', required: ['at'], additionalProperties: false, properties: { at: timeRef, ring: { anyOf: [{ type: 'string', description: 'Another layer to draw the ring around.' }, { const: false }] }, mark: { type: 'string', description: 'On a rig/footage-plane: a mark recorded with the footage, to ring.' } } }] },
+                  }, enter: move(false), exit: move(true), tracks,
                   parallax: {
                     description: 'Depth against the camera: 1 travels with the scene, above 1 nearer and faster, 0 holds still. Or { depth, home }.',
                     anyOf: [{ type: 'number', minimum: 0, maximum: 10 }, { type: 'object', required: ['depth'], additionalProperties: false, properties: { depth: { type: 'number', minimum: 0, maximum: 10 }, home: timeRef } }],

@@ -14,6 +14,11 @@ export interface SplitOptions {
   mask?: MaskUnit;
   /** Words (lower case, no punctuation) set in the accent colour. */
   accent?: Iterable<string>;
+  /**
+   * A soft bottom edge on each mask, in em: the mask grows by this much below its padding and
+   * fades out over it, so text rises out of a soft edge. Nothing at rest sits in the ramp.
+   */
+  feather?: number;
 }
 
 export interface SplitText {
@@ -38,6 +43,12 @@ export function splitText(el: HTMLElement, text: string, options: SplitOptions =
   const doc = el.ownerDocument;
   const accent = new Set([...(options.accent ?? [])].map(bare));
   const mask = options.mask ?? 'none';
+  const f = Math.max(0, options.feather ?? 0);
+  // A feathered mask fades over an extra strip below its padding instead of cutting.
+  const clip = (display: string, extra = '') => f > 0
+    ? `display:${display};overflow:hidden;${extra}padding:${PAD}em 0.06em ${PAD + f}em;margin:-${PAD}em -0.06em -${PAD + f}em;` +
+      `mask-image:linear-gradient(to bottom, #000 calc(100% - ${f}em), transparent);-webkit-mask-image:linear-gradient(to bottom, #000 calc(100% - ${f}em), transparent)`
+    : `display:${display};overflow:hidden;${extra}padding:${PAD}em 0.06em;margin:-${PAD}em -0.06em`;
   el.textContent = '';
 
   // 1. Words, laid out once to find where lines break.
@@ -88,7 +99,7 @@ export function splitText(el: HTMLElement, text: string, options: SplitOptions =
       host.style.display = 'block';
       if (mask === 'line') {
         const m = doc.createElement('span');
-        m.style.cssText = `display:block;overflow:hidden;padding:${PAD}em 0.06em;margin:-${PAD}em -0.06em`;
+        m.style.cssText = clip('block');
         m.appendChild(host);
         el.appendChild(m);
       } else el.appendChild(host);
@@ -96,7 +107,7 @@ export function splitText(el: HTMLElement, text: string, options: SplitOptions =
     } else host.appendChild(doc.createTextNode(' '));
     if (mask === 'word') {
       const m = doc.createElement('span');
-      m.style.cssText = `display:inline-block;overflow:hidden;vertical-align:top;padding:${PAD}em 0.06em;margin:-${PAD}em -0.06em`;
+      m.style.cssText = clip('inline-block', 'vertical-align:top;');
       m.appendChild(w);
       host.appendChild(m);
     } else host.appendChild(w);

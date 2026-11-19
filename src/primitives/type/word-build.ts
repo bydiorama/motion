@@ -29,10 +29,8 @@ export const wordBuild: Primitive = {
       el.appendChild(s);
       return s;
     });
-    // The line re-centres sideways as words arrive, but its final height is held
-    // from the start, so a wrap to a second line never moves what is around it.
-    el.style.minHeight = `${el.offsetHeight}px`;
-    el.style.alignContent = 'center';
+    // Every word has its place from the first frame: the line is laid out whole, so it
+    // never re-wraps or re-centres as words arrive, and nothing around it moves.
     const stagger = num(p.stagger), dur = num(p.word_duration), rise = num(p.rise);
     return {
       seek(t) {
@@ -40,8 +38,6 @@ export const wordBuild: Primitive = {
           const k = progress(t, i * stagger, dur, ease);
           s.style.opacity = String(Math.min(1, k * 1.6));
           s.style.transform = `translateY(${(1 - k) * rise}px)`;
-          // Words not started yet take no space, so the line re-centres as it grows.
-          s.style.display = t >= i * stagger ? 'inline-block' : 'none';
         });
       },
     };

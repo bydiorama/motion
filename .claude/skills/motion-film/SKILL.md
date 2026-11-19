@@ -36,10 +36,11 @@ Follow it in order. Each step is cheap; skipping one costs a round with the pers
 5. **Pace.** `motion pace films/<name>.film.json` prints each scene's time alone (free of hand-overs), the lengths of hand-overs, changes and rests, the share in motion, and a chart of the film beat by beat. Fix every rhythm warning before looking at frames: a hand-over that outweighs its scene, moves of one kind with different lengths, a scene far busier than the next, cuts off the bar. They are what makes a film feel fast, then slow.
 6. **Look.** `motion stills films/<name>.film.json` writes key frames and `sheet.png` to `films/out/<name>/stills/`. Open the sheet. Check: text collides, leaves the frame, is too long to read, or the accent appears more than once per scene.
 7. **Check.** `motion check films/<name>.film.json` must report frames that repeat exactly and nothing off stage. For loops it also reports the seam: fix a `loop-seam` warning. If no Chromium is installed, add `--browser <path to Chrome or Brave>`.
+7b. **Review the motion.** After every render, and on every piece of recorded footage before a film uses it: `motion review films/<name>.film.json` reviews the film's render, judging its cuts, hand-overs and punches as the film declares them (`--video file` for a render elsewhere); `motion review footage.mp4` reviews a recording. It watches the picture frame by frame and names a camera that wiggles, jumps, judders or stalls, a part floating against the rest, and frames that blink, flicker or shimmer, each with the frames around it. Fix every finding at its cause (`docs/CRAFT.md`, "Coherence") and review again; report the notes that remain to the person. Stills cannot show any of this.
 8. **Hand over.** Tell the person to run `motion preview films/<name>.film.json` (studio at http://127.0.0.1:4321). Say what you would like them to judge.
 9. **Answer notes.** When they come back: `motion notes films/<name>.film.json`. Each note has a time, a scene and text. Change the film to answer it, validate again, and say per note what you did. Do not mark notes done; the person does.
 
-Render only when asked: `motion render films/<name>.film.json` (needs ffmpeg).
+Render only when asked: `motion render films/<name>.film.json` (needs ffmpeg), then review it (step 7b).
 
 ## Rules for the film
 
@@ -57,7 +58,9 @@ Render only when asked: `motion render films/<name>.film.json` (needs ffmpeg).
 - **One hero move per scene.** Everything else in the frame enters quietly or holds.
 - **Exits are quicker than entrances** (60–75% of the time) and use an ease-in, never the entrance played backwards.
 - **One world per camera move.** When a scene hands to the next by moving the camera, use `transition/camera-travel` (or `whip-pan`), not two layers sliding separately. Give layers that travel far and fast `"motionBlur": true`.
-- **Footage is one layer.** Use `el/video` with `from`/`to`, never an image layer per frame. Loops through footage use `continues`.
+- **Footage is one layer.** Use `el/video` with `from`/`to`, never an image layer per frame. Loops through footage use `continues`. To film a live page or a component in its own runtime (its real transitions, at any scale), record it with `motion record <url>`: a virtual clock moves only between frames, so the footage is frame-exact and repeatable.
+- **Shoot flat, move the camera in the film.** A screen, an app or a page is recorded once, still, at its final layout, with no camera of its own (`motion record <url> --marks '#send,#card'`), large enough for the deepest zoom. The film lays it on a `rig/footage-plane` and moves over it with `scene.camera`, aiming at the recorded marks. Never zoom, tilt or pan the page itself while recording: it re-lays out and its text wiggles. Fix every `guard:` line the recorder prints.
+- **Frame with the camera, not tracks.** To move in on something, write `scene.camera` keys that name it (`"frame": "card"`) with a `zoom`, `anchor` and `tilt`; the framed thing stays on its mark through the move. Tilt grows with closeness and goes flat on punches; the last key `drift`s past the cut.
 - **Repeating films are scripts.** When layers repeat, write a `.film.mjs` with the builder and run `motion make`; see `reference/film.md`.
 - **A camera that travels a route follows it.** Give the scene `follow` on the `fx/path-draw` layer instead of copying the line's ease into camera keys.
 - **Placeholders wear bydiorama/ui.** Demo and placeholder content (sample films, thumbnails, stand-in posters, cards and slides) sets `theme.ui` (`zero` unless the person names another theme) and takes every colour from the role variables (`--m-bg-*`, `--m-text-*`, `--m-accent`, `--m-border`, or `--ui-*` for roles the stage does not map). Type is Aspekta through `var(--m-font-display)` / `var(--m-font-body)`, weight 500, tracking −0.02em on display sizes. Radii come from `--ui-radius-*`, cards get a hairline instead of a shadow, and inline SVG fills through `style="fill:var(…)"`, never `fill="#…"`. No hex colours, no other faces, no monospace. A different `theme.ui` or `accent` must restyle the whole film. A person's own brand content keeps its own colours and fonts.
@@ -68,6 +71,8 @@ Render only when asked: `motion render films/<name>.film.json` (needs ffmpeg).
 - Never write `*.tune.json`. It is the person's. Read it; answer it in the film.
 - Never bake (`motion bake`) unless the person asks. Baking writes their tuning into your film and empties their file.
 - Never claim a film is done without a clean `validate`, `pace` and `check`, and a look at the stills.
+- Never deliver a render or recorded footage without running `motion review` on it and reporting what it found. A clean set of stills says nothing about wiggle, judder or flicker.
+- Never animate a camera shake as random offsets, or move anything seen by `top`, `left`, `width`, `height` or CSS `zoom`.
 - Never invent a primitive, prop, param or ease. If the catalog lacks it, say so.
 
 ## When the person pasted a brief into a chat with no tools

@@ -58,3 +58,4 @@ A drawn cursor travels to a target along a slight curve, presses with a quick sq
 - Curved path, not a straight line; the bow is 0–20% of the distance.
 - Glide on an in-out curve; the press is about 80 ms down and a little longer back.
 - The target responds after the press, not during the travel.
+- Give `target` the id of the layer it clicks: that layer goes down with the click, lands on it, comes back past rest, and the ring leaves it in its own shape (a layer tap, see `taps` in reference/film.md) instead of round the tip. Set `to_x` and `to_y` on the control.
