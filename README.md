@@ -72,6 +72,12 @@ Then ask for a video, or paste a brief from the wizard. Claude writes `films/<na
 
 The plugin is this whole repository: `.claude-plugin/` holds the manifest and the marketplace, `hooks/hooks.json` the setup hook (`scripts/plugin-setup.mjs`), and `bin/motion` the command. Check changes with `claude plugin validate .`.
 
+## Use it in ChatGPT
+
+Select **Diorama Motion** in ChatGPT and paste a Motion brief, or attach a film and its studio notes. The plugin returns an editable `.film.json`. It includes the drawable catalog, narrative and style library, film schema, craft guide and an example. In sessions with Node and file access it can check film structure and timing. Use the local Motion CLI for the studio, footage capture and MP4 rendering.
+
+To build the private plugin ZIP from a checkout, run `pnpm install --frozen-lockfile` and `python3 scripts/package-chatgpt.py`. The result is `dist/diorama-motion.zip`. The builder takes the references and film checker from the same checkout as the CLI.
+
 ## Start with a brief
 
 ```bash

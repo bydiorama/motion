@@ -1,7 +1,7 @@
 {
   "name": "motion",
   "displayName": "Motion",
-  "description": "Make motion videos with the bydiorama motion library: films as JSON that the runtime validates, draws, checks and renders, with a studio for directing them.",
+  "description": "Create editable motion films, import layouts, record product footage and review renders with the Diorama Motion studio and CLI.",
   "author": {
     "name": "Diorama"
   },

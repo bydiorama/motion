@@ -7,8 +7,8 @@
 // installed here instead: once into the plugin's data directory, which survives
 // updates, then linked into the copy as node_modules so the CLI resolves them.
 //
-// It runs at every session start, so the common case (nothing changed) costs one file
-// read. It never fails the session: a failed install is reported and retried next time.
+// It runs at every session start, so the common case (nothing changed) checks the install marker
+// and package directories. It never fails the session: a failed install is reported and retried next time.
 // Chromium is not installed here (it is large); the motion-film skill says how.
 
 import { spawnSync } from 'node:child_process';
@@ -34,7 +34,9 @@ try {
 
   // Install when the dependency list changed since the last install that finished.
   const current = fs.existsSync(done) && fs.readFileSync(done, 'utf8') === manifest;
-  if (!current) {
+  const complete = Object.keys(pkg.dependencies ?? {}).every((name) =>
+    fs.existsSync(path.join(modules, name, 'package.json')));
+  if (!current || !complete) {
     fs.mkdirSync(data, { recursive: true });
     fs.writeFileSync(want, manifest);
     fs.rmSync(done, { force: true });
@@ -49,7 +51,13 @@ try {
   }
 
   // Link the packages into this version of the plugin (each version has its own copy).
-  if (!fs.existsSync(own)) fs.symlinkSync(modules, own, process.platform === 'win32' ? 'junction' : 'dir');
+  const link = fs.lstatSync(own, { throwIfNoEntry: false });
+  if (link?.isSymbolicLink() && !fs.existsSync(own)) {
+    fs.unlinkSync(own);
+  }
+  if (!fs.existsSync(own)) {
+    fs.symlinkSync(modules, own, process.platform === 'win32' ? 'junction' : 'dir');
+  }
 } catch (e) {
   say(`setup did not finish: ${e instanceof Error ? e.message : e}`);
 }
