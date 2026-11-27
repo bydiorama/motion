@@ -3,7 +3,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Film, Tune } from '../film/types.ts';
 
-export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
+const source = import.meta.url.endsWith('.ts');
+const cliDir = path.dirname(fileURLToPath(import.meta.url));
+export const ROOT = path.resolve(cliDir, source ? '../..' : '../../..');
+const assets = path.resolve(cliDir, '../browser');
 
 export const tunePath = (filmPath: string): string => filmPath.replace(/(\.film)?\.json$/, '.tune.json');
 export const filmName = (filmPath: string): string => path.basename(filmPath).replace(/(\.film)?\.json$/, '');
@@ -21,23 +24,34 @@ export const writeJson = (file: string, data: unknown): void => {
   fs.writeFileSync(file, `${JSON.stringify(data, null, 2)}\n`);
 };
 
-export async function bundle(): Promise<string> {
+export async function bundle(output?: string): Promise<string> {
+  if (!source) {
+    if (!output) return path.join(assets, 'page.js');
+    fs.mkdirSync(output, { recursive: true });
+    for (const name of ['page.js', 'motion.js']) fs.copyFileSync(path.join(assets, name), path.join(output, name));
+    return path.join(output, 'page.js');
+  }
   const { build } = await import('esbuild');
-  const out = path.join(ROOT, 'dist');
+  const out = output ?? path.join(ROOT, 'dist');
   const common = { bundle: true, format: 'esm' as const, target: 'es2022', minify: true, legalComments: 'none' as const, logLevel: 'warning' as const, loader: { '.css': 'text' as const, '.woff2': 'dataurl' as const } };
   await build({ ...common, entryPoints: [path.join(ROOT, 'src/studio/entry.ts')], outfile: path.join(out, 'page.js') });
   await build({ ...common, entryPoints: [path.join(ROOT, 'src/index.ts')], outfile: path.join(out, 'motion.js') });
   return path.join(out, 'page.js');
 }
 
-/** The wizard as one page, with the catalog and the library inlined. */
-export async function wizardPage(data: unknown): Promise<string> {
+export async function wizardScript(): Promise<string> {
   const { build } = await import('esbuild');
   const result = await build({
     entryPoints: [path.join(ROOT, 'src/wizard/entry.ts')], bundle: true, format: 'esm', target: 'es2022', minify: true, write: false,
     legalComments: 'none', logLevel: 'warning', loader: { '.css': 'text', '.woff2': 'dataurl' },
   });
-  const js = result.outputFiles[0]!.text.replace(/<\/script/g, '<\\/script');
+  return result.outputFiles[0]!.text;
+}
+
+/** The wizard as one page, with the catalog and the library inlined. */
+export async function wizardPage(data: unknown): Promise<string> {
+  const js = (source ? await wizardScript() : fs.readFileSync(path.join(assets, 'wizard.js'), 'utf8'))
+    .replace(/<\/script/g, '<\\/script');
   const json = JSON.stringify(data).replace(/</g, '\\u003c');
   return `<!doctype html>
 <html lang="en">

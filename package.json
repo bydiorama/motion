@@ -1,7 +1,6 @@
 {
   "name": "@bydiorama/motion",
   "version": "0.4.0",
-  "private": true,
   "license": "MIT",
   "description": "Diorama motion library: films as data, written by agents, directed by people.",
   "repository": {
@@ -16,11 +15,18 @@
     "node": ">=22.18.0"
   },
   "bin": {
-    "motion": "./bin/motion.mjs"
+    "motion": "./dist/npm/cli/motion.js"
   },
   "exports": {
-    ".": "./src/index.ts",
-    "./build": "./src/build/index.ts"
+    ".": {
+      "types": "./dist/npm/index.d.ts",
+      "import": "./dist/npm/index.js"
+    },
+    "./build": {
+      "types": "./dist/npm/build/index.d.ts",
+      "import": "./dist/npm/build/index.js"
+    },
+    "./film.schema.json": "./schema/film.schema.json"
   },
   "scripts": {
     "motion": "node bin/motion.mjs",
@@ -28,7 +34,9 @@
     "catalog": "node bin/motion.mjs catalog --write",
     "test": "node --test \"src/**/*.test.ts\"",
     "type-check": "tsc --noEmit",
-    "verify": "pnpm run type-check && pnpm run test && node bin/motion.mjs catalog --check && node bin/motion.mjs validate films/*.film.json"
+    "verify": "pnpm run type-check && pnpm run test && node bin/motion.mjs catalog --check && node bin/motion.mjs validate films/*.film.json",
+    "prepack": "npm run build:package",
+    "build:package": "node scripts/build-package.mjs"
   },
   "dependencies": {
     "dialkit": "2.1.0",
@@ -39,5 +47,20 @@
   "devDependencies": {
     "@types/node": "^24.0.0",
     "typescript": "^6"
-  }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist/npm",
+    "library",
+    "library.json",
+    "catalog.json",
+    "schema/film.schema.json",
+    "examples/builder.film.mjs",
+    "films/feature-announcement.film.json",
+    "CREDITS.md",
+    "showcase/vendor/DIALKIT-LICENSE",
+    "src/studio/theme/fonts/OFL.txt"
+  ]
 }

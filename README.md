@@ -36,6 +36,22 @@ Other parts:
 - `docs/DESIGN.md`: why the library is built this way.
 - `docs/MAINTENANCE.md`: how to add references, change entries and release versions.
 
+## npm package
+
+The package exposes the `motion` CLI, the ESM runtime at `@bydiorama/motion`, and film authoring helpers at `@bydiorama/motion/build`. It requires Node 22.18 or later and includes TypeScript declarations.
+
+To install from a release checkout before publication:
+
+```sh
+pnpm install --frozen-lockfile
+npm pack --pack-destination dist
+# In the project where you want to use Motion
+npm install /path/to/motion/dist/bydiorama-motion-0.4.0.tgz
+npx motion catalog
+```
+
+After publication, install by name with `npm install @bydiorama/motion`. Try the included film with `npx motion validate node_modules/@bydiorama/motion/films/feature-announcement.film.json`.
+
 ## Daily commands
 
 ```bash
