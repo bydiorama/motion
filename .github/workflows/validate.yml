@@ -47,6 +47,19 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - name: Type-check, test, catalog up to date, films valid
         run: pnpm verify
+      - name: Install and exercise the npm release tarball
+        run: |
+          consumer=$(mktemp -d)
+          archive=$(npm pack --silent --pack-destination "$consumer" | tail -1)
+          cd "$consumer"
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund "./$archive"
+          node --input-type=module -e "import { buildCatalog } from '@bydiorama/motion'; import { scene } from '@bydiorama/motion/build'; buildCatalog(); scene('opening', []);"
+          cp node_modules/@bydiorama/motion/examples/builder.film.mjs .
+          npx --no-install motion make builder.film.mjs
+          npx --no-install motion validate builder.film.json
+          npx --no-install motion build builder.film.json
+          npx --no-install motion wizard --out wizard.html
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"

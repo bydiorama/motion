@@ -16,14 +16,20 @@ library.json             styles and narratives: the beats a story needs, what a 
 
 ## Where the library is
 
-The library root is `${CLAUDE_PLUGIN_ROOT}`. From the motion plugin that is a path in Claude Code's plugin cache; from the motion repository's own `.claude/skills`, it is the repository root. `catalog.json`, `library.json`, `docs/CRAFT.md` and `schema/film.schema.json` below are files there.
+With the plugin enabled, the library root is `${CLAUDE_PLUGIN_ROOT}`. When working from this repository's own skill, use the repository root. Run commands in the project that owns the film so relative input and output paths resolve there. `catalog.json`, `library.json`, `docs/CRAFT.md` and `schema/film.schema.json` below are files there.
 
 `motion` below is the command line:
 
 - **With the plugin**, `motion` is on PATH (or run `node "${CLAUDE_PLUGIN_ROOT}/bin/motion.mjs"`). Films live in the person's project, in `films/` unless they keep them elsewhere; output goes to `out/` beside each film. Leave out `$schema`.
 - **In the motion repository**, run `node bin/motion.mjs`.
 
-If a command says a package is missing, the plugin's setup has not finished: it runs when a session starts, so start a new session (or run `node "${CLAUDE_PLUGIN_ROOT}/scripts/plugin-setup.mjs"` with `CLAUDE_PLUGIN_ROOT` and `CLAUDE_PLUGIN_DATA` set). If a command that draws says Chromium is not installed, pass `--browser` with the path to an installed Chrome, Brave or Edge, or ask the person before running `node "${CLAUDE_PLUGIN_ROOT}/node_modules/playwright/cli.js" install chromium` (a download of about 150 MB). `render` and `beats` also need ffmpeg.
+If a command says a package is missing, the plugin's setup has not finished: it runs when a session starts, so start a new session (or run `node "${CLAUDE_PLUGIN_ROOT}/scripts/plugin-setup.mjs"` with `CLAUDE_PLUGIN_ROOT` and `CLAUDE_PLUGIN_DATA` set). If a command that draws says Chromium is not installed, pass `--browser` with the path to an installed Chrome, Brave or Edge, or ask the person before running `node "${CLAUDE_PLUGIN_ROOT}/node_modules/playwright/cli.js" install chromium` (a download of about 150 MB). Recording MP4, rendering, motion review, beat analysis and drawing video layers also need ffmpeg.
+
+## Bring in the source material
+
+- For an exported layout, use `motion import design.json --id hero --out hero.scene.json`. Insert the resulting scene into the film and keep its asset paths relative to the film. The manifest format and artboard options are in `reference/film.md`.
+- For a still of a page, use `motion capture <url> --sections`. For a working interface, use `motion record <url> --duration 4 --marks '#send,#card' --out screen.mp4`, then `motion review screen.mp4`. Frame the recorded marks with the scene camera.
+- For a supplied film and tune, run `motion notes <film>` first. Preserve the IDs addressed by overrides when you revise the film.
 
 ## Workflow
 
@@ -34,7 +40,7 @@ Follow it in order. Each step is cheap; skipping one costs a round with the pers
 3. **Write the film in beats.** Every time is `"2b"`, `"1bar"`, `"title.end + 1b"`, so the film stays on the grid and a new bpm retimes all of it. See the rules below, `reference/film.md` for the shape, and `docs/CRAFT.md` for the numbers that make motion look designed: eases, durations, reveal patterns, end cards and safe areas.
 4. **Validate until clean.** `motion validate films/<name>.film.json`. Fix exactly what each error says; the hint names the fix and "did you mean" names the slug. Warnings about params out of range are real: bring them back in range unless the brief asks otherwise.
 5. **Pace.** `motion pace films/<name>.film.json` prints each scene's time alone (free of hand-overs), the lengths of hand-overs, changes and rests, the share in motion, and a chart of the film beat by beat. Fix every rhythm warning before looking at frames: a hand-over that outweighs its scene, moves of one kind with different lengths, a scene far busier than the next, cuts off the bar. They are what makes a film feel fast, then slow.
-6. **Look.** `motion stills films/<name>.film.json` writes key frames and `sheet.png` to `films/out/<name>/stills/`. Open the sheet. Check: text collides, leaves the frame, is too long to read, or the accent appears more than once per scene.
+6. **Look.** `motion stills films/<name>.film.json` writes key frames to `films/out/<name>/stills/` and the contact sheet to `films/out/<name>/sheet.png`. Open the sheet. Check: text collides, leaves the frame, is too long to read, or the accent appears more than once per scene.
 7. **Check.** `motion check films/<name>.film.json` must report frames that repeat exactly and nothing off stage. For loops it also reports the seam: fix a `loop-seam` warning. If no Chromium is installed, add `--browser <path to Chrome or Brave>`.
 7b. **Review the motion.** After every render, and on every piece of recorded footage before a film uses it: `motion review films/<name>.film.json` reviews the film's render, judging its cuts, hand-overs and punches as the film declares them (`--video file` for a render elsewhere); `motion review footage.mp4` reviews a recording. It watches the picture frame by frame and names a camera that wiggles, jumps, judders or stalls, a part floating against the rest, and frames that blink, flicker or shimmer, each with the frames around it. Fix every finding at its cause (`docs/CRAFT.md`, "Coherence") and review again; report the notes that remain to the person. Stills cannot show any of this.
 8. **Hand over.** Tell the person to run `motion preview films/<name>.film.json` (studio at http://127.0.0.1:4321). Say what you would like them to judge.

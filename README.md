@@ -36,6 +36,22 @@ Other parts:
 - `docs/DESIGN.md`: why the library is built this way.
 - `docs/MAINTENANCE.md`: how to add references, change entries and release versions.
 
+## npm package
+
+The package exposes the `motion` CLI, the ESM runtime at `@bydiorama/motion`, and film authoring helpers at `@bydiorama/motion/build`. It requires Node 22.18 or later and includes TypeScript declarations.
+
+To install from a release checkout before publication:
+
+```sh
+pnpm install --frozen-lockfile
+npm pack --pack-destination dist
+# In the project where you want to use Motion
+npm install /path/to/motion/dist/bydiorama-motion-0.4.0.tgz
+npx motion catalog
+```
+
+After publication, install by name with `npm install @bydiorama/motion`. Try the included film with `npx motion validate node_modules/@bydiorama/motion/films/feature-announcement.film.json`.
+
 ## Daily commands
 
 ```bash
@@ -71,6 +87,12 @@ Then ask for a video, or paste a brief from the wizard. Claude writes `films/<na
 - **Claude Code only:** claude.ai and Cowork don't install plugins that ship a `bin/` folder.
 
 The plugin is this whole repository: `.claude-plugin/` holds the manifest and the marketplace, `hooks/hooks.json` the setup hook (`scripts/plugin-setup.mjs`), and `bin/motion` the command. Check changes with `claude plugin validate .`.
+
+## Use it in ChatGPT
+
+Select **Diorama Motion** in ChatGPT and paste a Motion brief, or attach a film and its studio notes. The plugin returns an editable `.film.json`. It includes the drawable catalog, narrative and style library, film schema, craft guide and an example. In sessions with Node and file access it can check film structure and timing. Use the local Motion CLI for the studio, footage capture and MP4 rendering.
+
+To build the private plugin ZIP from a checkout, run `pnpm install --frozen-lockfile` and `python3 scripts/package-chatgpt.py`. The result is `dist/diorama-motion.zip`. The builder takes the references and film checker from the same checkout as the CLI.
 
 ## Start with a brief
 

@@ -1,0 +1,21 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "diorama-motion",
+  "version": "0.1.0",
+  "description": "Turn a motion brief into an editable Diorama film and revise it from studio notes.",
+  "author": { "name": "Diorama" },
+  "homepage": "https://github.com/bydiorama/motion#readme",
+  "repository": "https://github.com/bydiorama/motion",
+  "license": "MIT",
+  "extensions": {
+    "com.openai": {
+      "interface": {
+        "displayName": "Diorama Motion",
+        "shortDescription": "Write and revise motion films",
+        "developerName": "Diorama",
+        "category": "Creativity",
+        "defaultPrompt": "Turn my brief into an editable motion film."
+      }
+    }
+  }
+}

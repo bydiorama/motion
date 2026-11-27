@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist/npm",
+    "noEmit": false,
+    "noEmitOnError": true,
+    "declaration": true,
+    "rewriteRelativeImportExtensions": true
+  },
+  "include": ["src/index.ts", "src/build/index.ts", "src/cli/motion.ts", "src/studio/css.d.ts"]
+}

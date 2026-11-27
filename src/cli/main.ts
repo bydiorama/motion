@@ -180,12 +180,12 @@ export const madePath = (script: string): string => script.replace(/(\.film)?\.(
 
 /**
  * `@bydiorama/motion` and `@bydiorama/motion/build`, for a script outside this repository
- * (from the Claude plugin, say), resolve to this copy of the library. Inside it, Node's own
- * self-reference finds the same files, so the hook changes nothing there.
+ * (from the Claude plugin, for example), resolve to this copy of the library.
  */
+const moduleExtension = path.extname(import.meta.filename);
 export const LIBRARY_ENTRIES: Record<string, string> = {
-  '@bydiorama/motion': path.join(ROOT, 'src/index.ts'),
-  '@bydiorama/motion/build': path.join(ROOT, 'src/build/index.ts'),
+  '@bydiorama/motion': path.resolve(import.meta.dirname, `../index${moduleExtension}`),
+  '@bydiorama/motion/build': path.resolve(import.meta.dirname, `../build/index${moduleExtension}`),
 };
 let libraryResolved = false;
 function resolveLibraryImports() {
@@ -193,7 +193,7 @@ function resolveLibraryImports() {
   libraryResolved = true;
   registerHooks({
     resolve: (specifier, context, next) => specifier in LIBRARY_ENTRIES
-      ? { url: pathToFileURL(LIBRARY_ENTRIES[specifier]!).href, format: 'module-typescript', shortCircuit: true }
+      ? { url: pathToFileURL(LIBRARY_ENTRIES[specifier]!).href, shortCircuit: true }
       : next(specifier, context),
   });
 }
@@ -815,6 +815,6 @@ export async function main(argv: string[]) {
   if (cmd === 'bake') return bakeCmd(args);
   if (cmd === 'brief') return briefCmd(args);
   if (cmd === 'wizard') return wizard(args);
-  if (cmd === 'bundle') { await bundle(); return console.log('dist/page.js and dist/motion.js written'); }
+  if (cmd === 'bundle') { await bundle(path.resolve('dist')); return console.log('dist/page.js and dist/motion.js written'); }
   throw new Error(`Unknown command "${cmd}".\n\n${HELP}`);
 }
