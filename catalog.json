@@ -1,5 +1,5 @@
 {
-  "motion": "0.4.0",
+  "motion": "0.4.1",
   "tokens": {
     "fps": 30,
     "beat": 2.5,
@@ -423,7 +423,7 @@
     },
     {
       "slug": "el/slot",
-      "summary": "An empty frame the host page fills, e.g. with a rendered bydiorama/ui component.",
+      "summary": "An empty frame the host page fills, e.g. with a rendered UI component.",
       "props": {
         "name": {
           "type": "string",

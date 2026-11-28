@@ -191,7 +191,7 @@ export function resolveFilm(input: unknown): Resolution {
     if (!isObject(film.theme)) err('theme', 'bad-theme', 'theme is { scheme, vars }.');
     else {
       unknownKeys(film.theme as Record<string, unknown>, ['scheme', 'accent', 'onAccent', 'ui', 'vars'], 'theme');
-      if (film.theme.ui !== undefined && !(UI_THEME_NAMES as readonly unknown[]).includes(film.theme.ui)) err('theme.ui', 'bad-value', `ui is one of the bydiorama/ui themes: ${UI_THEME_NAMES.join(', ')}.`, 'Use "zero", Diorama\'s own theme, unless the brief names another.');
+      if (film.theme.ui !== undefined && !(UI_THEME_NAMES as readonly unknown[]).includes(film.theme.ui)) err('theme.ui', 'bad-value', `ui is one of the bundled themes: ${UI_THEME_NAMES.join(', ')}.`, 'Use "zero", Diorama\'s own theme, unless the brief names another.');
       for (const k of ['accent', 'onAccent'] as const) if (film.theme[k] !== undefined && typeof film.theme[k] !== 'string') err(`theme.${k}`, 'bad-value', `${k} is a CSS colour.`);
       if (film.theme.scheme !== undefined && film.theme.scheme !== 'light' && film.theme.scheme !== 'dark') err('theme.scheme', 'bad-value', 'scheme is "light" or "dark".');
       for (const k of Object.keys(film.theme.vars ?? {})) {

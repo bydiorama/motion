@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Removed cross-repository references from the npm package documentation, catalog and runtime output while retaining attribution and licence notices.
+
 - Prepared the public `@bydiorama/motion` npm package with a compiled CLI, ESM runtime, film builder, TypeScript declarations and prebuilt studio and wizard.
 
 - `motion review <film|video.mp4>`: watches the motion frame by frame. Phase correlation on a grid of tiles, fitted to one zoom and pan a frame, finds a camera that wiggles, jumps, judders, hitches or stalls, a part floating against the rest, and frames that blink, flicker or shimmer; a pan that strobes is a note. Reviewing a film judges its cuts, hand-overs and camera punches as the film declares them. Writes a motion graph and five-frame strips around each finding, and exits 1 on a fault. Thresholds are in px at a 1080 short side (`THRESHOLDS` in `src/review/measure.ts`); an in-house FFT, no native dependencies.

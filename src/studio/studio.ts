@@ -79,7 +79,7 @@ export function createStudio(options: StudioOptions) {
   const root = options.root;
   root.classList.add('ms');
 
-  // The chrome wears bydiorama/ui's Graphite theme; the stage keeps the film's own look.
+  // The chrome wears the Graphite theme; the stage keeps the film's own look.
   const chrome = (tag: 'header' | 'aside' | 'div' | 'footer', cls: string, ...children: Node[]) =>
     h(tag, { class: `${cls} ms-chrome`, 'data-ui-theme': 'graphite', 'data-ui-density': 'default' }, ...children);
 
@@ -154,7 +154,7 @@ export function createStudio(options: StudioOptions) {
 
   root.replaceChildren(h('div', { class: 'ms-body' }, rail, canvas, inspector), dockFrame);
 
-  // ---- edge fades (bydiorama/ui's Fade): every scrolling region dissolves into its own ground ----
+  // ---- edge fades: every scrolling region dissolves into its own ground ----
   for (const side of ['top', 'bottom'] as const) {
     fade(sceneList, { side, ground: 'base', size: 'sm' });
     // DialKit pins the panel's title and versions inside the scroller: the top fade hangs under them.

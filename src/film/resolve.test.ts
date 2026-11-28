@@ -166,7 +166,7 @@ test('every calm preset sits inside its params\' ranges', async () => {
   }
 });
 
-test('theme.ui names one of the bundled bydiorama/ui themes', async () => {
+test('theme.ui names one of the bundled themes', async () => {
   const { UI_THEMES } = await import('../dom/ui-themes.css.ts');
   const { UI_THEME_NAMES } = await import('./types.ts');
   const one = [{ id: 'a', length: 1, layers: [] }];

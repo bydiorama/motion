@@ -8,8 +8,6 @@
 //   window.audit(t)  where every layer sits at t
 //
 // and, opened with #render, draws at the film's own pixel size with no controls.
-// This is the same contract bydiorama/ui's ui-video-render skill reads, so its
-// renderer and this library's own `motion render` accept the same page.
 import type { Film, Tune } from '../film/types.ts';
 import { mount, type LayerBox, type Mounted, type MountOptions } from './mount.ts';
 import { createSoundtrack } from './soundtrack.ts';

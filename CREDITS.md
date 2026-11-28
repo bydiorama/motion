@@ -22,21 +22,12 @@ as the licence requires.
   `src/studio/theme/fonts/OFL.txt`. The font stays under the OFL; the MIT
   licence of this repository does not cover it.
 
-## From bydiorama/ui
+## Theme and motion credits
 
-**[bydiorama/ui](https://github.com/bydiorama/ui)** — © 2026 Diorama
-(bydiorama), MIT, the same owner and licence as this repository.
-
-- `src/dom/ui-themes.css.ts` and `src/studio/theme/graphite.css.ts` are
-  generated from its token resolver by `scripts/ui-theme.ts`.
-- `src/studio/fade.ts` ports its Fade component to plain DOM, with the
-  perceptual ramp tables copied verbatim.
-- The `ui.*` easing curves are its `--ui-ease-*` tokens.
-
-Some of those tokens (`--ui-press-scale`, `--ui-stagger-step`, the hit-area
-sizes) encode values ui adapted from
-[jakubkrehel/skills](https://github.com/jakubkrehel/skills) (© 2026 Jakub
-Krehel, MIT). See ui's [CREDITS.md](https://github.com/bydiorama/ui/blob/main/CREDITS.md).
+The bundled theme tokens, easing curves, and studio edge fades are © 2026
+Diorama and licensed under the MIT licence. The press scale, stagger step,
+and hit-area sizes incorporate work © 2026 Jakub Krehel, also licensed
+under the MIT licence. See [LICENSE](LICENSE) for the licence terms.
 
 ## Tools, not shipped
 

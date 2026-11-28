@@ -75,7 +75,7 @@ Deliver
   bake <film>                       Write the tuning into the film and empty the tune file
 
 Options for every command that draws
-  --css <file>    A stylesheet to load, e.g. a bydiorama/ui theme. Repeat for more.
+  --css <file>    A stylesheet to load, e.g. a theme. Repeat for more.
   --no-tune       Ignore <film>.tune.json
   --browser <path>  A Chromium-based browser to draw with (Chrome, Brave, Edge),
                   when Playwright's own is not installed. Or set MOTION_CHROMIUM.

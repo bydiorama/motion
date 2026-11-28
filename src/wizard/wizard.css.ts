@@ -1,5 +1,5 @@
 // The wizard: one question per screen, a quiet page, one strong button.
-// Graphite tokens from bydiorama/ui, Aspekta throughout.
+// Bundled Graphite tokens, Aspekta throughout.
 import { GRAPHITE_CSS } from '../studio/theme/graphite.css.ts';
 import aspekta from '../studio/theme/fonts/AspektaVF.woff2';
 

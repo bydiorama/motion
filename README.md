@@ -40,17 +40,12 @@ Other parts:
 
 The package exposes the `motion` CLI, the ESM runtime at `@bydiorama/motion`, and film authoring helpers at `@bydiorama/motion/build`. It requires Node 22.18 or later and includes TypeScript declarations.
 
-To install from a release checkout before publication:
+Install the package and validate the included example film:
 
 ```sh
-pnpm install --frozen-lockfile
-npm pack --pack-destination dist
-# In the project where you want to use Motion
-npm install /path/to/motion/dist/bydiorama-motion-0.4.0.tgz
-npx motion catalog
+npm install @bydiorama/motion
+npx motion validate node_modules/@bydiorama/motion/films/feature-announcement.film.json
 ```
-
-After publication, install by name with `npm install @bydiorama/motion`. Try the included film with `npx motion validate node_modules/@bydiorama/motion/films/feature-announcement.film.json`.
 
 ## Daily commands
 
@@ -130,7 +125,7 @@ The studio is one screen: scenes on the left, each with a still and its intent, 
 
 Agents write the film and never the tune. People direct in the studio: every dial is generated from the film and the catalog, dragging a scene clip sets its length, and notes pinned to a moment are stored for the agent. Overrides address scenes and layers by id, so they survive the agent rewriting the film; an override whose target is gone is reported, not dropped.
 
-The studio is drawn in bydiorama/ui's Graphite theme (Aspekta, no chroma). Films read `--ui-*` tokens too: pass a ui theme with `--css` and the stage uses its colours, fonts and easing curves (`ui.default`, `ui.spring`, …). A film can also set `"theme": { "ui": "zero" }` (or `graphite`, `hockney`): the stage then carries that bundled ui theme and Aspekta itself, in the studio, in stills and in renders. The demo films and the wizard's thumbnails are drawn this way. `node scripts/ui-theme.ts` regenerates the studio theme and the bundled stage themes from the ui token resolver.
+The studio is drawn in the bundled Graphite theme (Aspekta, no chroma). Films read `--ui-*` tokens too: pass a ui theme with `--css` and the stage uses its colours, fonts and easing curves (`ui.default`, `ui.spring`, …). A film can also set `"theme": { "ui": "zero" }` (or `graphite`, `hockney`): the stage then carries that bundled ui theme and Aspekta itself, in the studio, in stills and in renders. The demo films and the wizard's thumbnails are drawn this way. `node scripts/ui-theme.ts` regenerates the studio theme and the bundled stage themes from the ui token resolver.
 
 ## The one rule
 
