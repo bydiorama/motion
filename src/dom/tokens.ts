@@ -1,4 +1,4 @@
-// The bridge to bydiorama/ui. A page that loads a ui theme exposes its motion
+// Theme integration. A page that loads a ui theme exposes its motion
 // tokens as custom properties; a film reads them here, so `ui.out` in a film is
 // the theme's own curve and `$ui.duration.base` is the theme's own duration.
 import type { Bezier } from '../core/ease.ts';

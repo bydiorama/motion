@@ -2,7 +2,7 @@ import { num, str, type Primitive } from '../types.ts';
 
 export const slot: Primitive = {
   slug: 'el/slot',
-  summary: 'An empty frame the host page fills, e.g. with a rendered bydiorama/ui component.',
+  summary: 'An empty frame the host page fills, e.g. with a rendered UI component.',
   props: { name: { type: 'string', required: true, label: 'Slot name the host fills' } },
   params: {
     width: { type: 'number', default: 640, min: 1, max: 4000, step: 1, unit: 'px', label: 'Width' },

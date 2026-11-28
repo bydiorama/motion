@@ -1,4 +1,4 @@
-// bydiorama/ui's Fade, for the studio's plain DOM. The ui component is React; this
+// Edge fade, for the studio's plain DOM. The ui component is React; this
 // is the same band with the same behaviour, ported rather than reinvented:
 //   registry/ui/fade/fade.tsx         the band, its sides, depths, grounds, and the
 //                                     scroll-linked strength with its scrollbar inset

@@ -61,7 +61,7 @@ export function spring({ duration, bounce = 0 }: SpringSpec): (x: number) => num
 }
 
 /**
- * The `ui.*` curves are the bydiorama/ui easing tokens (`--ui-ease-*`). A page that
+ * The `ui.*` curves are the theme easing tokens (`--ui-ease-*`). A page that
  * loads a ui theme replaces them with the theme's own values (see dom/tokens.ts).
  */
 export const UI_EASE: Record<string, Bezier> = {

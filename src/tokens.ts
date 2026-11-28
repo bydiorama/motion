@@ -19,7 +19,7 @@ export interface Tokens {
    * values a film sets itself still win.
    */
   transitions: 'standard' | 'calm';
-  /** bydiorama/ui interface timings in seconds. Replaced by the theme on a page that loads one. */
+  /** Default interface timings in seconds. Replaced by the theme on a page that loads one. */
   ui: { duration: { fast: number; base: number; slow: number; enter: number }; stagger: number };
 }
 

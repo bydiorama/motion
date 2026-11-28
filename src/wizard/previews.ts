@@ -2,7 +2,7 @@
 // real runtime, so a thumbnail shows exactly what a move or a look does, and
 // `previews.test.ts` checks every one of them like any other film.
 //
-// They wear the page's own theme, bydiorama/ui's Graphite: Aspekta, no chroma.
+// They wear the page's own theme, Graphite: Aspekta, no chroma.
 import { FEELS } from '../brief/brief.ts';
 import type { Feel, LibraryNarrative } from '../brief/types.ts';
 import type { Film, Layer, Scene } from '../film/types.ts';
@@ -14,7 +14,7 @@ export type Tone = 'light' | 'dark';
 
 const film = (title: string, scenes: Scene[], tone: Tone, extra: Partial<Film> = {}): Film => ({
   motion: '0.4', title, size: SIZE, fps: 30, loop: true, ...extra,
-  // The wizard page wears bydiorama/ui's Graphite; so do its thumbnails, in the page's scheme.
+  // The wizard page wears Graphite; so do its thumbnails, in the page's scheme.
   theme: { ui: 'graphite', scheme: tone, ...extra.theme },
   scenes,
 });

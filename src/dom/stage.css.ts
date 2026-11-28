@@ -1,4 +1,4 @@
-// The stage's stylesheet. Colours, fonts and weights come from bydiorama/ui theme
+// The stage's stylesheet. Colours, fonts and weights come from theme
 // tokens (--ui-*) when a theme is on the page; the fallbacks keep a film readable
 // without one. Sizes are in --m-u, one hundredth of the stage width, so a film
 // looks the same at any resolution.

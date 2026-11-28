@@ -120,7 +120,7 @@ function ensureCss(doc: Document) {
 }
 
 /**
- * A bydiorama/ui theme for the stage (`theme.ui`), once per page: its --ui-*
+ * A bundled theme for the stage (`theme.ui`), once per page: its --ui-*
  * tokens scoped to stages that ask for it, and Aspekta, embedded so stills and
  * renders never fall back to another face.
  */
